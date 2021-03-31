@@ -1,3 +1,7 @@
 domain: bbox.kiev.ua
 repo: github.com/grengojbo/k3ctl
+resources:
+- group: k3s
+  kind: Cluster
+  version: v1alpha1
 version: "2"
