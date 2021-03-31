@@ -1,13 +1,13 @@
 module github.com/grengojbo/k3ctl
 
-go 1.13
+go 1.15
 
 require (
 	cloud.google.com/go v0.80.0 // indirect
 	github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6 // indirect
 	github.com/coreos/go-etcd v2.0.0+incompatible // indirect
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
-	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0 // indirect
+	github.com/docker/go-connections v0.4.0
 	github.com/fabric8-analytics/cli-tools v0.0.1 // indirect
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0 // indirect
@@ -19,12 +19,14 @@ require (
 	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/gophercloud/gophercloud v0.1.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
+	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
 	github.com/prometheus/client_golang v1.10.0 // indirect
 	github.com/prometheus/common v0.20.0 // indirect
+	github.com/rancher/k3d/v4 v4.4.0
 	github.com/rs/zerolog v1.21.0 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.3
 	github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8 // indirect
 	github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77 // indirect
@@ -35,6 +37,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20210323180902-22b0adad7558 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	gonum.org/v1/netlib v0.0.0-20190331212654-76723241ea4e // indirect
+	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	k8s.io/apiextensions-apiserver v0.20.5 // indirect
 	k8s.io/apimachinery v0.20.5

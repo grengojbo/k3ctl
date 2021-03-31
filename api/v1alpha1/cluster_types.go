@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/docker/go-connections/nat"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,6 +41,9 @@ image: %s
 // 	fmt.Sprintf("%s:%s", k3d.DefaultK3sImageRepo, version.GetK3sVersion(false)),
 // )
 
+// Role defines a k3s node role
+type Role string
+
 type LabelWithNodeFilters struct {
 	Label       string   `mapstructure:"label" yaml:"label" json:"label,omitempty"`
 	NodeFilters []string `mapstructure:"nodeFilters" yaml:"nodeFilters" json:"nodeFilters,omitempty"`
@@ -56,6 +60,59 @@ type Registry struct {
 	Config string   `mapstructure:"config" yaml:"config,omitempty" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
 }
 
+// Node describes a k3d node
+type Node struct {
+	Name       string            `yaml:"name" json:"name,omitempty"`
+	Role       Role              `yaml:"role" json:"role,omitempty"`
+	Image      string            `yaml:"image" json:"image,omitempty"`
+	Volumes    []string          `yaml:"volumes" json:"volumes,omitempty"`
+	Env        []string          `yaml:"env" json:"env,omitempty"`
+	Cmd        []string          // filled automatically based on role
+	Args       []string          `yaml:"extraArgs" json:"extraArgs,omitempty"`
+	Ports      nat.PortMap       `yaml:"portMappings" json:"portMappings,omitempty"`
+	Restart    bool              `yaml:"restart" json:"restart,omitempty"`
+	Created    string            `yaml:"created" json:"created,omitempty"`
+	Labels     map[string]string // filled automatically
+	Networks   []string          // filled automatically
+	ExtraHosts []string          // filled automatically
+	ServerOpts ServerOpts        `yaml:"serverOpts" json:"serverOpts,omitempty"`
+	AgentOpts  AgentOpts         `yaml:"agentOpts" json:"agentOpts,omitempty"`
+	GPURequest string            // filled automatically
+	Memory     string            // filled automatically
+	State      NodeState         // filled automatically
+}
+
+// ServerOpts describes some additional server role specific opts
+type ServerOpts struct {
+	IsInit  bool          `yaml:"isInitializingServer" json:"isInitializingServer,omitempty"`
+	KubeAPI *ExposureOpts `yaml:"kubeAPI" json:"kubeAPI"`
+}
+
+// ExposureOpts describes settings that the user can set for accessing the Kubernetes API
+type ExposureOpts struct {
+	nat.PortMapping        // filled automatically (reference to normal portmapping)
+	Host            string `yaml:"host,omitempty" json:"host,omitempty"`
+}
+
+// ExternalDatastore describes an external datastore used for HA/multi-server clusters
+type ExternalDatastore struct {
+	Endpoint string `yaml:"endpoint" json:"endpoint,omitempty"`
+	CAFile   string `yaml:"caFile" json:"caFile,omitempty"`
+	CertFile string `yaml:"certFile" json:"certFile,omitempty"`
+	KeyFile  string `yaml:"keyFile" json:"keyFile,omitempty"`
+	Network  string `yaml:"network" json:"network,omitempty"`
+}
+
+// AgentOpts describes some additional agent role specific opts
+type AgentOpts struct{}
+
+// NodeState describes the current state of a node
+type NodeState struct {
+	Running bool
+	Status  string
+	Started string
+}
+
 // K3sOptions k3s options for generate config
 type K3sOptions struct {
 }
@@ -69,6 +126,7 @@ type ClusterSpec struct {
 	Servers      int                     `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`         //nolint:lll    // default 1
 	Agents       int                     `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`            //nolint:lll    // default 0
 	ClusterToken string                  `mapstructure:"token" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
+	Nodes        []*Node            `mapstructure:"token" yaml:"nodes" json:"nodes,omitempty"`
 	Host         string                  `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
 	HostIP       string                  `mapstructure:"hostIP" yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
 	Labels       []LabelWithNodeFilters  `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
