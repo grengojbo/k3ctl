@@ -21,64 +21,64 @@ THE SOFTWARE.
 */
 package util
 
-// import (
-// 	"context"
-// 	"fmt"
-// 	"os"
-// 	"os/exec"
-// 	"strings"
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+	// 	k3d "github.com/rancher/k3d/v4/pkg/types"
+)
 
-// 	k3d "github.com/rancher/k3d/v4/pkg/types"
-// )
+// HandlePlugin takes care of finding and executing a plugin based on the longest prefix
+func HandlePlugin(ctx context.Context, args []string) (bool, error) {
+	argsPrefix := []string{}
 
-// // HandlePlugin takes care of finding and executing a plugin based on the longest prefix
-// func HandlePlugin(ctx context.Context, args []string) (bool, error) {
-// 	argsPrefix := []string{}
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			continue // drop flags
+		}
+		argsPrefix = append(argsPrefix, strings.ReplaceAll(arg, "-", "_")) // plugin executables assumed to have underscores
+	}
 
-// 	for _, arg := range args {
-// 		if strings.HasPrefix(arg, "-") {
-// 			continue // drop flags
-// 		}
-// 		argsPrefix = append(argsPrefix, strings.ReplaceAll(arg, "-", "_")) // plugin executables assumed to have underscores
-// 	}
+	execPath := ""
 
-// 	execPath := ""
+	for len(argsPrefix) > 0 {
+		path, found := FindPlugin(strings.Join(argsPrefix, "-"))
 
-// 	for len(argsPrefix) > 0 {
-// 		path, found := FindPlugin(strings.Join(argsPrefix, "-"))
+		if !found {
+			argsPrefix = argsPrefix[:len(argsPrefix)-1] // drop last element
+			continue
+		}
 
-// 		if !found {
-// 			argsPrefix = argsPrefix[:len(argsPrefix)-1] // drop last element
-// 			continue
-// 		}
+		execPath = path
+		break
+	}
 
-// 		execPath = path
-// 		break
-// 	}
+	if execPath == "" {
+		return false, nil
+	}
 
-// 	if execPath == "" {
-// 		return false, nil
-// 	}
+	return true, ExecPlugin(ctx, execPath, args[len(argsPrefix):], os.Environ())
 
-// 	return true, ExecPlugin(ctx, execPath, args[len(argsPrefix):], os.Environ())
+}
 
-// }
+// FindPlugin tries to find the plugin executable on the filesystem
+func FindPlugin(name string) (string, bool) {
+	// path, err := exec.LookPath(fmt.Sprintf("%s-%s", k3d.DefaultObjectNamePrefix, name))
+	path, err := exec.LookPath(fmt.Sprintf("%s-%s", "k3s", name))
+	if err == nil && len(path) > 0 {
+		return path, true
+	}
+	return "", false
+}
 
-// // FindPlugin tries to find the plugin executable on the filesystem
-// func FindPlugin(name string) (string, bool) {
-// 	path, err := exec.LookPath(fmt.Sprintf("%s-%s", k3d.DefaultObjectNamePrefix, name))
-// 	if err == nil && len(path) > 0 {
-// 		return path, true
-// 	}
-// 	return "", false
-// }
-
-// // ExecPlugin executes a found plugin
-// func ExecPlugin(ctx context.Context, path string, args []string, env []string) error {
-// 	cmd := exec.CommandContext(ctx, path, args...)
-// 	cmd.Env = env
-// 	cmd.Stderr = os.Stderr
-// 	cmd.Stdout = os.Stdout
-// 	cmd.Stdin = os.Stdin
-// 	return cmd.Run()
-// }
+// ExecPlugin executes a found plugin
+func ExecPlugin(ctx context.Context, path string, args []string, env []string) error {
+	cmd := exec.CommandContext(ctx, path, args...)
+	cmd.Env = env
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	return cmd.Run()
+}

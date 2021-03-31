@@ -43,7 +43,7 @@ func NewCmdCluster() *cobra.Command {
 	}
 
 	// add subcommands
-	// cmd.AddCommand(NewCmdClusterCreate())
+	cmd.AddCommand(NewCmdClusterCreate())
 	// cmd.AddCommand(NewCmdClusterStart())
 	// cmd.AddCommand(NewCmdClusterStop())
 	// cmd.AddCommand(NewCmdClusterDelete())

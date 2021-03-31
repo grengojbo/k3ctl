@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -33,13 +34,13 @@ import (
 	// "io/ioutil"
 	// "strings"
 	// rt "runtime"
-	// "github.com/rancher/k3d/v4/cmd/cluster"
+	"github.com/grengojbo/k3ctl/cmd/cluster"
 	// cfg "github.com/rancher/k3d/v4/cmd/config"
 	// "github.com/rancher/k3d/v4/cmd/image"
 	// "github.com/rancher/k3d/v4/cmd/kubeconfig"
 	// "github.com/rancher/k3d/v4/cmd/node"
 	// "github.com/rancher/k3d/v4/cmd/registry"
-	// cliutil "github.com/rancher/k3d/v4/cmd/util"
+	cliutil "github.com/grengojbo/k3ctl/cmd/util"
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
 	"github.com/grengojbo/k3ctl/version"
 	log "github.com/sirupsen/logrus"
@@ -82,12 +83,12 @@ func Execute() {
 		parts := os.Args[1:]
 		// Check if it's a built-in command, else try to execute it as a plugin
 		if _, _, err := rootCmd.Find(parts); err != nil {
-			// 	pluginFound, err := cliutil.HandlePlugin(context.Background(), parts)
+			pluginFound, err := cliutil.HandlePlugin(context.Background(), parts)
 			if err != nil {
 				log.Errorf("Failed to execute plugin '%+v'", parts)
 				log.Fatalln(err)
-				// 	} else if pluginFound {
-				// 		os.Exit(0)
+			} else if pluginFound {
+				os.Exit(0)
 			}
 		}
 	}
@@ -107,7 +108,7 @@ func init() {
 
 	// add subcommands
 	rootCmd.AddCommand(NewCmdCompletion())
-	// rootCmd.AddCommand(cluster.NewCmdCluster())
+	rootCmd.AddCommand(cluster.NewCmdCluster())
 	// rootCmd.AddCommand(kubeconfig.NewCmdKubeconfig())
 	// rootCmd.AddCommand(node.NewCmdNode())
 	// rootCmd.AddCommand(image.NewCmdImage())
