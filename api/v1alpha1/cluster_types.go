@@ -23,13 +23,57 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+// DefaultConfigTpl for printing
+const DefaultConfigTpl = `---
+apiVersion: k3d.io/v1alpha2
+kind: Simple
+name: %s
+servers: 1
+agents: 0
+image: %s
+`
+
+// DefaultConfig templated DefaultConfigTpl
+// var DefaultConfig = fmt.Sprintf(
+// 	DefaultConfigTpl,
+// 	k3d.DefaultClusterName,
+// 	fmt.Sprintf("%s:%s", k3d.DefaultK3sImageRepo, version.GetK3sVersion(false)),
+// )
+
+type LabelWithNodeFilters struct {
+	Label       string   `mapstructure:"label" yaml:"label" json:"label,omitempty"`
+	NodeFilters []string `mapstructure:"nodeFilters" yaml:"nodeFilters" json:"nodeFilters,omitempty"`
+}
+
+type EnvVarWithNodeFilters struct {
+	EnvVar      string   `mapstructure:"envVar" yaml:"envVar" json:"envVar,omitempty"`
+	NodeFilters []string `mapstructure:"nodeFilters" yaml:"nodeFilters" json:"nodeFilters,omitempty"`
+}
+
+type Registry struct {
+	Use    []string `mapstructure:"use" yaml:"use,omitempty" json:"use,omitempty"`
+	Create bool     `mapstructure:"create" yaml:"create,omitempty" json:"create,omitempty"`
+	Config string   `mapstructure:"config" yaml:"config,omitempty" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
+}
+
+// K3sOptions k3s options for generate config
+type K3sOptions struct {
+}
+
 // ClusterSpec defines the desired state of Cluster
 type ClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Cluster. Edit Cluster_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Region       string                  `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Servers      int                     `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`         //nolint:lll    // default 1
+	Agents       int                     `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`            //nolint:lll    // default 0
+	ClusterToken string                  `mapstructure:"token" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
+	Host         string                  `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
+	HostIP       string                  `mapstructure:"hostIP" yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
+	Labels       []LabelWithNodeFilters  `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
+	Env          []EnvVarWithNodeFilters `mapstructure:"env" yaml:"env" json:"env,omitempty"`
+	Registries   Registry                `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster
