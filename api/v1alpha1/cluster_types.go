@@ -126,7 +126,7 @@ type ClusterSpec struct {
 	Servers      int                     `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`         //nolint:lll    // default 1
 	Agents       int                     `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`            //nolint:lll    // default 0
 	ClusterToken string                  `mapstructure:"token" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
-	Nodes        []*Node            `mapstructure:"token" yaml:"nodes" json:"nodes,omitempty"`
+	Nodes        []*Node                 `mapstructure:"token" yaml:"nodes" json:"nodes,omitempty"`
 	Host         string                  `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
 	HostIP       string                  `mapstructure:"hostIP" yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
 	Labels       []LabelWithNodeFilters  `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`

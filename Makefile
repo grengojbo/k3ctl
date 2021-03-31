@@ -18,7 +18,7 @@ test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
 
 build: # Build k3ctl binary
-	go build -o k3ctl cli.go
+	go build -o k3ctl cli/main.go
 
 manager: generate fmt vet
 	go build -o bin/manager main.go

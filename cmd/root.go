@@ -67,10 +67,10 @@ k3ctl is a wrapper CLI that helps you to easily create k3s clusters.
 		// fmt.Println("Start...")
 		if flags.version {
 			printVersion()
-			} else {
-				if err := cmd.Usage(); err != nil {
-					log.Fatalln(err)
-				}
+		} else {
+			if err := cmd.Usage(); err != nil {
+				log.Fatalln(err)
+			}
 		}
 	},
 }
@@ -82,12 +82,12 @@ func Execute() {
 		parts := os.Args[1:]
 		// Check if it's a built-in command, else try to execute it as a plugin
 		if _, _, err := rootCmd.Find(parts); err != nil {
-		// 	pluginFound, err := cliutil.HandlePlugin(context.Background(), parts)
+			// 	pluginFound, err := cliutil.HandlePlugin(context.Background(), parts)
 			if err != nil {
 				log.Errorf("Failed to execute plugin '%+v'", parts)
 				log.Fatalln(err)
-		// 	} else if pluginFound {
-		// 		os.Exit(0)
+				// 	} else if pluginFound {
+				// 		os.Exit(0)
 			}
 		}
 	}
@@ -224,10 +224,10 @@ func NewCmdCompletion() *cobra.Command {
 		Args:  cobra.ExactArgs(1), // TODO: NewCmdCompletion: add support for 0 args = auto detection
 		Run: func(cmd *cobra.Command, args []string) {
 			if completionFunc, ok := completionFunctions[args[0]]; ok {
-			if err := completionFunc(os.Stdout); err != nil {
-				log.Fatalf("Failed to generate completion script for shell '%s'", args[0])
-			}
-			return
+				if err := completionFunc(os.Stdout); err != nil {
+					log.Fatalf("Failed to generate completion script for shell '%s'", args[0])
+				}
+				return
 			}
 			log.Fatalf("Shell '%s' not supported for completion", args[0])
 		},

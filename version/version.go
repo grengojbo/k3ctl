@@ -61,12 +61,12 @@ func GetVersion() string {
 // GetK3sVersion returns the version string for K3s
 func GetK3sVersion(latest bool) string {
 	// if latest {
-		// version, err := fetchLatestK3sVersion()
-		// if err != nil || version == "" {
-		// 	log.Warnln("Failed to fetch latest K3s version from DockerHub, falling back to hardcoded version.")
-		// 	return K3sVersion
-		// }
-		// return version
+	// version, err := fetchLatestK3sVersion()
+	// if err != nil || version == "" {
+	// 	log.Warnln("Failed to fetch latest K3s version from DockerHub, falling back to hardcoded version.")
+	// 	return K3sVersion
+	// }
+	// return version
 	// }
 	return K3sVersion
 }
