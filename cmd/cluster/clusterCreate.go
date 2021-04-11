@@ -42,7 +42,7 @@ import (
 
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
 	"github.com/grengojbo/k3ctl/pkg/types"
-	// "github.com/rancher/k3d/v4/version"
+	"github.com/grengojbo/k3ctl/version"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -314,6 +314,13 @@ func NewCmdClusterCreate() *cobra.Command {
 
 	cmd.Flags().Bool("kubeconfig-switch-context", true, "Directly switch the default kubeconfig's current-context to the new cluster's context (requires --kubeconfig-update-default)")
 	_ = cfgViper.BindPFlag("spec.kubeconfig.switchcurrentcontext", cmd.Flags().Lookup("kubeconfig-switch-context"))
+
+	cmd.Flags().String("k3s-channel", version.PinnedK3sChannel, fmt.Sprintf("Release channel: stable, latest, or i.e. %v", version.PinnedK3sChannel))
+	_ = cfgViper.BindPFlag("spec.channel", cmd.Flags().Lookup("k3s-channel"))
+
+	cmd.Flags().String("k3s-version", "", "Set a version to install, overrides k3s-version")
+	// log.Infoln("k3s-version: ", cmd.Flags().Lookup("k3s-version").Value.String())
+	_ = cfgViper.BindPFlag("spec.KubernetesVersion", cmd.Flags().Lookup("k3s-version"))
 
 	// cmd.Flags().Bool("no-lb", false, "Disable the creation of a LoadBalancer in front of the server nodes")
 	// _ = cfgViper.BindPFlag("spec.options.disableloadbalancer", cmd.Flags().Lookup("no-lb"))

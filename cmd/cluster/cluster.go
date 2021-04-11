@@ -26,6 +26,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const GetScript = "curl -sfL https://get.k3s.io"
+
 // NewCmdCluster returns a new cobra command
 func NewCmdCluster() *cobra.Command {
 

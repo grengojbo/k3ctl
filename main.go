@@ -50,6 +50,9 @@ func main() {
 
 	if isCli == "yes" {
 		cmd.Execute()
+		// if err := cmd.Execute(); err != nil {
+		// 	os.Exit(1)
+		// }
 	} else {
 		var metricsAddr string
 		var enableLeaderElection bool

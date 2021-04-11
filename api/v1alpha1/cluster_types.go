@@ -271,15 +271,15 @@ type ClusterSpec struct {
 	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`         //nolint:lll    // default 1
 	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`            //nolint:lll    // default 0
 	ClusterToken      string                        `mapstructure:"token" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
-	Nodes             []*Node                       `mapstructure:"token" yaml:"nodes" json:"nodes,omitempty"`
+	Nodes             []*Node                       `mapstructure:"nodes" yaml:"nodes" json:"nodes,omitempty"`
 	Host              string                        `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
 	HostIP            string                        `mapstructure:"hostIP" yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
 	Labels            []LabelWithNodeFilters        `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
 	Env               []EnvVarWithNodeFilters       `mapstructure:"env" yaml:"env" json:"env,omitempty"`
 	Registries        Registry                      `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
-	Options           Options                       `mapstructure:"options" yaml:"options"`
-	K3sOptions        SimpleConfigOptionsK3s        `mapstructure:"k3s" yaml:"k3s"`
-	KubeconfigOptions SimpleConfigOptionsKubeconfig `mapstructure:"kubeconfig" yaml:"kubeconfig"`
+	Options           Options                       `mapstructure:"options" yaml:"options" json:"options,omitempty"`
+	K3sOptions        SimpleConfigOptionsK3s        `mapstructure:"k3s" yaml:"k3s" json:"k3s,omitempty"`
+	KubeconfigOptions SimpleConfigOptionsKubeconfig `mapstructure:"kubeconfig" yaml:"kubeconfig" json:"kubeconfig,omitempty"`
 	Volumes           []VolumeWithNodeFilters       `mapstructure:"volumes" yaml:"volumes" json:"volumes,omitempty"`
 	// The cluster name
 	// +optional
@@ -287,11 +287,14 @@ type ClusterSpec struct {
 	// KubernetesVersion is the target version of the control plane.
 	// NB: This value defaults to the Machine object spec.kuberentesVersion
 	// +optional
-	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
+	KubernetesVersion string `mapstructure:"kubernetesVersion" yaml:"kubernetesVersion" json:"kubernetesVersion,omitempty"`
+	// K3sChannel Release channel: stable, latest, or i.e. v1.19
+	// +optional
+	K3sChannel string `mapstructure:"channel" yaml:"channel" json:"channel,omitempty"`
 	// Networking holds configuration for the networking topology of the cluster.
 	// NB: This value defaults to the Cluster object spec.clusterNetwork.
 	// +optional
-	Networking Networking `json:"networking,omitempty"`
+	Networking Networking `mapstructure:"networking" yaml:"networking" json:"networking,omitempty"`
 	// Cluster network configuration.
 	// +optional
 	// ClusterNetwork *clusterv1.ClusterNetwork `json:"clusterNetwork,omitempty"`
