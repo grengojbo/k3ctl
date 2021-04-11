@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
 	"github.com/docker/go-connections/nat"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -114,7 +116,25 @@ type NodeState struct {
 }
 
 // K3sOptions k3s options for generate config
-type K3sOptions struct {
+type SimpleConfigOptionsK3s struct {
+	ExtraServerArgs []string `mapstructure:"extraServerArgs" yaml:"extraServerArgs"`
+	ExtraAgentArgs  []string `mapstructure:"extraAgentArgs" yaml:"extraAgentArgs"`
+}
+
+// SimpleConfigOptionsKubeconfig describes the set of options referring to the kubeconfig during cluster creation.
+type SimpleConfigOptionsKubeconfig struct {
+	UpdateDefaultKubeconfig bool `mapstructure:"updateDefaultKubeconfig" yaml:"updateDefaultKubeconfig" json:"updateDefaultKubeconfig,omitempty"` // default: true
+	SwitchCurrentContext    bool `mapstructure:"switchCurrentContext" yaml:"switchCurrentContext" json:"switchCurrentContext,omitempty"`          //nolint:lll    // default: true
+}
+
+type Options struct {
+	Wait                       bool          `mapstructure:"wait" yaml:"wait"`
+	Timeout                    time.Duration `mapstructure:"timeout" yaml:"timeout"`
+	DisableLoadbalancer        bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer"`
+	DisableImageVolume         bool          `mapstructure:"disableImageVolume" yaml:"disableImageVolume"`
+	NoRollback                 bool          `mapstructure:"disableRollback" yaml:"disableRollback"`
+	PrepDisableHostIPInjection bool          `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection"`
+	// NodeHookActions            []k3d.NodeHookAction `mapstructure:"nodeHookActions" yaml:"nodeHookActions,omitempty"`
 }
 
 // ClusterSpec defines the desired state of Cluster
@@ -122,16 +142,19 @@ type ClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Region       string                  `mapstructure:"region" yaml:"region" json:"region,omitempty"`
-	Servers      int                     `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`         //nolint:lll    // default 1
-	Agents       int                     `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`            //nolint:lll    // default 0
-	ClusterToken string                  `mapstructure:"token" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
-	Nodes        []*Node                 `mapstructure:"token" yaml:"nodes" json:"nodes,omitempty"`
-	Host         string                  `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
-	HostIP       string                  `mapstructure:"hostIP" yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
-	Labels       []LabelWithNodeFilters  `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
-	Env          []EnvVarWithNodeFilters `mapstructure:"env" yaml:"env" json:"env,omitempty"`
-	Registries   Registry                `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
+	Region            string                        `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`         //nolint:lll    // default 1
+	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`            //nolint:lll    // default 0
+	ClusterToken      string                        `mapstructure:"token" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
+	Nodes             []*Node                       `mapstructure:"token" yaml:"nodes" json:"nodes,omitempty"`
+	Host              string                        `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
+	HostIP            string                        `mapstructure:"hostIP" yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
+	Labels            []LabelWithNodeFilters        `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
+	Env               []EnvVarWithNodeFilters       `mapstructure:"env" yaml:"env" json:"env,omitempty"`
+	Registries        Registry                      `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
+	Options           Options                       `mapstructure:"options" yaml:"options"`
+	K3sOptions        SimpleConfigOptionsK3s        `mapstructure:"k3s" yaml:"k3s"`
+	KubeconfigOptions SimpleConfigOptionsKubeconfig `mapstructure:"kubeconfig" yaml:"kubeconfig"`
 }
 
 // ClusterStatus defines the observed state of Cluster

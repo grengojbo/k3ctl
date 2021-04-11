@@ -67,9 +67,12 @@ func initConfig() {
 	cfgViper.SetConfigType("yaml")
 
 	// Set config file, if specified
-	log.Debugln("configFile:", configFile)
 	if configFile != "" {
+		if configFile == "sample" {
+			configFile = "config/samples/k3s_v1alpha1_cluster.yaml"
+		}
 		cfgViper.SetConfigFile(configFile)
+		log.Infoln("configFile:", configFile)
 
 		if _, err := os.Stat(configFile); err != nil {
 			log.Fatalf("Failed to stat config file %s: %+v", configFile, err)
@@ -282,66 +285,66 @@ func NewCmdClusterCreate() *cobra.Command {
 	_ = cfgViper.BindPFlag("agents", cmd.Flags().Lookup("agents"))
 	cfgViper.SetDefault("agents", 0)
 
-	// cmd.Flags().StringP("image", "i", "", "Specify k3s image that you want to use for the nodes")
-	// _ = cfgViper.BindPFlag("image", cmd.Flags().Lookup("image"))
-	// cfgViper.SetDefault("image", fmt.Sprintf("%s:%s", k3d.DefaultK3sImageRepo, version.GetK3sVersion(false)))
+	// // cmd.Flags().StringP("image", "i", "", "Specify k3s image that you want to use for the nodes")
+	// // _ = cfgViper.BindPFlag("image", cmd.Flags().Lookup("image"))
+	// // cfgViper.SetDefault("image", fmt.Sprintf("%s:%s", k3d.DefaultK3sImageRepo, version.GetK3sVersion(false)))
 
-	cmd.Flags().String("network", "", "Join an existing network")
-	_ = cfgViper.BindPFlag("network", cmd.Flags().Lookup("network"))
+	// cmd.Flags().String("network", "", "Join an existing network")
+	// _ = cfgViper.BindPFlag("network", cmd.Flags().Lookup("network"))
 
 	cmd.Flags().String("token", "", "Specify a cluster token. By default, we generate one.")
 	_ = cfgViper.BindPFlag("token", cmd.Flags().Lookup("token"))
 
 	cmd.Flags().Bool("wait", true, "Wait for the server(s) to be ready before returning. Use '--timeout DURATION' to not wait forever.")
-	_ = cfgViper.BindPFlag("options.k3d.wait", cmd.Flags().Lookup("wait"))
+	_ = cfgViper.BindPFlag("spec.options.wait", cmd.Flags().Lookup("wait"))
 
 	cmd.Flags().Duration("timeout", 0*time.Second, "Rollback changes if cluster couldn't be created in specified duration.")
-	_ = cfgViper.BindPFlag("options.k3d.timeout", cmd.Flags().Lookup("timeout"))
+	_ = cfgViper.BindPFlag("spec.options.timeout", cmd.Flags().Lookup("timeout"))
 
 	cmd.Flags().Bool("kubeconfig-update-default", true, "Directly update the default kubeconfig with the new cluster's context")
-	_ = cfgViper.BindPFlag("options.kubeconfig.updatedefaultkubeconfig", cmd.Flags().Lookup("kubeconfig-update-default"))
+	_ = cfgViper.BindPFlag("spec.kubeconfig.updatedefaultkubeconfig", cmd.Flags().Lookup("kubeconfig-update-default"))
 
 	cmd.Flags().Bool("kubeconfig-switch-context", true, "Directly switch the default kubeconfig's current-context to the new cluster's context (requires --kubeconfig-update-default)")
-	_ = cfgViper.BindPFlag("options.kubeconfig.switchcurrentcontext", cmd.Flags().Lookup("kubeconfig-switch-context"))
+	_ = cfgViper.BindPFlag("spec.kubeconfig.switchcurrentcontext", cmd.Flags().Lookup("kubeconfig-switch-context"))
 
-	cmd.Flags().Bool("no-lb", false, "Disable the creation of a LoadBalancer in front of the server nodes")
-	_ = cfgViper.BindPFlag("options.k3d.disableloadbalancer", cmd.Flags().Lookup("no-lb"))
+	// cmd.Flags().Bool("no-lb", false, "Disable the creation of a LoadBalancer in front of the server nodes")
+	// _ = cfgViper.BindPFlag("spec.options.disableloadbalancer", cmd.Flags().Lookup("no-lb"))
 
-	cmd.Flags().Bool("no-rollback", false, "Disable the automatic rollback actions, if anything goes wrong")
-	_ = cfgViper.BindPFlag("options.k3d.disablerollback", cmd.Flags().Lookup("no-rollback"))
+	// cmd.Flags().Bool("no-rollback", false, "Disable the automatic rollback actions, if anything goes wrong")
+	// _ = cfgViper.BindPFlag("spec.options.disablerollback", cmd.Flags().Lookup("no-rollback"))
 
-	cmd.Flags().Bool("no-hostip", false, "Disable the automatic injection of the Host IP as 'host.k3d.internal' into the containers and CoreDNS")
-	_ = cfgViper.BindPFlag("options.k3d.disablehostipinjection", cmd.Flags().Lookup("no-hostip"))
+	// cmd.Flags().Bool("no-hostip", false, "Disable the automatic injection of the Host IP as 'host.options.internal' into the containers and CoreDNS")
+	// _ = cfgViper.BindPFlag("spec.options.disablehostipinjection", cmd.Flags().Lookup("no-hostip"))
 
-	cmd.Flags().String("gpus", "", "GPU devices to add to the cluster node containers ('all' to pass all GPUs) [From docker]")
-	_ = cfgViper.BindPFlag("options.runtime.gpurequest", cmd.Flags().Lookup("gpus"))
+	// cmd.Flags().String("gpus", "", "GPU devices to add to the cluster node containers ('all' to pass all GPUs) [From docker]")
+	// _ = cfgViper.BindPFlag("spec.runtime.gpurequest", cmd.Flags().Lookup("gpus"))
 
-	cmd.Flags().String("servers-memory", "", "Memory limit imposed on the server nodes [From docker]")
-	_ = cfgViper.BindPFlag("options.runtime.serversmemory", cmd.Flags().Lookup("servers-memory"))
+	// cmd.Flags().String("servers-memory", "", "Memory limit imposed on the server nodes [From docker]")
+	// _ = cfgViper.BindPFlag("spec.runtime.serversmemory", cmd.Flags().Lookup("servers-memory"))
 
-	cmd.Flags().String("agents-memory", "", "Memory limit imposed on the agents nodes [From docker]")
-	_ = cfgViper.BindPFlag("options.runtime.agentsmemory", cmd.Flags().Lookup("agents-memory"))
+	// cmd.Flags().String("agents-memory", "", "Memory limit imposed on the agents nodes [From docker]")
+	// _ = cfgViper.BindPFlag("spec.runtime.agentsmemory", cmd.Flags().Lookup("agents-memory"))
 
-	/* Image Importing */
-	cmd.Flags().Bool("no-image-volume", false, "Disable the creation of a volume for importing images")
-	_ = cfgViper.BindPFlag("options.k3d.disableimagevolume", cmd.Flags().Lookup("no-image-volume"))
+	// /* Image Importing */
+	// cmd.Flags().Bool("no-image-volume", false, "Disable the creation of a volume for importing images")
+	// _ = cfgViper.BindPFlag("spec.options.disableimagevolume", cmd.Flags().Lookup("no-image-volume"))
 
 	/* Registry */
 	cmd.Flags().StringArray("registry-use", nil, "Connect to one or more k3d-managed registries running locally")
-	_ = cfgViper.BindPFlag("registries.use", cmd.Flags().Lookup("registry-use"))
+	_ = cfgViper.BindPFlag("spec.registries.use", cmd.Flags().Lookup("registry-use"))
 
 	cmd.Flags().Bool("registry-create", false, "Create a k3d-managed registry and connect it to the cluster")
-	_ = cfgViper.BindPFlag("registries.create", cmd.Flags().Lookup("registry-create"))
+	_ = cfgViper.BindPFlag("spec.registries.create", cmd.Flags().Lookup("registry-create"))
 
 	cmd.Flags().String("registry-config", "", "Specify path to an extra registries.yaml file")
-	_ = cfgViper.BindPFlag("registries.config", cmd.Flags().Lookup("registry-config"))
+	_ = cfgViper.BindPFlag("spec.registries.config", cmd.Flags().Lookup("registry-config"))
 
 	/* k3s */
 	cmd.Flags().StringArray("k3s-server-arg", nil, "Additional args passed to the `k3s server` command on server nodes (new flag per arg)")
-	_ = cfgViper.BindPFlag("options.k3s.extraserverargs", cmd.Flags().Lookup("k3s-server-arg"))
+	_ = cfgViper.BindPFlag("spec.k3s.extraserverargs", cmd.Flags().Lookup("k3s-server-arg"))
 
 	cmd.Flags().StringArray("k3s-agent-arg", nil, "Additional args passed to the `k3s agent` command on agent nodes (new flag per arg)")
-	_ = cfgViper.BindPFlag("options.k3s.extraagentargs", cmd.Flags().Lookup("k3s-agent-arg"))
+	_ = cfgViper.BindPFlag("spec.k3s.extraagentargs", cmd.Flags().Lookup("k3s-agent-arg"))
 
 	/* Subcommands */
 

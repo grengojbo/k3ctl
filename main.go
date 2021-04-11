@@ -33,6 +33,7 @@ import (
 )
 
 var (
+	isCli    = "yes"
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
@@ -45,9 +46,9 @@ func init() {
 }
 
 func main() {
-	isCli := true
+	// isCli = true
 
-	if isCli {
+	if isCli == "yes" {
 		cmd.Execute()
 	} else {
 		var metricsAddr string
