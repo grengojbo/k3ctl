@@ -21,34 +21,35 @@ THE SOFTWARE.
 */
 package config
 
-// import (
-// 	"fmt"
-// 	"strings"
+import (
+	"fmt"
+	"strings"
 
-// 	log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-// 	"github.com/spf13/viper"
+	"github.com/spf13/viper"
 
-// 	conf "github.com/rancher/k3d/v4/pkg/config/v1alpha2"
-// )
+	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
+	// conf "github.com/grengojbo/api/v1alpha1"
+)
 
-// func FromViperSimple(config *viper.Viper) (conf.SimpleConfig, error) {
+func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 
-// 	var cfg conf.SimpleConfig
+	var cfg k3sv1alpha1.Cluster
 
-// 	// determine config kind
-// 	if config.GetString("kind") != "" && strings.ToLower(config.GetString("kind")) != "simple" {
-// 		return cfg, fmt.Errorf("Wrong `kind` '%s' != 'simple' in config file", config.GetString("kind"))
-// 	}
+	// determine config kind
+	if config.GetString("kind") != "" && strings.ToLower(config.GetString("kind")) != "cluster" {
+		return cfg, fmt.Errorf("Wrong `kind` '%s' != 'Cluster' in config file", config.GetString("kind"))
+	}
 
-// 	if err := config.Unmarshal(&cfg); err != nil {
-// 		log.Errorln("Failed to unmarshal File config")
+	if err := config.Unmarshal(&cfg); err != nil {
+		log.Errorln("Failed to unmarshal File config")
 
-// 		return cfg, err
-// 	}
+		return cfg, err
+	}
 
-// 	return cfg, nil
-// }
+	return cfg, nil
+}
 
 // func FromViper(config *viper.Viper) (conf.Config, error) {
 

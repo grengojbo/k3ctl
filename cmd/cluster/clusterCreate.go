@@ -25,18 +25,23 @@ package cluster
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 
-	// cliutil "github.com/rancher/k3d/v4/cmd/util"
+	// "github.com/docker/go-connections/nat"
+	// "github.com/docker/go-connections/nat"
+
+	cliutil "github.com/grengojbo/k3ctl/cmd/util"
 	// k3dCluster "github.com/rancher/k3d/v4/pkg/client"
-	// "github.com/rancher/k3d/v4/pkg/config"
-	// conf "github.com/rancher/k3d/v4/pkg/config/v1alpha2"
+	conf "github.com/grengojbo/k3ctl/api/v1alpha1"
+	"github.com/grengojbo/k3ctl/pkg/config"
+
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
-	// k3d "github.com/rancher/k3d/v4/pkg/types"
+	"github.com/grengojbo/k3ctl/pkg/types"
 	// "github.com/rancher/k3d/v4/version"
 
 	log "github.com/sirupsen/logrus"
@@ -122,20 +127,23 @@ func NewCmdClusterCreate() *cobra.Command {
 			/*************************
 			 * Compute Configuration *
 			 *************************/
-			// cfg, err := config.FromViperSimple(cfgViper)
-			// if err != nil {
-			// 	log.Fatalln(err)
-			// }
+			cfg, err := config.FromViperSimple(cfgViper)
+			if err != nil {
+				log.Fatalln(err)
+			}
 
-			// log.Debugf("========== Simple Config ==========\n%+v\n==========================\n", cfg)
-			log.Debugf("========== Simple Config ==========\n\n==========================\n")
+			log.Debugf("========== Simple Config ==========\n%+v\n==========================\n", cfg)
 
-			// cfg, err = applyCLIOverrides(cfg)
-			// if err != nil {
-			// 	log.Fatalf("Failed to apply CLI overrides: %+v", err)
-			// }
+			cfg, err = applyCLIOverrides(cfg)
+			if err != nil {
+				log.Fatalf("Failed to apply CLI overrides: %+v", err)
+			}
 
-			// log.Debugf("========== Merged Simple Config ==========\n%+v\n==========================\n", cfg)
+			if log.GetLevel() >= log.DebugLevel {
+				log.Debugf("========== Merged Simple Config ==========\n%+v\n==========================\n", cfg)
+				c, _ := yaml.Marshal(cfg)
+				log.Debugf("Merge Configuration:\n%s", c)
+			}
 
 			/**************************************
 			 * Transform, Process & Validate Configuration *
@@ -278,12 +286,12 @@ func NewCmdClusterCreate() *cobra.Command {
 	 */
 
 	cmd.Flags().IntP("servers", "s", 0, "Specify how many servers you want to create")
-	_ = cfgViper.BindPFlag("servers", cmd.Flags().Lookup("servers"))
-	cfgViper.SetDefault("servers", 1)
+	_ = cfgViper.BindPFlag("spec.servers", cmd.Flags().Lookup("servers"))
+	cfgViper.SetDefault("spec.servers", 1)
 
 	cmd.Flags().IntP("agents", "a", 0, "Specify how many agents you want to create")
-	_ = cfgViper.BindPFlag("agents", cmd.Flags().Lookup("agents"))
-	cfgViper.SetDefault("agents", 0)
+	_ = cfgViper.BindPFlag("spec.agents", cmd.Flags().Lookup("agents"))
+	cfgViper.SetDefault("spec.agents", 0)
 
 	// // cmd.Flags().StringP("image", "i", "", "Specify k3s image that you want to use for the nodes")
 	// // _ = cfgViper.BindPFlag("image", cmd.Flags().Lookup("image"))
@@ -293,7 +301,7 @@ func NewCmdClusterCreate() *cobra.Command {
 	// _ = cfgViper.BindPFlag("network", cmd.Flags().Lookup("network"))
 
 	cmd.Flags().String("token", "", "Specify a cluster token. By default, we generate one.")
-	_ = cfgViper.BindPFlag("token", cmd.Flags().Lookup("token"))
+	_ = cfgViper.BindPFlag("spec.token", cmd.Flags().Lookup("token"))
 
 	cmd.Flags().Bool("wait", true, "Wait for the server(s) to be ready before returning. Use '--timeout DURATION' to not wait forever.")
 	_ = cfgViper.BindPFlag("spec.options.wait", cmd.Flags().Lookup("wait"))
@@ -352,172 +360,172 @@ func NewCmdClusterCreate() *cobra.Command {
 	return cmd
 }
 
-// func applyCLIOverrides(cfg conf.SimpleConfig) (conf.SimpleConfig, error) {
+func applyCLIOverrides(cfg conf.Cluster) (conf.Cluster, error) {
 
-// 	/****************************
-// 	 * Parse and validate flags *
-// 	 ****************************/
+	/****************************
+	 * Parse and validate flags *
+	 ****************************/
 
-// 	// -> API-PORT
-// 	// parse the port mapping
-// 	var (
-// 		err       error
-// 		exposeAPI *k3d.ExposureOpts
-// 	)
+	// -> API-PORT
+	// parse the port mapping
+	// var (
+	// 	err       error
+	// 	exposeAPI *types.ExposureOpts
+	// )
 
-// 	// Apply config file values as defaults
-// 	exposeAPI = &k3d.ExposureOpts{
-// 		PortMapping: nat.PortMapping{
-// 			Binding: nat.PortBinding{
-// 				HostIP:   cfg.ExposeAPI.HostIP,
-// 				HostPort: cfg.ExposeAPI.HostPort,
-// 			},
-// 		},
-// 		Host: cfg.ExposeAPI.Host,
-// 	}
+	// // Apply config file values as defaults
+	// exposeAPI = &types.ExposureOpts{
+	// 	PortMapping: nat.PortMapping{
+	// 		Binding: nat.PortBinding{
+	// 			HostIP: cfg.Spec.HostIP,
+	// 			// HostPort: cfg.Spec.HostPort,
+	// 		},
+	// 	},
+	// 	Host: cfg.Spec.Host,
+	// }
 
-// 	// Overwrite if cli arg is set
-// 	if ppViper.IsSet("cli.api-port") {
-// 		if cfg.ExposeAPI.HostPort != "" {
-// 			log.Debugf("Overriding pre-defined kubeAPI Exposure Spec %+v with CLI argument %s", cfg.ExposeAPI, ppViper.GetString("cli.api-port"))
-// 		}
-// 		exposeAPI, err = cliutil.ParsePortExposureSpec(ppViper.GetString("cli.api-port"), k3d.DefaultAPIPort)
-// 		if err != nil {
-// 			return cfg, err
-// 		}
-// 	}
+	// Overwrite if cli arg is set
+	// if ppViper.IsSet("cli.api-port") {
+	// 	if cfg.ExposeAPI.HostPort != "" {
+	// 		log.Debugf("Overriding pre-defined kubeAPI Exposure Spec %+v with CLI argument %s", cfg.ExposeAPI, ppViper.GetString("cli.api-port"))
+	// 	}
+	// 	exposeAPI, err = cliutil.ParsePortExposureSpec(ppViper.GetString("cli.api-port"), k3d.DefaultAPIPort)
+	// 	if err != nil {
+	// 		return cfg, err
+	// 	}
+	// }
 
-// 	// Set to random port if port is empty string
-// 	if len(exposeAPI.Binding.HostPort) == 0 {
-// 		exposeAPI, err = cliutil.ParsePortExposureSpec("random", k3d.DefaultAPIPort)
-// 		if err != nil {
-// 			return cfg, err
-// 		}
-// 	}
+	// Set to random port if port is empty string
+	// if len(exposeAPI.Binding.HostPort) == 0 {
+	// 	exposeAPI, err = cliutil.ParsePortExposureSpec("random", k3d.DefaultAPIPort)
+	// 	if err != nil {
+	// 		return cfg, err
+	// 	}
+	// }
 
-// 	cfg.ExposeAPI = conf.SimpleExposureOpts{
-// 		Host:     exposeAPI.Host,
-// 		HostIP:   exposeAPI.Binding.HostIP,
-// 		HostPort: exposeAPI.Binding.HostPort,
-// 	}
+	// cfg.ExposeAPI = conf.SimpleExposureOpts{
+	// 	Host:     exposeAPI.Host,
+	// 	HostIP:   exposeAPI.Binding.HostIP,
+	// 	HostPort: exposeAPI.Binding.HostPort,
+	// }
 
-// 	// -> VOLUMES
-// 	// volumeFilterMap will map volume mounts to applied node filters
-// 	volumeFilterMap := make(map[string][]string, 1)
-// 	for _, volumeFlag := range ppViper.GetStringSlice("cli.volumes") {
+	// -> VOLUMES
+	// volumeFilterMap will map volume mounts to applied node filters
+	volumeFilterMap := make(map[string][]string, 1)
+	for _, volumeFlag := range ppViper.GetStringSlice("cli.volumes") {
 
-// 		// split node filter from the specified volume
-// 		volume, filters, err := cliutil.SplitFiltersFromFlag(volumeFlag)
-// 		if err != nil {
-// 			log.Fatalln(err)
-// 		}
+		// split node filter from the specified volume
+		volume, filters, err := cliutil.SplitFiltersFromFlag(volumeFlag)
+		if err != nil {
+			log.Fatalln(err)
+		}
 
-// 		if strings.Contains(volume, k3d.DefaultRegistriesFilePath) && (cfg.Registries.Create || cfg.Registries.Config != "" || len(cfg.Registries.Use) != 0) {
-// 			log.Warnf("Seems like you're mounting a file at '%s' while also using a referenced registries config or k3d-managed registries: Your mounted file will probably be overwritten!", k3d.DefaultRegistriesFilePath)
-// 		}
+		if strings.Contains(volume, types.DefaultRegistriesFilePath) && (cfg.Spec.Registries.Create || cfg.Spec.Registries.Config != "" || len(cfg.Spec.Registries.Use) != 0) {
+			log.Warnf("Seems like you're mounting a file at '%s' while also using a referenced registries config or k3d-managed registries: Your mounted file will probably be overwritten!", types.DefaultRegistriesFilePath)
+		}
 
-// 		// create new entry or append filter to existing entry
-// 		if _, exists := volumeFilterMap[volume]; exists {
-// 			volumeFilterMap[volume] = append(volumeFilterMap[volume], filters...)
-// 		} else {
-// 			volumeFilterMap[volume] = filters
-// 		}
-// 	}
+		// create new entry or append filter to existing entry
+		if _, exists := volumeFilterMap[volume]; exists {
+			volumeFilterMap[volume] = append(volumeFilterMap[volume], filters...)
+		} else {
+			volumeFilterMap[volume] = filters
+		}
+	}
 
-// 	for volume, nodeFilters := range volumeFilterMap {
-// 		cfg.Volumes = append(cfg.Volumes, conf.VolumeWithNodeFilters{
-// 			Volume:      volume,
-// 			NodeFilters: nodeFilters,
-// 		})
-// 	}
+	for volume, nodeFilters := range volumeFilterMap {
+		cfg.Spec.Volumes = append(cfg.Spec.Volumes, conf.VolumeWithNodeFilters{
+			Volume:      volume,
+			NodeFilters: nodeFilters,
+		})
+	}
 
-// 	log.Tracef("VolumeFilterMap: %+v", volumeFilterMap)
+	log.Tracef("VolumeFilterMap: %+v", volumeFilterMap)
 
-// 	// -> PORTS
-// 	portFilterMap := make(map[string][]string, 1)
-// 	for _, portFlag := range ppViper.GetStringSlice("cli.ports") {
-// 		// split node filter from the specified volume
-// 		portmap, filters, err := cliutil.SplitFiltersFromFlag(portFlag)
-// 		if err != nil {
-// 			log.Fatalln(err)
-// 		}
+	// -> PORTS
+	portFilterMap := make(map[string][]string, 1)
+	for _, portFlag := range ppViper.GetStringSlice("cli.ports") {
+		// split node filter from the specified volume
+		portmap, filters, err := cliutil.SplitFiltersFromFlag(portFlag)
+		if err != nil {
+			log.Fatalln(err)
+		}
 
-// 		if len(filters) > 1 {
-// 			log.Fatalln("Can only apply a Portmap to one node")
-// 		}
+		if len(filters) > 1 {
+			log.Fatalln("Can only apply a Portmap to one node")
+		}
 
-// 		// create new entry or append filter to existing entry
-// 		if _, exists := portFilterMap[portmap]; exists {
-// 			log.Fatalln("Same Portmapping can not be used for multiple nodes")
-// 		} else {
-// 			portFilterMap[portmap] = filters
-// 		}
-// 	}
+		// create new entry or append filter to existing entry
+		if _, exists := portFilterMap[portmap]; exists {
+			log.Fatalln("Same Portmapping can not be used for multiple nodes")
+		} else {
+			portFilterMap[portmap] = filters
+		}
+	}
 
-// 	for port, nodeFilters := range portFilterMap {
-// 		cfg.Ports = append(cfg.Ports, conf.PortWithNodeFilters{
-// 			Port:        port,
-// 			NodeFilters: nodeFilters,
-// 		})
-// 	}
+	// for port, nodeFilters := range portFilterMap {
+	// 	cfg.Ports = append(cfg.Ports, conf.PortWithNodeFilters{
+	// 		Port:        port,
+	// 		NodeFilters: nodeFilters,
+	// 	})
+	// }
 
-// 	log.Tracef("PortFilterMap: %+v", portFilterMap)
+	log.Tracef("PortFilterMap: %+v", portFilterMap)
 
-// 	// --label
-// 	// labelFilterMap will add container label to applied node filters
-// 	labelFilterMap := make(map[string][]string, 1)
-// 	for _, labelFlag := range ppViper.GetStringSlice("cli.labels") {
+	// --label
+	// labelFilterMap will add container label to applied node filters
+	labelFilterMap := make(map[string][]string, 1)
+	for _, labelFlag := range ppViper.GetStringSlice("cli.labels") {
 
-// 		// split node filter from the specified label
-// 		label, nodeFilters, err := cliutil.SplitFiltersFromFlag(labelFlag)
-// 		if err != nil {
-// 			log.Fatalln(err)
-// 		}
+		// split node filter from the specified label
+		label, nodeFilters, err := cliutil.SplitFiltersFromFlag(labelFlag)
+		if err != nil {
+			log.Fatalln(err)
+		}
 
-// 		// create new entry or append filter to existing entry
-// 		if _, exists := labelFilterMap[label]; exists {
-// 			labelFilterMap[label] = append(labelFilterMap[label], nodeFilters...)
-// 		} else {
-// 			labelFilterMap[label] = nodeFilters
-// 		}
-// 	}
+		// create new entry or append filter to existing entry
+		if _, exists := labelFilterMap[label]; exists {
+			labelFilterMap[label] = append(labelFilterMap[label], nodeFilters...)
+		} else {
+			labelFilterMap[label] = nodeFilters
+		}
+	}
 
-// 	for label, nodeFilters := range labelFilterMap {
-// 		cfg.Labels = append(cfg.Labels, conf.LabelWithNodeFilters{
-// 			Label:       label,
-// 			NodeFilters: nodeFilters,
-// 		})
-// 	}
+	for label, nodeFilters := range labelFilterMap {
+		cfg.Spec.Labels = append(cfg.Spec.Labels, conf.LabelWithNodeFilters{
+			Label:       label,
+			NodeFilters: nodeFilters,
+		})
+	}
 
-// 	log.Tracef("LabelFilterMap: %+v", labelFilterMap)
+	log.Tracef("LabelFilterMap: %+v", labelFilterMap)
 
-// 	// --env
-// 	// envFilterMap will add container env vars to applied node filters
-// 	envFilterMap := make(map[string][]string, 1)
-// 	for _, envFlag := range ppViper.GetStringSlice("cli.env") {
+	// --env
+	// envFilterMap will add container env vars to applied node filters
+	envFilterMap := make(map[string][]string, 1)
+	for _, envFlag := range ppViper.GetStringSlice("cli.env") {
 
-// 		// split node filter from the specified env var
-// 		env, filters, err := cliutil.SplitFiltersFromFlag(envFlag)
-// 		if err != nil {
-// 			log.Fatalln(err)
-// 		}
+		// split node filter from the specified env var
+		env, filters, err := cliutil.SplitFiltersFromFlag(envFlag)
+		if err != nil {
+			log.Fatalln(err)
+		}
 
-// 		// create new entry or append filter to existing entry
-// 		if _, exists := envFilterMap[env]; exists {
-// 			envFilterMap[env] = append(envFilterMap[env], filters...)
-// 		} else {
-// 			envFilterMap[env] = filters
-// 		}
-// 	}
+		// create new entry or append filter to existing entry
+		if _, exists := envFilterMap[env]; exists {
+			envFilterMap[env] = append(envFilterMap[env], filters...)
+		} else {
+			envFilterMap[env] = filters
+		}
+	}
 
-// 	for envVar, nodeFilters := range envFilterMap {
-// 		cfg.Env = append(cfg.Env, conf.EnvVarWithNodeFilters{
-// 			EnvVar:      envVar,
-// 			NodeFilters: nodeFilters,
-// 		})
-// 	}
+	for envVar, nodeFilters := range envFilterMap {
+		cfg.Spec.Env = append(cfg.Spec.Env, conf.EnvVarWithNodeFilters{
+			EnvVar:      envVar,
+			NodeFilters: nodeFilters,
+		})
+	}
 
-// 	log.Tracef("EnvFilterMap: %+v", envFilterMap)
+	log.Tracef("EnvFilterMap: %+v", envFilterMap)
 
-// 	return cfg, nil
-// }
+	return cfg, nil
+}

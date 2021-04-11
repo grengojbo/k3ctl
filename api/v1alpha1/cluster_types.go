@@ -21,6 +21,8 @@ import (
 
 	"github.com/docker/go-connections/nat"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// go get sigs.k8s.io/cluster-api
+	// clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -43,6 +45,123 @@ image: %s
 // 	fmt.Sprintf("%s:%s", k3d.DefaultK3sImageRepo, version.GetK3sVersion(false)),
 // )
 
+// ###### From cluster api kubeadmin
+// https://github.com/kubernetes-sigs/cluster-api-bootstrap-provider-kubeadm
+
+// Encoding specifies the cloud-init file encoding.
+// +kubebuilder:validation:Enum=base64;gzip;gzip+base64
+type Encoding string
+
+const (
+	// Base64 implies the contents of the file are encoded as base64.
+	Base64 Encoding = "base64"
+	// Gzip implies the contents of the file are encoded with gzip.
+	Gzip Encoding = "gzip"
+	// GzipBase64 implies the contents of the file are first base64 encoded and then gzip encoded.
+	GzipBase64 Encoding = "gzip+base64"
+)
+
+// File defines the input for generating write_files in cloud-init.
+type File struct {
+	// Path specifies the full path on disk where to store the file.
+	Path string `json:"path"`
+
+	// Owner specifies the ownership of the file, e.g. "root:root".
+	// +optional
+	Owner string `json:"owner,omitempty"`
+
+	// Permissions specifies the permissions to assign to the file, e.g. "0640".
+	// +optional
+	Permissions string `json:"permissions,omitempty"`
+
+	// Encoding specifies the encoding of the file contents.
+	// +optional
+	Encoding Encoding `json:"encoding,omitempty"`
+
+	// Content is the actual content of the file.
+	Content string `json:"content"`
+}
+
+// User defines the input for a generated user in cloud-init.
+type User struct {
+	// Name specifies the user name
+	Name string `json:"name"`
+
+	// Gecos specifies the gecos to use for the user
+	// +optional
+	Gecos *string `json:"gecos,omitempty"`
+
+	// Groups specifies the additional groups for the user
+	// +optional
+	Groups *string `json:"groups,omitempty"`
+
+	// HomeDir specifies the home directory to use for the user
+	// +optional
+	HomeDir *string `json:"homeDir,omitempty"`
+
+	// Inactive specifies whether to mark the user as inactive
+	// +optional
+	Inactive *bool `json:"inactive,omitempty"`
+
+	// Shell specifies the user's shell
+	// +optional
+	Shell *string `json:"shell,omitempty"`
+
+	// Passwd specifies a hashed password for the user
+	// +optional
+	Passwd *string `json:"passwd,omitempty"`
+
+	// PrimaryGroup specifies the primary group for the user
+	// +optional
+	PrimaryGroup *string `json:"primaryGroup,omitempty"`
+
+	// LockPassword specifies if password login should be disabled
+	// +optional
+	LockPassword *bool `json:"lockPassword,omitempty"`
+
+	// Sudo specifies a sudo role for the user
+	// +optional
+	Sudo *string `json:"sudo,omitempty"`
+
+	// SSHAuthorizedKeys specifies a list of ssh authorized keys for the user
+	// +optional
+	SSHAuthorizedKeys []string `json:"sshAuthorizedKeys,omitempty"`
+}
+
+// NTP defines input for generated ntp in cloud-init
+type NTP struct {
+	// Servers specifies which NTP servers to use
+	// +optional
+	Servers []string `json:"servers,omitempty"`
+
+	// Enabled specifies whether NTP should be enabled
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
+// Networking contains elements describing cluster's networking configuration
+type Networking struct {
+	// APIServerPort specifies the port the API Server should bind to.
+	// Defaults to 6443.
+	// +optional
+	APIServerPort *int32 `json:"apiServerPort,omitempty"`
+	// ServiceSubnet is the subnet used by k8s services.
+	// Defaults to the first element of the Cluster object's spec.clusterNetwork.pods.cidrBlocks field, or
+	// to "10.96.0.0/12" if that's unset.
+	// +optional
+	ServiceSubnet string `json:"serviceSubnet,omitempty"`
+	// PodSubnet is the subnet used by pods.
+	// If unset, the API server will not allocate CIDR ranges for every node.
+	// Defaults to the first element of the Cluster object's spec.clusterNetwork.services.cidrBlocks if that is set
+	// +optional
+	PodSubnet string `json:"podSubnet,omitempty"`
+	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
+	// +optional
+	DNSDomain string `json:"dnsDomain,omitempty"`
+}
+
+// ######### END
+
 // Role defines a k3s node role
 type Role string
 
@@ -60,6 +179,11 @@ type Registry struct {
 	Use    []string `mapstructure:"use" yaml:"use,omitempty" json:"use,omitempty"`
 	Create bool     `mapstructure:"create" yaml:"create,omitempty" json:"create,omitempty"`
 	Config string   `mapstructure:"config" yaml:"config,omitempty" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
+}
+
+type VolumeWithNodeFilters struct {
+	Volume      string   `mapstructure:"volume" yaml:"volume" json:"volume,omitempty"`
+	NodeFilters []string `mapstructure:"nodeFilters" yaml:"nodeFilters" json:"nodeFilters,omitempty"`
 }
 
 // Node describes a k3d node
@@ -138,6 +262,7 @@ type Options struct {
 }
 
 // ClusterSpec defines the desired state of Cluster
+// https://github.com/kubernetes-sigs/cluster-api-bootstrap-provider-kubeadm/blob/master/kubeadm/v1beta1/types.go
 type ClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -155,6 +280,40 @@ type ClusterSpec struct {
 	Options           Options                       `mapstructure:"options" yaml:"options"`
 	K3sOptions        SimpleConfigOptionsK3s        `mapstructure:"k3s" yaml:"k3s"`
 	KubeconfigOptions SimpleConfigOptionsKubeconfig `mapstructure:"kubeconfig" yaml:"kubeconfig"`
+	Volumes           []VolumeWithNodeFilters       `mapstructure:"volumes" yaml:"volumes" json:"volumes,omitempty"`
+	// The cluster name
+	// +optional
+	ClusterName string `json:"clusterName,omitempty"`
+	// KubernetesVersion is the target version of the control plane.
+	// NB: This value defaults to the Machine object spec.kuberentesVersion
+	// +optional
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
+	// Networking holds configuration for the networking topology of the cluster.
+	// NB: This value defaults to the Cluster object spec.clusterNetwork.
+	// +optional
+	Networking Networking `json:"networking,omitempty"`
+	// Cluster network configuration.
+	// +optional
+	// ClusterNetwork *clusterv1.ClusterNetwork `json:"clusterNetwork,omitempty"`
+	// CertificatesDir specifies where to store or look for all required certificates.
+	// NB: if not provided, this will default to `/etc/kubernetes/pki`
+	// +optional
+	CertificatesDir string `json:"certificatesDir,omitempty"`
+	// Files specifies extra files to be passed to user_data upon creation.
+	// +optional
+	Files []File `json:"files,omitempty"`
+	// PreCommands specifies extra commands to run before kubeadm runs
+	// +optional
+	PreCommands []string `json:"preCommands,omitempty"`
+	// PostCommands specifies extra commands to run after kubeadm runs
+	// +optional
+	PostCommands []string `json:"postCommands,omitempty"`
+	// Users specifies extra users to add
+	// +optional
+	Users []User `json:"users,omitempty"`
+	// NTP specifies NTP configuration
+	// +optional
+	NTP *NTP `json:"ntp,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster
