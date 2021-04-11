@@ -67,6 +67,7 @@ func initConfig() {
 	cfgViper.SetConfigType("yaml")
 
 	// Set config file, if specified
+	log.Debugln("configFile:", configFile)
 	if configFile != "" {
 		cfgViper.SetConfigFile(configFile)
 
@@ -109,6 +110,7 @@ func NewCmdClusterCreate() *cobra.Command {
 		Long:  clusterCreateDescription,
 		Args:  cobra.RangeArgs(0, 1), // exactly one cluster name can be set (default: k3d.DefaultClusterName)
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// fmt.Println("PreRun...")
 			initConfig()
 			return nil
 		},
@@ -123,6 +125,7 @@ func NewCmdClusterCreate() *cobra.Command {
 			// }
 
 			// log.Debugf("========== Simple Config ==========\n%+v\n==========================\n", cfg)
+			log.Debugf("========== Simple Config ==========\n\n==========================\n")
 
 			// cfg, err = applyCLIOverrides(cfg)
 			// if err != nil {
@@ -218,7 +221,7 @@ func NewCmdClusterCreate() *cobra.Command {
 			// 		fmt.Printf("export KUBECONFIG=$(%s kubeconfig write %s)\n", os.Args[0], clusterConfig.Cluster.Name)
 			// 	}
 			// }
-			fmt.Println("kubectl cluster-info")
+			fmt.Println("kubectl cluster-info :)")
 		},
 	}
 
