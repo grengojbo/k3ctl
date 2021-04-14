@@ -5,3 +5,14 @@ metadata:
 spec:
   # Add fields here
   region: kiev
+  nodes:
+    - name: developer-master
+      role: master
+      addresses:
+        - address: 192.168.192.108
+          type: InternalIP # Hostname, ExternalIP, InternalIP, ExternalDNS, InternalDNS
+    - name: developer-worker
+      user: ubuntu
+      addresses:
+        - address: 192.168.192.109
+          type: InternalIP # Hostname, ExternalIP, InternalIP, ExternalDNS, InternalDNS

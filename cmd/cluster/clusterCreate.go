@@ -42,6 +42,7 @@ import (
 
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
 	"github.com/grengojbo/k3ctl/pkg/types"
+	"github.com/grengojbo/k3ctl/pkg/util"
 	"github.com/grengojbo/k3ctl/version"
 
 	log "github.com/sirupsen/logrus"
@@ -172,8 +173,29 @@ func NewCmdClusterCreate() *cobra.Command {
 
 			/**************************************
 			 * Create cluster if it doesn't exist *
-			 **************************************/
+			**************************************/
 
+			if len(cfg.Spec.Nodes) == 0 {
+				log.Fatalln("Is Not Nodes to install k3s cluster")
+			}
+
+			servers, agents, err := util.GetGroupNodes(cfg.Spec.Nodes)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			log.Infoln("Install servers")
+			for _, node := range servers {
+				log.Infof("Name: %s (Role: %v)\nUser: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
+				log.Infoln("-------------------")
+			}
+			if len(agents) > 0 {
+				log.Infoln("=====================")
+				log.Infoln("Install agents")
+				for _, node := range agents {
+					log.Infof("Name: %s (Role: %v)\nUser: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
+					log.Infoln("-------------------")
+				}
+			}
 			// // check if a cluster with that name exists already
 			// if _, err := k3dCluster.ClusterGet(cmd.Context(), runtimes.SelectedRuntime, &clusterConfig.Cluster); err == nil {
 			// 	log.Fatalf("Failed to create cluster '%s' because a cluster with that name already exists", clusterConfig.Cluster.Name)

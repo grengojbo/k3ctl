@@ -21,8 +21,9 @@ import (
 
 	"github.com/docker/go-connections/nat"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	// go get sigs.k8s.io/cluster-api
-	// clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -123,9 +124,9 @@ type User struct {
 	// +optional
 	Sudo *string `json:"sudo,omitempty"`
 
-	// SSHAuthorizedKeys specifies a list of ssh authorized keys for the user
+	// SSHAuthorizedKey specifies a list of ssh authorized keys for the user
 	// +optional
-	SSHAuthorizedKeys []string `json:"sshAuthorizedKeys,omitempty"`
+	SSHAuthorizedKey string `yaml:"sshAuthorizedKey" json:"sshAuthorizedKey,omitempty"`
 }
 
 // NTP defines input for generated ntp in cloud-init
@@ -186,9 +187,19 @@ type VolumeWithNodeFilters struct {
 	NodeFilters []string `mapstructure:"nodeFilters" yaml:"nodeFilters" json:"nodeFilters,omitempty"`
 }
 
+type BastionNode struct {
+	Name    string `yaml:"name" json:"name,omitempty"`
+	User    string `yaml:"user" json:"user,omitempty"`
+	Address string `yaml:"address" json:"address"`
+	// SSHAuthorizedKey specifies a list of ssh authorized keys for the user
+	// +optional
+	SSHAuthorizedKey string `yaml:"sshAuthorizedKey" json:"sshAuthorizedKey,omitempty"`
+}
+
 // Node describes a k3d node
 type Node struct {
 	Name       string            `yaml:"name" json:"name,omitempty"`
+	User       string            `yaml:"user" json:"user,omitempty"`
 	Role       Role              `yaml:"role" json:"role,omitempty"`
 	Image      string            `yaml:"image" json:"image,omitempty"`
 	Volumes    []string          `yaml:"volumes" json:"volumes,omitempty"`
@@ -206,6 +217,14 @@ type Node struct {
 	GPURequest string            // filled automatically
 	Memory     string            // filled automatically
 	State      NodeState         // filled automatically
+	// Bastion имя ssh bastion сервера если local то запускается на локальном хосте
+	// +optional
+	Bastion string `yaml:"bastion" json:"bastion,omitempty"`
+	// Addresses is a list of addresses assigned to the machine.
+	// This field is copied from the infrastructure provider reference.
+	// https://github.com/kubernetes-sigs/cluster-api/blob/2cbeb175b243da6953c4edf9e7ec99eac4e2a4a2/api/v1alpha3/common_types.go
+	// +optional
+	Addresses clusterv1.MachineAddresses `json:"addresses,omitempty"`
 }
 
 // ServerOpts describes some additional server role specific opts
@@ -252,12 +271,12 @@ type SimpleConfigOptionsKubeconfig struct {
 }
 
 type Options struct {
-	Wait                       bool          `mapstructure:"wait" yaml:"wait"`
-	Timeout                    time.Duration `mapstructure:"timeout" yaml:"timeout"`
-	DisableLoadbalancer        bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer"`
-	DisableImageVolume         bool          `mapstructure:"disableImageVolume" yaml:"disableImageVolume"`
-	NoRollback                 bool          `mapstructure:"disableRollback" yaml:"disableRollback"`
-	PrepDisableHostIPInjection bool          `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection"`
+	Wait                       bool          `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
+	Timeout                    time.Duration `mapstructure:"timeout" yaml:"timeout" json:"timeout,omitempty"`
+	DisableLoadbalancer        bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer" json:"disableLoadbalancer,omitempty"`
+	DisableImageVolume         bool          `mapstructure:"disableImageVolume" yaml:"disableImageVolume" json:"disableImageVolume,omitempty"`
+	NoRollback                 bool          `mapstructure:"disableRollback" yaml:"disableRollback" json:"disableRollback,omitempty"`
+	PrepDisableHostIPInjection bool          `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection" json:"disableHostIPInjection,omitempty"`
 	// NodeHookActions            []k3d.NodeHookAction `mapstructure:"nodeHookActions" yaml:"nodeHookActions,omitempty"`
 }
 
@@ -268,9 +287,11 @@ type ClusterSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Region            string                        `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Operator          bool                          `mapstructure:"operator" yaml:"operator" json:"operator,omitempty"`
 	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`         //nolint:lll    // default 1
 	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`            //nolint:lll    // default 0
 	ClusterToken      string                        `mapstructure:"token" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
+	Bastions          []*BastionNode                `mapstructure:"bastions" yaml:"bastions" json:"bastions,omitempty"`
 	Nodes             []*Node                       `mapstructure:"nodes" yaml:"nodes" json:"nodes,omitempty"`
 	Host              string                        `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
 	HostIP            string                        `mapstructure:"hostIP" yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
@@ -343,6 +364,17 @@ type ClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Cluster `json:"items"`
+}
+
+func (r *Cluster) GetUser(name string) User {
+	if name == "" {
+		name = "root"
+	}
+
+	user := User{
+		Name: name,
+	}
+	return user
 }
 
 func init() {

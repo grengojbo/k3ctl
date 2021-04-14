@@ -24,13 +24,38 @@ package util
 import (
 	"regexp"
 	// k3d "github.com/rancher/k3d/v4/pkg/types"
+	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
+	log "github.com/sirupsen/logrus"
 )
 
 // Regexp pattern to match node filters
 var filterRegexp = regexp.MustCompile(`^(?P<group>server|agent|loadbalancer|all)(?P<subsetSpec>\[(?P<subset>(?P<subsetList>(\d+,?)+)|(?P<subsetRange>\d*:\d*)|(?P<subsetWildcard>\*))\])?$`)
 
+type ServerNodes []*k3sv1alpha1.Node
+type AgentNodes []*k3sv1alpha1.Node
+
+// GetGroupNodes nodes grouping to role
+func GetGroupNodes(nodes []*k3sv1alpha1.Node) (ServerNodes, AgentNodes, error) {
+	serverNodes := ServerNodes{}
+	agentNodes := AgentNodes{}
+	for _, node := range nodes {
+		log.Tracef("Node (%+v): Checking node role %s", node, node.Role)
+		role := GetNodeRole(string(node.Role))
+		node.Role = k3sv1alpha1.Role(role)
+		if role == "server" {
+			serverNodes = append(serverNodes, node)
+		} else {
+			agentNodes = append(agentNodes, node)
+		}
+	}
+	if len(serverNodes) == 0 {
+		log.Fatalln("Is not set server node :(")
+	}
+	return serverNodes, agentNodes, nil
+}
+
 // FilterNodes takes a string filter to return a filtered list of nodes
-// func FilterNodes(nodes []*k3d.Node, filters []string) ([]*k3d.Node, error) {
+// func FilterNodes(nodes []*k3sv1alpha1.Node, filters []string) (ServerNodes, error) {
 
 // 	if len(filters) == 0 || len(filters[0]) == 0 {
 // 		log.Warnln("No node filter specified")
@@ -38,7 +63,7 @@ var filterRegexp = regexp.MustCompile(`^(?P<group>server|agent|loadbalancer|all)
 // 	}
 
 // 	// map roles to subsets
-// 	serverNodes := []*k3d.Node{}
+// serverNodes :=
 // 	agentNodes := []*k3d.Node{}
 // 	var serverlb *k3d.Node
 // 	for _, node := range nodes {
