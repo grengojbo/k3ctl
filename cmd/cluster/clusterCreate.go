@@ -39,6 +39,7 @@ import (
 	// k3dCluster "github.com/rancher/k3d/v4/pkg/client"
 	conf "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/config"
+	k3s "github.com/grengojbo/k3ctl/pkg/k3s"
 
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
 	"github.com/grengojbo/k3ctl/pkg/types"
@@ -60,9 +61,11 @@ Every cluster will consist of one or more containers:
 
 var cfgViper = viper.New()
 var ppViper = viper.New()
+var dryRun bool
 
 func initConfig() {
 
+	dryRun = viper.GetBool("dry-run")
 	// Viper for pre-processed config options
 	ppViper.SetEnvPrefix("K3S")
 
@@ -185,17 +188,37 @@ func NewCmdClusterCreate() *cobra.Command {
 			}
 			log.Infoln("Install servers")
 			for _, node := range servers {
-				log.Infof("Name: %s (Role: %v)\nUser: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
+
+				cluster := false
+				host := "localhost"
+				tlsSAN := "none"
+				installk3sExec := k3s.MakeInstallExec(cluster, host, tlsSAN,
+					k3s.K3sExecOptions{})
+				// k3sExecOptions{
+				// 	Datastore:    datastore,
+				// 	FlannelIPSec: flannelIPSec,
+				// 	NoExtras:     k3sNoExtras,
+				// 	ExtraArgs:    k3sExtraArgs,
+				// })
+
+				if dryRun {
+					log.Infoln(installk3sExec)
+				} else {
+					log.Warnln("TODO: add ssh run...")
+				}
+
+				log.Infof("Name: %s (Role: %v) User: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
 				log.Infoln("-------------------")
 			}
 			if len(agents) > 0 {
 				log.Infoln("=====================")
 				log.Infoln("Install agents")
 				for _, node := range agents {
-					log.Infof("Name: %s (Role: %v)\nUser: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
+					log.Infof("Name: %s (Role: %v) User: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
 					log.Infoln("-------------------")
 				}
 			}
+			log.Infoln("DRY RUN: ", dryRun)
 			// // check if a cluster with that name exists already
 			// if _, err := k3dCluster.ClusterGet(cmd.Context(), runtimes.SelectedRuntime, &clusterConfig.Cluster); err == nil {
 			// 	log.Fatalf("Failed to create cluster '%s' because a cluster with that name already exists", clusterConfig.Cluster.Name)

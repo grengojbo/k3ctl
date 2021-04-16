@@ -271,6 +271,7 @@ type SimpleConfigOptionsKubeconfig struct {
 }
 
 type Options struct {
+	Protected                  bool          `mapstructure:"protected" yaml:"protected" json:"protected,omitempty"`
 	Wait                       bool          `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
 	Timeout                    time.Duration `mapstructure:"timeout" yaml:"timeout" json:"timeout,omitempty"`
 	DisableLoadbalancer        bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer" json:"disableLoadbalancer,omitempty"`

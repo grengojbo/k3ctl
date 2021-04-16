@@ -4,14 +4,14 @@ package k3s
 
 var kubeconfig []byte
 
-type k3sExecOptions struct {
+type K3sExecOptions struct {
 	Datastore    string
 	ExtraArgs    string
 	FlannelIPSec bool
 	NoExtras     bool
 }
 
-func MakeInstallExec(cluster bool, host, tlsSAN string, options k3sExecOptions) string {
+func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) string {
 	// extraArgs := []string{}
 	// if len(options.Datastore) > 0 {
 	// 	extraArgs = append(extraArgs, fmt.Sprintf("--datastore-endpoint %s", options.Datastore))

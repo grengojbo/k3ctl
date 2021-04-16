@@ -30,6 +30,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	// "context"
 	// "io/ioutil"
 	// "strings"
@@ -102,6 +104,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flags.debugLogging, "verbose", false, "Enable verbose output (debug logging)")
 	rootCmd.PersistentFlags().BoolVar(&flags.traceLogging, "trace", false, "Enable super verbose output (trace logging)")
 	rootCmd.PersistentFlags().BoolVar(&flags.timestampedLogging, "timestamps", false, "Enable Log timestamps")
+	rootCmd.PersistentFlags().Bool("dry-run", false, "Show run command and skip the k3s installer")
+	_ = viper.BindPFlag("dry-run", rootCmd.PersistentFlags().Lookup("dry-run"))
 
 	// add local flags
 	rootCmd.Flags().BoolVar(&flags.version, "version", false, "Show k3ctl and default k3s version")
