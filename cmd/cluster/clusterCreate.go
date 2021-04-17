@@ -485,7 +485,7 @@ func applyCLIOverrides(cfg conf.Cluster) (conf.Cluster, error) {
 			log.Fatalln(err)
 		}
 
-		if strings.Contains(volume, types.DefaultRegistriesFilePath) && (cfg.Spec.Registries.Create || cfg.Spec.Registries.Config != "" || len(cfg.Spec.Registries.Use) != 0) {
+		if strings.Contains(volume, types.DefaultRegistriesFilePath) && (cfg.Spec.Addons.Registries.Create || cfg.Spec.Addons.Registries.Config != "" || len(cfg.Spec.Addons.Registries.Use) != 0) {
 			log.Warnf("Seems like you're mounting a file at '%s' while also using a referenced registries config or k3d-managed registries: Your mounted file will probably be overwritten!", types.DefaultRegistriesFilePath)
 		}
 

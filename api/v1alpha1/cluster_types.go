@@ -166,6 +166,12 @@ type Networking struct {
 
 // ######### END
 
+type Registry struct {
+	Use    []string `mapstructure:"use" yaml:"use,omitempty" json:"use,omitempty"`
+	Create bool     `mapstructure:"create" yaml:"create,omitempty" json:"create,omitempty"`
+	Config string   `mapstructure:"config" yaml:"config,omitempty" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
+}
+
 type CertManager struct {
 	Name   string   `mapstructure:"certManager" yaml:"certManager" json:"certManager,omitempty"`
 	Values []string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
@@ -173,6 +179,7 @@ type CertManager struct {
 
 type Addons struct {
 	CertManager CertManager `mapstructure:"certManager" yaml:"certManager" json:"certManager,omitempty"`
+	Registries  Registry    `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
 }
 
 // Role defines a k3s node role
@@ -186,12 +193,6 @@ type LabelWithNodeFilters struct {
 type EnvVarWithNodeFilters struct {
 	EnvVar      string   `mapstructure:"envVar" yaml:"envVar" json:"envVar,omitempty"`
 	NodeFilters []string `mapstructure:"nodeFilters" yaml:"nodeFilters" json:"nodeFilters,omitempty"`
-}
-
-type Registry struct {
-	Use    []string `mapstructure:"use" yaml:"use,omitempty" json:"use,omitempty"`
-	Create bool     `mapstructure:"create" yaml:"create,omitempty" json:"create,omitempty"`
-	Config string   `mapstructure:"config" yaml:"config,omitempty" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
 }
 
 type VolumeWithNodeFilters struct {
@@ -316,7 +317,6 @@ type ClusterSpec struct {
 	HostIP            string                        `mapstructure:"hostIP" yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
 	Labels            []LabelWithNodeFilters        `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
 	Env               []EnvVarWithNodeFilters       `mapstructure:"env" yaml:"env" json:"env,omitempty"`
-	Registries        Registry                      `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
 	Options           Options                       `mapstructure:"options" yaml:"options" json:"options,omitempty"`
 	K3sOptions        SimpleConfigOptionsK3s        `mapstructure:"k3s" yaml:"k3s" json:"k3s,omitempty"`
 	Ingress           string                        `mapstructure:"ingress" yaml:"ingress" json:"ingress,omitempty"`
