@@ -186,23 +186,27 @@ func NewCmdClusterCreate() *cobra.Command {
 			if err != nil {
 				log.Fatalln(err)
 			}
-			log.Infoln("Install servers")
+			log.Infoln("Creating initializing server node")
 			for _, node := range servers {
 
 				cluster := false
 				host := "localhost"
 				tlsSAN := "none"
 				installk3sExec := k3s.MakeInstallExec(cluster, host, tlsSAN,
-					k3s.K3sExecOptions{})
-				// k3sExecOptions{
-				// 	Datastore:    datastore,
-				// 	FlannelIPSec: flannelIPSec,
-				// 	NoExtras:     k3sNoExtras,
-				// 	ExtraArgs:    k3sExtraArgs,
-				// })
+					k3s.K3sExecOptions{
+						// 	Datastore:    datastore,
+						// 	FlannelIPSec: flannelIPSec,
+						// 	NoExtras:     k3sNoExtras,
+						ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
+						Ingress:             cfg.Spec.Ingress,
+						DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
+						DisableIngress:      cfg.Spec.Options.DisableIngress,
+						LoadBalancer:        &cfg.Spec.LoadBalancer,
+					})
 
 				if dryRun {
-					log.Infoln(installk3sExec)
+					log.Infoln("[EXEC] ", installk3sExec.ExecString)
+					log.Infoln("LoadBalancer: ", installk3sExec.LoadBalancer)
 				} else {
 					log.Warnln("TODO: add ssh run...")
 				}
@@ -277,6 +281,12 @@ func NewCmdClusterCreate() *cobra.Command {
 			// 		fmt.Printf("export KUBECONFIG=$(%s kubeconfig write %s)\n", os.Args[0], clusterConfig.Cluster.Name)
 			// 	}
 			// }
+
+			// k3sup install --ip 192.168.192.103 --print-command \
+			// --k3s-extra-args="--tls-san developer.iwis.io --disable servicelb --disable traefik
+			// --cluster-cidr 10.42.0.0/19 --service-cidr 10.42.32.0/19 --cluster-dns 10.42.32.10
+			// --flannel-backend=none --secrets-encryption --node-taint CriticalAddonsOnly=true:NoExecute" \
+			// --user ubuntu  --local-path ~/.kube/developer.yaml --context developer
 			fmt.Println("kubectl cluster-info :)")
 		},
 	}
@@ -367,8 +377,11 @@ func NewCmdClusterCreate() *cobra.Command {
 	// log.Infoln("k3s-version: ", cmd.Flags().Lookup("k3s-version").Value.String())
 	_ = cfgViper.BindPFlag("spec.KubernetesVersion", cmd.Flags().Lookup("k3s-version"))
 
-	// cmd.Flags().Bool("no-lb", false, "Disable the creation of a LoadBalancer in front of the server nodes")
-	// _ = cfgViper.BindPFlag("spec.options.disableloadbalancer", cmd.Flags().Lookup("no-lb"))
+	cmd.Flags().Bool("no-lb", false, "Disable the creation of a LoadBalancer in front of the server nodes")
+	_ = cfgViper.BindPFlag("spec.options.disableloadbalancer", cmd.Flags().Lookup("no-lb"))
+
+	cmd.Flags().Bool("no-ingress", false, "Disable the creation of a Ingress Controller in front of the server nodes")
+	_ = cfgViper.BindPFlag("spec.options.disableIngress", cmd.Flags().Lookup("no-ingress"))
 
 	// cmd.Flags().Bool("no-rollback", false, "Disable the automatic rollback actions, if anything goes wrong")
 	// _ = cfgViper.BindPFlag("spec.options.disablerollback", cmd.Flags().Lookup("no-rollback"))

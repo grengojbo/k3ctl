@@ -114,6 +114,17 @@ var DefaultObjectLabelsVar = map[string]string{
 	"k3d.version": version.GetVersion(),
 }
 
+const (
+	MetalLb           string = "MetalLB"
+	KubeVip           string = "kube-vip"
+	ServiceLb         string = "servicelb"
+	IngressAmbassador string = "Ambassador"
+	IngressHaproxy    string = "Haproxy"
+	IngressContour    string = "Contour"
+	IngressNginx      string = "Nginx"
+	IngressKing       string = "King"
+)
+
 // List of k3d technical label name
 const (
 	LabelClusterName          string = "k3d.cluster"

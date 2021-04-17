@@ -159,9 +159,21 @@ type Networking struct {
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	// +optional
 	DNSDomain string `json:"dnsDomain,omitempty"`
+	// --cluster-dns value	“10.43.0.10”	Cluster IP for coredns service. Should be in your service-cidr range
+	// --cluster-domain value	“cluster.local”	Cluster Domain
+	// --flannel-backend value	“vxlan”	One of ‘none’, ‘vxlan’, ‘ipsec’, ‘host-gw’, or ‘wireguard’
 }
 
 // ######### END
+
+type CertManager struct {
+	Name   string   `mapstructure:"certManager" yaml:"certManager" json:"certManager,omitempty"`
+	Values []string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+}
+
+type Addons struct {
+	CertManager CertManager `mapstructure:"certManager" yaml:"certManager" json:"certManager,omitempty"`
+}
 
 // Role defines a k3s node role
 type Role string
@@ -188,12 +200,12 @@ type VolumeWithNodeFilters struct {
 }
 
 type BastionNode struct {
-	Name    string `yaml:"name" json:"name,omitempty"`
-	User    string `yaml:"user" json:"user,omitempty"`
-	Address string `yaml:"address" json:"address"`
+	Name    string `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	User    string `mapstructure:"user" yaml:"user" json:"user,omitempty"`
+	Address string `mapstructure:"address" yaml:"address" json:"address"`
 	// SSHAuthorizedKey specifies a list of ssh authorized keys for the user
 	// +optional
-	SSHAuthorizedKey string `yaml:"sshAuthorizedKey" json:"sshAuthorizedKey,omitempty"`
+	SSHAuthorizedKey string `mapstructure:"address" yaml:"sshAuthorizedKey" json:"sshAuthorizedKey,omitempty"`
 }
 
 // Node describes a k3d node
@@ -275,10 +287,16 @@ type Options struct {
 	Wait                       bool          `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
 	Timeout                    time.Duration `mapstructure:"timeout" yaml:"timeout" json:"timeout,omitempty"`
 	DisableLoadbalancer        bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer" json:"disableLoadbalancer,omitempty"`
+	DisableIngress             bool          `mapstructure:"disableIngress" yaml:"disableIngress" json:"disableIngress,omitempty"`
 	DisableImageVolume         bool          `mapstructure:"disableImageVolume" yaml:"disableImageVolume" json:"disableImageVolume,omitempty"`
 	NoRollback                 bool          `mapstructure:"disableRollback" yaml:"disableRollback" json:"disableRollback,omitempty"`
 	PrepDisableHostIPInjection bool          `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection" json:"disableHostIPInjection,omitempty"`
 	// NodeHookActions            []k3d.NodeHookAction `mapstructure:"nodeHookActions" yaml:"nodeHookActions,omitempty"`
+}
+
+type LoadBalancer struct {
+	MetalLb string `mapstructure:"metalLb" yaml:"metalLb" json:"metalLb,omitempty"`
+	KubeVip string `mapstructure:"kubeVip" yaml:"kubeVip" json:"kubeVip,omitempty"`
 }
 
 // ClusterSpec defines the desired state of Cluster
@@ -301,6 +319,9 @@ type ClusterSpec struct {
 	Registries        Registry                      `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
 	Options           Options                       `mapstructure:"options" yaml:"options" json:"options,omitempty"`
 	K3sOptions        SimpleConfigOptionsK3s        `mapstructure:"k3s" yaml:"k3s" json:"k3s,omitempty"`
+	Ingress           string                        `mapstructure:"ingress" yaml:"ingress" json:"ingress,omitempty"`
+	LoadBalancer      LoadBalancer                  `mapstructure:"loadBalancer" yaml:"loadBalancer" json:"loadBalancer,omitempty"`
+	Addons            Addons                        `mapstructure:"addons" yaml:"addons" json:"addons,omitempty"`
 	KubeconfigOptions SimpleConfigOptionsKubeconfig `mapstructure:"kubeconfig" yaml:"kubeconfig" json:"kubeconfig,omitempty"`
 	Volumes           []VolumeWithNodeFilters       `mapstructure:"volumes" yaml:"volumes" json:"volumes,omitempty"`
 	// The cluster name
