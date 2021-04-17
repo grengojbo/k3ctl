@@ -13,13 +13,17 @@ spec:
     # cni: calico
     # backend: wireguard
     backend: host-gw
-  loadBalancer:
-    metalLb: "192.168.192.33"
+  # loadBalancer:
+  #   metalLb: "192.168.192.33"
   # addons:
   #   ingress:
   #     name: ambassador
   #   certManager:
   #     enabled: true
+  # options:
+  #   # secretsEncryption: true
+  #   # selinux: true
+  #   # rootless: true
   # k3s:
   #   extraServerArgs:  # additional arguments passed to the `k3s server` command; same as `--k3s-server-arg`
   #     - --tls-san=my.host.domain

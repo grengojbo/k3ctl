@@ -202,6 +202,9 @@ func NewCmdClusterCreate() *cobra.Command {
 						Ingress:             cfg.Spec.Addons.Ingress.Name,
 						DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
 						DisableIngress:      cfg.Spec.Options.DisableIngress,
+						SecretsEncryption:   cfg.Spec.Options.SecretsEncryption,
+						SELinux:             cfg.Spec.Options.SELinux,
+						Rootless:            cfg.Spec.Options.Rootless,
 						LoadBalancer:        &cfg.Spec.LoadBalancer,
 						Networking:          &cfg.Spec.Networking,
 					})
@@ -365,6 +368,15 @@ func NewCmdClusterCreate() *cobra.Command {
 
 	cmd.Flags().String("token", "", "Specify a cluster token. By default, we generate one.")
 	_ = cfgViper.BindPFlag("spec.token", cmd.Flags().Lookup("token"))
+
+	cmd.Flags().Bool("secrets-encryption", false, "Enable Secret encryption at rest")
+	_ = cfgViper.BindPFlag("spec.options.secretsEncryption", cmd.Flags().Lookup("secrets-encryption"))
+
+	cmd.Flags().Bool("selinux", false, "To leverage SELinux, specify the flag when starting K3s servers and agents.")
+	_ = cfgViper.BindPFlag("spec.options.selinux", cmd.Flags().Lookup("selinux"))
+
+	cmd.Flags().Bool("rootless", false, "Running Servers and Agents with Rootless")
+	_ = cfgViper.BindPFlag("spec.options.rootless", cmd.Flags().Lookup("rootless"))
 
 	cmd.Flags().Bool("wait", true, "Wait for the server(s) to be ready before returning. Use '--timeout DURATION' to not wait forever.")
 	_ = cfgViper.BindPFlag("spec.options.wait", cmd.Flags().Lookup("wait"))

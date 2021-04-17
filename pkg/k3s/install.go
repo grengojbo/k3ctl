@@ -24,6 +24,9 @@ type K3sExecOptions struct {
 	Ingress             string
 	DisableLoadbalancer bool
 	DisableIngress      bool
+	SELinux             bool
+	Rootless            bool
+	SecretsEncryption   bool
 }
 
 type K3sIstallOptions struct {
@@ -123,6 +126,18 @@ func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) 
 		extraArgs = append(extraArgs, fmt.Sprintf("--flannel-backend=%s", k3sIstallOptions.Backend))
 	} else {
 		extraArgs = append(extraArgs, "--flannel-backend=none")
+	}
+
+	if options.SecretsEncryption {
+		extraArgs = append(extraArgs, "--secrets-encryption")
+	}
+
+	if options.SELinux {
+		extraArgs = append(extraArgs, "--selinux")
+	}
+
+	if options.Rootless {
+		extraArgs = append(extraArgs, "--rootless")
 	}
 
 	extraArgsCmdline := ""

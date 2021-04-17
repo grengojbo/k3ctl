@@ -308,6 +308,22 @@ type Options struct {
 	DisableImageVolume         bool          `mapstructure:"disableImageVolume" yaml:"disableImageVolume" json:"disableImageVolume,omitempty"`
 	NoRollback                 bool          `mapstructure:"disableRollback" yaml:"disableRollback" json:"disableRollback,omitempty"`
 	PrepDisableHostIPInjection bool          `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection" json:"disableHostIPInjection,omitempty"`
+	// SELinux To leverage SELinux, specify the --selinux flag when starting K3s servers and agents.
+	// https://rancher.com/docs/k3s/latest/en/advanced/
+	// +optional
+	SELinux bool `mapstructure:"selinux" yaml:"selinux" json:"selinux,omitempty"`
+	// Rootless --rootless Running Servers and Agents with Rootless
+	// k3s Experimental Options
+	// +optional
+	Rootless bool `mapstructure:"rootless" yaml:"rootless" json:"rootless,omitempty"`
+	// SecretsEncryption --secrets-encryption	Enable Secret encryption at rest
+	// +optional
+	SecretsEncryption bool `mapstructure:"secretsEncryption" yaml:"secretsEncryption" json:"secretsEncryption,omitempty"`
+	// --agent-token value	K3S_AGENT_TOKEN	Shared secret used to join agents to the cluster, but not servers
+	// --agent-token-file value	K3S_AGENT_TOKEN_FILE	File containing the agent secret
+	// --server value, -s value	K3S_URL	Server to connect to, used to join a cluster
+	// --cluster-init	K3S_CLUSTER_INIT	Initialize new cluster master
+	// --cluster-reset	K3S_CLUSTER_RESET	Forget all peers and become a single cluster new cluster master
 	// NodeHookActions            []k3d.NodeHookAction `mapstructure:"nodeHookActions" yaml:"nodeHookActions,omitempty"`
 }
 
