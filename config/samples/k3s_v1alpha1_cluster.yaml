@@ -6,8 +6,10 @@ spec:
   # Add fields here
   region: kiev
   networking:
-    serviceSubnet: 10.42.0.0/16
-    PodSubnet: 10.43.0.0/16
+    # serviceSubnet: 10.42.0.0/16
+    # PodSubnet: 10.43.0.0/16
+    # dnsDomain: cluster.local
+    # clusterDns: 10.43.0.10
   loadBalancer:
     metalLb: "192.168.192.33"
   # ingress: "Ambassador"

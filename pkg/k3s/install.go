@@ -19,6 +19,7 @@ type K3sExecOptions struct {
 	FlannelIPSec        bool
 	NoExtras            bool
 	LoadBalancer        *k3sv1alpha1.LoadBalancer
+	Networking          *k3sv1alpha1.Networking
 	Ingress             string
 	DisableLoadbalancer bool
 	DisableIngress      bool
@@ -59,6 +60,26 @@ func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) 
 		extraArgs = append(extraArgs, "--no-deploy traefik")
 	}
 
+	if len(options.Networking.ServiceSubnet) > 0 {
+		log.Debugln("ServiceSubnet: ", options.Networking.ServiceSubnet)
+		extraArgs = append(extraArgs, fmt.Sprintf("--service-cidr %s", options.Networking.ServiceSubnet))
+	}
+
+	if len(options.Networking.PodSubnet) > 0 {
+		log.Debugln("PodSubnet: ", options.Networking.PodSubnet)
+		extraArgs = append(extraArgs, fmt.Sprintf("--cluster-cidr %s", options.Networking.PodSubnet))
+	}
+
+	if len(options.Networking.DNSDomain) > 0 {
+		log.Debugln("DNSDomain: ", options.Networking.DNSDomain)
+		extraArgs = append(extraArgs, fmt.Sprintf("--cluster-domain %s", options.Networking.DNSDomain))
+	}
+
+	if len(options.Networking.ClusterDns) > 0 {
+		log.Debugln("ClusterDns: ", options.Networking.ClusterDns)
+		extraArgs = append(extraArgs, fmt.Sprintf("--cluster-dns %s", options.Networking.ClusterDns))
+	}
+
 	extraArgsCmdline := ""
 	for _, a := range extraArgs {
 		extraArgsCmdline += a + " "
@@ -92,6 +113,6 @@ func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) 
 	if len(k3sIstallOptions.LoadBalancer) == 0 {
 		k3sIstallOptions.LoadBalancer = types.ServiceLb
 	}
-	// --tls-san developer.iwis.io --cluster-cidr 10.42.0.0/19 --service-cidr 10.42.32.0/19 --cluster-dns 10.42.32.10 --flannel-backend=none --secrets-encryption --node-taint CriticalAddonsOnly=true:NoExecute
+	// --tls-san developer.iwis.io --flannel-backend=none --secrets-encryption --node-taint CriticalAddonsOnly=true:NoExecute
 	return k3sIstallOptions
 }

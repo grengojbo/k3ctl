@@ -202,6 +202,7 @@ func NewCmdClusterCreate() *cobra.Command {
 						DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
 						DisableIngress:      cfg.Spec.Options.DisableIngress,
 						LoadBalancer:        &cfg.Spec.LoadBalancer,
+						Networking:          &cfg.Spec.Networking,
 					})
 
 				if dryRun {

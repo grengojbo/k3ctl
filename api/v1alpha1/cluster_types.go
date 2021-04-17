@@ -159,8 +159,9 @@ type Networking struct {
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	// +optional
 	DNSDomain string `json:"dnsDomain,omitempty"`
-	// --cluster-dns value	“10.43.0.10”	Cluster IP for coredns service. Should be in your service-cidr range
-	// --cluster-domain value	“cluster.local”	Cluster Domain
+	// ClusterDns	Cluster IP for coredns service. Should be in your service-cidr range --cluster-dns value	“10.43.0.10”
+	// +optional
+	ClusterDns string `json:"clusterDns,omitempty"`
 	// --flannel-backend value	“vxlan”	One of ‘none’, ‘vxlan’, ‘ipsec’, ‘host-gw’, or ‘wireguard’
 }
 
