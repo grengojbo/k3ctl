@@ -162,7 +162,15 @@ type Networking struct {
 	// ClusterDns	Cluster IP for coredns service. Should be in your service-cidr range --cluster-dns value	“10.43.0.10”
 	// +optional
 	ClusterDns string `json:"clusterDns,omitempty"`
+	// CNI plugins ("flannel", "calico", "cilium", "aws")
+	// +optional
+	CNI string `json:"cni,omitempty"`
+	// Backend The default backend for flannel is VXLAN
 	// --flannel-backend value	“vxlan”	One of ‘none’, ‘vxlan’, ‘ipsec’, ‘host-gw’, or ‘wireguard’
+	// Calico "ipip", “vxlan”
+	// Cilium "ipip", “vxlan”
+	// +optional
+	Backend string `json:"backend,omitempty"`
 }
 
 // ######### END

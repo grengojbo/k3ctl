@@ -6,6 +6,7 @@ import (
 
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/types"
+	"github.com/grengojbo/k3ctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -28,6 +29,8 @@ type K3sExecOptions struct {
 type K3sIstallOptions struct {
 	ExecString   string
 	LoadBalancer string
+	CNI          string
+	Backend      string
 }
 
 func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) K3sIstallOptions {
@@ -78,6 +81,42 @@ func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) 
 	if len(options.Networking.ClusterDns) > 0 {
 		log.Debugln("ClusterDns: ", options.Networking.ClusterDns)
 		extraArgs = append(extraArgs, fmt.Sprintf("--cluster-dns %s", options.Networking.ClusterDns))
+	}
+
+	k3sIstallOptions.Backend = types.Vxlan
+	k3sIstallOptions.CNI = types.Flannel
+	if len(options.Networking.CNI) > 0 {
+		if cni, isset := util.Find(types.CNIplugins, options.Networking.CNI); isset {
+			k3sIstallOptions.CNI = cni
+		} else {
+			log.Fatalf("CNI plugins %s not support :(", options.Networking.CNI)
+		}
+	}
+	if len(options.Networking.Backend) > 0 {
+		if k3sIstallOptions.CNI == types.Flannel {
+			if backend, isset := util.Find(types.FlannelBackends, options.Networking.Backend); isset {
+				k3sIstallOptions.Backend = backend
+			} else {
+				log.Fatalf("CNI plugins %s backend %s not support :(", options.Networking.CNI, options.Networking.Backend)
+			}
+		} else if k3sIstallOptions.CNI == types.Calico {
+			if backend, isset := util.Find(types.CalicoBackends, options.Networking.Backend); isset {
+				k3sIstallOptions.Backend = backend
+			} else {
+				log.Fatalf("CNI plugins %s backend %s not support :(", options.Networking.CNI, options.Networking.Backend)
+			}
+		} else if k3sIstallOptions.CNI == types.Cilium {
+			if backend, isset := util.Find(types.CiliumBackends, options.Networking.Backend); isset {
+				k3sIstallOptions.Backend = backend
+			} else {
+				log.Fatalf("CNI plugins %s backend %s not support :(", options.Networking.CNI, options.Networking.Backend)
+			}
+		}
+	}
+	if k3sIstallOptions.CNI == types.Flannel {
+		extraArgs = append(extraArgs, fmt.Sprintf("--flannel-backend=%s", k3sIstallOptions.Backend))
+	} else {
+		extraArgs = append(extraArgs, "--flannel-backend=none")
 	}
 
 	extraArgsCmdline := ""

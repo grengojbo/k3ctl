@@ -208,6 +208,7 @@ func NewCmdClusterCreate() *cobra.Command {
 				if dryRun {
 					log.Infoln("[EXEC] ", installk3sExec.ExecString)
 					log.Infoln("LoadBalancer: ", installk3sExec.LoadBalancer)
+					log.Infof("CNI: %s Backend: %s", installk3sExec.CNI, installk3sExec.Backend)
 				} else {
 					log.Warnln("TODO: add ssh run...")
 				}

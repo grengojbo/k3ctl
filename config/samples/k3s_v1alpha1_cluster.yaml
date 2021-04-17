@@ -10,6 +10,9 @@ spec:
     # PodSubnet: 10.43.0.0/16
     # dnsDomain: cluster.local
     # clusterDns: 10.43.0.10
+    # cni: calico
+    # backend: wireguard
+    backend: host-gw
   loadBalancer:
     metalLb: "192.168.192.33"
   # ingress: "Ambassador"

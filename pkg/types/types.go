@@ -123,6 +123,16 @@ const (
 	IngressContour    string = "Contour"
 	IngressNginx      string = "Nginx"
 	IngressKing       string = "King"
+	Flannel           string = "flannel"
+	Calico            string = "calico"
+	Cilium            string = "cilium"
+	Vxlan             string = "vxlan"
+	None              string = "none"
+	IpSec             string = "ipsec"
+	HostGw            string = "host-gw"
+	WireGuard         string = "wireguard"
+	IpIp              string = "ipip"
+	Bgp               string = "bgp"
 )
 
 // List of k3d technical label name
@@ -150,6 +160,21 @@ var DefaultRoleCmds = map[Role][]string{
 	ServerRole: {"server"},
 	AgentRole:  {"agent"},
 }
+
+// var FlannelBackend = []string{"vxlan", "none", "vxlan", "ipsec", "host-gw", "wireguard"}
+// var FlannelBackends = map[Role][]string{
+// 	Vxlan:     {"vxlan"},
+// 	None:      {"none"},
+// 	IpSec:     {"ipsec"},
+// 	HostGw:    {"host-gw"},
+// 	WireGuard: {"wireguard"},
+// }
+
+var FlannelBackends = []string{Vxlan, None, IpSec, HostGw, WireGuard}
+var CalicoBackends = []string{Vxlan, IpIp, WireGuard, Bgp}
+var CiliumBackends = []string{Vxlan, IpIp, WireGuard}
+
+var CNIplugins = []string{Flannel, Calico, Cilium}
 
 // DefaultTmpfsMounts specifies tmpfs mounts that are required for all k3d nodes
 var DefaultTmpfsMounts = []string{
