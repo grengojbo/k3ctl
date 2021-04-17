@@ -56,7 +56,7 @@ const DefaultRegistryImageRepo = "docker.io/library/registry"
 const DefaultRegistryImageTag = "2"
 
 // DefaultObjectNamePrefix defines the name prefix for every object created by k3d
-const DefaultObjectNamePrefix = "k3d"
+const DefaultObjectNamePrefix = "k3s"
 
 // ReadyLogMessageByRole defines the log messages we wait for until a server node is considered ready
 var ReadyLogMessageByRole = map[Role]string{
@@ -72,7 +72,7 @@ const NodeWaitForLogMessageRestartWarnTime = 2 * time.Minute
 // NodeStatusRestarting defines the status string that signals the node container is restarting
 const NodeStatusRestarting = "restarting"
 
-// Role defines a k3d node role
+// Role defines a k3s node role
 type Role string
 
 // existing k3d node roles
@@ -106,12 +106,12 @@ var ClusterExternalNodeRoles = []Role{
 
 // DefaultObjectLabels specifies a set of labels that will be attached to k3d objects by default
 var DefaultObjectLabels = map[string]string{
-	"app": "k3d",
+	"app": "k3s",
 }
 
 // DefaultObjectLabelsVar specifies a set of labels that will be attached to k3d objects by default but are not static (e.g. across k3d versions)
 var DefaultObjectLabelsVar = map[string]string{
-	"k3d.version": version.GetVersion(),
+	"k3s.version": version.GetVersion(),
 }
 
 const (
@@ -191,13 +191,13 @@ var DefaultNodeEnv = []string{
 }
 
 // DefaultK3dInternalHostRecord defines the default /etc/hosts entry for the k3d host
-const DefaultK3dInternalHostRecord = "host.k3d.internal"
+const DefaultK3dInternalHostRecord = "host.k3s.internal"
 
 // DefaultImageVolumeMountPath defines the mount path inside k3d nodes where we will mount the shared image volume by default
-const DefaultImageVolumeMountPath = "/k3d/images"
+const DefaultImageVolumeMountPath = "/k3s/images"
 
 // DefaultConfigDirName defines the name of the config directory (where we'll e.g. put the kubeconfigs)
-const DefaultConfigDirName = ".k3d" // should end up in $HOME/
+const DefaultConfigDirName = ".k3s" // should end up in $HOME/
 
 // DefaultKubeconfigPrefix defines the default prefix for kubeconfig files
 const DefaultKubeconfigPrefix = DefaultObjectNamePrefix + "-kubeconfig"

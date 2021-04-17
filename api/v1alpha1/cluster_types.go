@@ -17,9 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	// log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	// go get sigs.k8s.io/cluster-api
@@ -60,7 +63,16 @@ const (
 	Gzip Encoding = "gzip"
 	// GzipBase64 implies the contents of the file are first base64 encoded and then gzip encoded.
 	GzipBase64 Encoding = "gzip+base64"
+	// Local      string   = "local"
+	Public         string = "ExternalIP"
+	Private        string = "InternalIP"
+	SshKeyDefault  string = "~/.ssh/id_rsa"
+	SshPortDefault int32  = 22
 )
+
+var ConnectionHost = []string{Public, Private}
+
+// var LocalHost = []string{Local, "localhost", "127.0.0.1"}
 
 // File defines the input for generating write_files in cloud-init.
 type File struct {
@@ -217,12 +229,20 @@ type VolumeWithNodeFilters struct {
 }
 
 type BastionNode struct {
-	Name    string `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	User    string `mapstructure:"user" yaml:"user" json:"user,omitempty"`
+	// Name The bastion Name
+	Name string `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	// User Ssh user is empty use bastion name
+	// +optional
+	User string `mapstructure:"user" yaml:"user" json:"user,omitempty"`
+	// Address bastion host
 	Address string `mapstructure:"address" yaml:"address" json:"address"`
+	// SshPort specifies the port the SSH bastion host.
+	// Defaults to 22.
+	// +optional
+	SshPort int32 `mapstructure:"sshPort" yaml:"sshPort" json:"sshPort,omitempty"`
 	// SSHAuthorizedKey specifies a list of ssh authorized keys for the user
 	// +optional
-	SSHAuthorizedKey string `mapstructure:"address" yaml:"sshAuthorizedKey" json:"sshAuthorizedKey,omitempty"`
+	SSHAuthorizedKey string `mapstructure:"sshAuthorizedKey" yaml:"sshAuthorizedKey" json:"sshAuthorizedKey,omitempty"`
 }
 
 // Node describes a k3d node
@@ -428,6 +448,48 @@ func (r *Cluster) GetUser(name string) User {
 		Name: name,
 	}
 	return user
+}
+
+// GetBastion search and return bastion host
+func (r *Cluster) GetBastion(name string, nodeName string, addrs clusterv1.MachineAddresses) (bastion *BastionNode, err error) {
+	bastion = &BastionNode{
+		SshPort:          SshPortDefault,
+		SSHAuthorizedKey: SshKeyDefault,
+	}
+	if name == "localhost" || name == "127.0.0.1" || name == "local" {
+		bastion.Name = "local"
+		bastion.Address = "127.0.0.1"
+		return bastion, nil
+	}
+	if len(addrs) == 0 {
+		return bastion, errors.New(fmt.Sprintf("Is not set addresses in node %s", nodeName))
+	}
+
+	if len(name) == 0 || name == Private || name == Public {
+		for _, addr := range addrs {
+			if name == string(addr.Type) {
+				bastion.Address = addr.Address
+				bastion.Name = string(addr.Type)
+				return bastion, nil
+			}
+		}
+		bastion.Address = addrs[0].Address
+		bastion.Name = string(addrs[0].Type)
+		return bastion, nil
+	}
+
+	for _, node := range r.Spec.Bastions {
+		if name == node.Name {
+			if node.SshPort == 0 {
+				node.SshPort = SshPortDefault
+			}
+			if len(node.SSHAuthorizedKey) == 0 {
+				node.SSHAuthorizedKey = SshKeyDefault
+			}
+			return node, nil
+		}
+	}
+	return bastion, errors.New(fmt.Sprintf("Is not bastion %s host.", name))
 }
 
 func init() {

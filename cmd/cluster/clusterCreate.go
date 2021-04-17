@@ -190,6 +190,19 @@ func NewCmdClusterCreate() *cobra.Command {
 			log.Infoln("Creating initializing server node")
 			for _, node := range servers {
 
+				// if len(node.Bastion) > 0 {
+				// 	if len(cfg.Spec.Bastions) > 0 {
+				// 		log.Infof("Bastion: %s", node.Bastion)
+				if bastion, err := cfg.GetBastion(node.Bastion, node.Name, node.Addresses); err != nil {
+					log.Fatalln(err.Error())
+				} else {
+					log.Warnf("Bastion %s host: %s (ssh port: %d key: %s)", bastion.Name, bastion.Address, bastion.SshPort, bastion.SSHAuthorizedKey)
+				}
+				// 	} else {
+				// 		log.Fatalln("Is not bastion hosts.")
+				// 	}
+				// }
+
 				cluster := false
 				host := "localhost"
 				tlsSAN := "none"

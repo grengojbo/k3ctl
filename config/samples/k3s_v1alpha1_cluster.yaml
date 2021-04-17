@@ -12,7 +12,7 @@ spec:
     # clusterDns: 10.43.0.10
     # cni: calico
     # backend: wireguard
-    backend: host-gw
+    # backend: host-gw
   # loadBalancer:
   #   metalLb: "192.168.192.33"
   # addons:
@@ -28,12 +28,23 @@ spec:
   #   extraServerArgs:  # additional arguments passed to the `k3s server` command; same as `--k3s-server-arg`
   #     - --tls-san=my.host.domain
   #     # - --tls-san=my2.host.domain
+  bastions:
+    - name: mybastion
+      user: jbo
+      address: 192.168.166.92
+      # sshPort: 2222
+      # sshAuthorizedKey: ~/keys/my_rsa
   nodes:
     - name: developer-master
       role: master
+      # bastion: local
+      # bastion: mybastion
+      # bastion: ExternalIP
       addresses:
         - address: 192.168.192.108
           type: InternalIP # Hostname, ExternalIP, InternalIP, ExternalDNS, InternalDNS
+        - address: 1.1.1.1
+          type: ExternalIP # Hostname, ExternalIP, InternalIP, ExternalDNS, InternalDNS
     # - name: developer-worker
     #   user: ubuntu
     #   addresses:
