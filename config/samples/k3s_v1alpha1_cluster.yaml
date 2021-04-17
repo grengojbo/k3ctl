@@ -15,7 +15,11 @@ spec:
     backend: host-gw
   loadBalancer:
     metalLb: "192.168.192.33"
-  # ingress: "Ambassador"
+  # addons:
+  #   ingress:
+  #     name: ambassador
+  #   certManager:
+  #     enabled: true
   # k3s:
   #   extraServerArgs:  # additional arguments passed to the `k3s server` command; same as `--k3s-server-arg`
   #     - --tls-san=my.host.domain

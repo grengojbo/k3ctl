@@ -29,6 +29,7 @@ type K3sExecOptions struct {
 type K3sIstallOptions struct {
 	ExecString   string
 	LoadBalancer string
+	Ingress      string
 	CNI          string
 	Backend      string
 }
@@ -59,8 +60,13 @@ func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) 
 		}
 	}
 
-	if options.DisableIngress || len(options.Ingress) != 0 {
-		extraArgs = append(extraArgs, "--no-deploy traefik")
+	if options.DisableIngress || len(options.Ingress) > 0 {
+		if ingress, isset := util.Find(types.IngressControllers, options.Ingress); isset {
+			k3sIstallOptions.Ingress = ingress
+			extraArgs = append(extraArgs, "--no-deploy traefik")
+		} else {
+			log.Fatalf("Ingress Controllers %s not support :(", options.Ingress)
+		}
 	}
 
 	if len(options.Networking.ServiceSubnet) > 0 {
@@ -152,6 +158,6 @@ func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) 
 	if len(k3sIstallOptions.LoadBalancer) == 0 {
 		k3sIstallOptions.LoadBalancer = types.ServiceLb
 	}
-	// --tls-san developer.iwis.io --flannel-backend=none --secrets-encryption --node-taint CriticalAddonsOnly=true:NoExecute
+	// --tls-san developer.iwis.io --secrets-encryption --node-taint CriticalAddonsOnly=true:NoExecute
 	return k3sIstallOptions
 }

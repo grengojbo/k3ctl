@@ -40,9 +40,10 @@ import (
 	conf "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/config"
 	k3s "github.com/grengojbo/k3ctl/pkg/k3s"
+	"github.com/grengojbo/k3ctl/pkg/types"
 
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
-	"github.com/grengojbo/k3ctl/pkg/types"
+
 	"github.com/grengojbo/k3ctl/pkg/util"
 	"github.com/grengojbo/k3ctl/version"
 
@@ -198,7 +199,7 @@ func NewCmdClusterCreate() *cobra.Command {
 						// 	FlannelIPSec: flannelIPSec,
 						// 	NoExtras:     k3sNoExtras,
 						ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
-						Ingress:             cfg.Spec.Ingress,
+						Ingress:             cfg.Spec.Addons.Ingress.Name,
 						DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
 						DisableIngress:      cfg.Spec.Options.DisableIngress,
 						LoadBalancer:        &cfg.Spec.LoadBalancer,
@@ -207,8 +208,13 @@ func NewCmdClusterCreate() *cobra.Command {
 
 				if dryRun {
 					log.Infoln("[EXEC] ", installk3sExec.ExecString)
-					log.Infoln("LoadBalancer: ", installk3sExec.LoadBalancer)
 					log.Infof("CNI: %s Backend: %s", installk3sExec.CNI, installk3sExec.Backend)
+					log.Infof("LoadBalancer: %s", installk3sExec.LoadBalancer)
+					if len(installk3sExec.Ingress) > 0 {
+						log.Infof("Ingress Controllers: %s", installk3sExec.Ingress)
+					} else {
+						log.Infoln("Ingress Controllers: default k3s Traefik")
+					}
 				} else {
 					log.Warnln("TODO: add ssh run...")
 				}

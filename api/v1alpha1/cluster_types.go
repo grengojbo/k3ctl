@@ -176,18 +176,25 @@ type Networking struct {
 // ######### END
 
 type Registry struct {
-	Use    []string `mapstructure:"use" yaml:"use,omitempty" json:"use,omitempty"`
-	Create bool     `mapstructure:"create" yaml:"create,omitempty" json:"create,omitempty"`
-	Config string   `mapstructure:"config" yaml:"config,omitempty" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
+	Use    []string `mapstructure:"use" yaml:"use" json:"use,omitempty"`
+	Create bool     `mapstructure:"create" yaml:"create" json:"create,omitempty"`
+	Config string   `mapstructure:"config" yaml:"config" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
 }
 
 type CertManager struct {
-	Name   string   `mapstructure:"certManager" yaml:"certManager" json:"certManager,omitempty"`
+	Name    string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Enabled bool     `mapstructure:"enabled" yaml:"enabled" json:"enabled,omitempty"`
+	Values  []string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+}
+
+type Ingress struct {
+	Name   string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
 	Values []string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 }
 
 type Addons struct {
-	CertManager CertManager `mapstructure:"certManager" yaml:"certManager" json:"certManager,omitempty"`
+	Ingress     Ingress     `mapstructure:"ingress" yaml:"ingress" json:"ingress,omitempty"`
+	CertManager CertManager `mapstructure:"certManager" yaml:"certManager,omitempty" json:"certManager,omitempty"`
 	Registries  Registry    `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
 }
 
@@ -328,7 +335,6 @@ type ClusterSpec struct {
 	Env               []EnvVarWithNodeFilters       `mapstructure:"env" yaml:"env" json:"env,omitempty"`
 	Options           Options                       `mapstructure:"options" yaml:"options" json:"options,omitempty"`
 	K3sOptions        SimpleConfigOptionsK3s        `mapstructure:"k3s" yaml:"k3s" json:"k3s,omitempty"`
-	Ingress           string                        `mapstructure:"ingress" yaml:"ingress" json:"ingress,omitempty"`
 	LoadBalancer      LoadBalancer                  `mapstructure:"loadBalancer" yaml:"loadBalancer" json:"loadBalancer,omitempty"`
 	Addons            Addons                        `mapstructure:"addons" yaml:"addons" json:"addons,omitempty"`
 	KubeconfigOptions SimpleConfigOptionsKubeconfig `mapstructure:"kubeconfig" yaml:"kubeconfig" json:"kubeconfig,omitempty"`

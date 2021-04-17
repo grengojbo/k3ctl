@@ -115,24 +115,26 @@ var DefaultObjectLabelsVar = map[string]string{
 }
 
 const (
-	MetalLb           string = "MetalLB"
-	KubeVip           string = "kube-vip"
-	ServiceLb         string = "servicelb"
-	IngressAmbassador string = "Ambassador"
-	IngressHaproxy    string = "Haproxy"
-	IngressContour    string = "Contour"
-	IngressNginx      string = "Nginx"
-	IngressKing       string = "King"
-	Flannel           string = "flannel"
-	Calico            string = "calico"
-	Cilium            string = "cilium"
-	Vxlan             string = "vxlan"
-	None              string = "none"
-	IpSec             string = "ipsec"
-	HostGw            string = "host-gw"
-	WireGuard         string = "wireguard"
-	IpIp              string = "ipip"
-	Bgp               string = "bgp"
+	MetalLb              string = "MetalLB"
+	KubeVip              string = "kube-vip"
+	ServiceLb            string = "servicelb"
+	IngressAmbassador    string = "ambassador"
+	IngressAmbassadorAPI string = "ambassadorApi"
+	IngressHaproxy       string = "aaproxy"
+	IngressContour       string = "contour"
+	IngressNginx         string = "nginx"
+	IngressKing          string = "king"
+	IngressTraefik       string = "traefik"
+	Flannel              string = "flannel"
+	Calico               string = "calico"
+	Cilium               string = "cilium"
+	Vxlan                string = "vxlan"
+	None                 string = "none"
+	IpSec                string = "ipsec"
+	HostGw               string = "host-gw"
+	WireGuard            string = "wireguard"
+	IpIp                 string = "ipip"
+	Bgp                  string = "bgp"
 )
 
 // List of k3d technical label name
@@ -170,6 +172,7 @@ var DefaultRoleCmds = map[Role][]string{
 // 	WireGuard: {"wireguard"},
 // }
 
+var IngressControllers = []string{IngressAmbassador, IngressAmbassadorAPI, IngressContour, IngressHaproxy, IngressKing, IngressNginx, IngressTraefik}
 var FlannelBackends = []string{Vxlan, None, IpSec, HostGw, WireGuard}
 var CalicoBackends = []string{Vxlan, IpIp, WireGuard, Bgp}
 var CiliumBackends = []string{Vxlan, IpIp, WireGuard}
