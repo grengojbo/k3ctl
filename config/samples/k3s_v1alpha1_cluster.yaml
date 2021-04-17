@@ -28,6 +28,13 @@ spec:
   #   extraServerArgs:  # additional arguments passed to the `k3s server` command; same as `--k3s-server-arg`
   #     - --tls-san=my.host.domain
   #     # - --tls-san=my2.host.domain
+  datastore:
+    name: k3s_dev
+    provider: postgres
+    # username: root
+    # password: root
+    # host: localhost
+    # port: 30336
   bastions:
     - name: mybastion
       user: jbo

@@ -64,10 +64,12 @@ const (
 	// GzipBase64 implies the contents of the file are first base64 encoded and then gzip encoded.
 	GzipBase64 Encoding = "gzip+base64"
 	// Local      string   = "local"
-	Public         string = "ExternalIP"
-	Private        string = "InternalIP"
-	SshKeyDefault  string = "~/.ssh/id_rsa"
-	SshPortDefault int32  = 22
+	Public              string = "ExternalIP"
+	Private             string = "InternalIP"
+	SshKeyDefault       string = "~/.ssh/id_rsa"
+	SshPortDefault      int32  = 22
+	DatastoreMySql      string = "mysql"
+	DatastorePostgreSql string = "postgres"
 )
 
 var ConnectionHost = []string{Public, Private}
@@ -347,6 +349,25 @@ type Options struct {
 	// NodeHookActions            []k3d.NodeHookAction `mapstructure:"nodeHookActions" yaml:"nodeHookActions,omitempty"`
 }
 
+type Datastore struct {
+	// Name Database name ("mysql", "postgresql", "etcd")
+	Name string `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	// Provider Database name ("mysql", "postgres", "etcd")
+	Provider string `mapstructure:"provider" yaml:"provider" json:"provider,omitempty"`
+	Username string `mapstructure:"username" yaml:"username" json:"username,omitempty"`
+	Password string `mapstructure:"password" yaml:"password" json:"password,omitempty"`
+	Host     string `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
+	// Port DataBase port
+	// +optional
+	Port int32 `mapstructure:"ip" yaml:"ip,omitempty" json:"hostIP,omitempty"`
+	// CertFile K3S_DATASTORE_CERTFILE='/path/to/client.crt'
+	// +optional
+	CertFile string `mapstructure:"certFile" yaml:"certFile,omitempty" json:"certFile,omitempty"`
+	// KeyFile K3S_DATASTORE_KEYFILE='/path/to/client.key'
+	// +optional
+	KeyFile string `mapstructure:"keyFile" yaml:"keyFile,omitempty" json:"keyFile,omitempty"`
+}
+
 type LoadBalancer struct {
 	MetalLb string `mapstructure:"metalLb" yaml:"metalLb" json:"metalLb,omitempty"`
 	KubeVip string `mapstructure:"kubeVip" yaml:"kubeVip" json:"kubeVip,omitempty"`
@@ -375,6 +396,9 @@ type ClusterSpec struct {
 	Addons            Addons                        `mapstructure:"addons" yaml:"addons" json:"addons,omitempty"`
 	KubeconfigOptions SimpleConfigOptionsKubeconfig `mapstructure:"kubeconfig" yaml:"kubeconfig" json:"kubeconfig,omitempty"`
 	Volumes           []VolumeWithNodeFilters       `mapstructure:"volumes" yaml:"volumes" json:"volumes,omitempty"`
+	// Datastore k3s datastore to enable HA https://rancher.com/docs/k3s/latest/en/installation/datastore/
+	// +optional
+	Datastore Datastore `mapstructure:"datastore" yaml:"datastore" json:"datastore,omitempty"`
 	// The cluster name
 	// +optional
 	ClusterName string `json:"clusterName,omitempty"`
@@ -448,6 +472,36 @@ func (r *Cluster) GetUser(name string) User {
 		Name: name,
 	}
 	return user
+}
+
+// GetDatastore connection string
+func (r *Cluster) GetDatastore() (string, error) {
+	conUrl := ""
+	if len(r.Spec.Datastore.Provider) == 0 {
+		return "", errors.New("Is not set Datastore provider.")
+	}
+	if len(r.Spec.Datastore.Name) == 0 {
+		r.Spec.Datastore.Name = "k3s"
+	}
+	if r.Spec.Datastore.Provider == DatastoreMySql {
+		if r.Spec.Datastore.Port == 0 {
+			r.Spec.Datastore.Port = 3306
+		}
+		// K3S_DATASTORE_ENDPOINT='mysql://username:password@tcp(hostname:3306)/k3s' \
+		// K3S_DATASTORE_CERTFILE='/path/to/client.crt' \
+		// K3S_DATASTORE_KEYFILE='/path/to/client.key' \
+		// k3s server
+		conUrl = fmt.Sprintf("mysql://username:password@tcp(hostname:%d)/%s", r.Spec.Datastore.Port, r.Spec.Datastore.Name)
+	} else if r.Spec.Datastore.Provider == DatastorePostgreSql {
+		if r.Spec.Datastore.Port == 0 {
+			r.Spec.Datastore.Port = 5432
+		}
+		// K3S_DATASTORE_ENDPOINT='postgres://username:password@hostname:5432/k3s' k3s server
+		conUrl = fmt.Sprintf("postgres://username:password@hostname:%d/%s", r.Spec.Datastore.Port, r.Spec.Datastore.Name)
+	} else {
+		return "", errors.New(fmt.Sprintf("Is not suport Datastore provider %s.", r.Spec.Datastore.Provider))
+	}
+	return conUrl, nil
 }
 
 // GetBastion search and return bastion host

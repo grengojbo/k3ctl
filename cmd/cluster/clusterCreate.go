@@ -198,10 +198,11 @@ func NewCmdClusterCreate() *cobra.Command {
 				} else {
 					log.Warnf("Bastion %s host: %s (ssh port: %d key: %s)", bastion.Name, bastion.Address, bastion.SshPort, bastion.SSHAuthorizedKey)
 				}
-				// 	} else {
-				// 		log.Fatalln("Is not bastion hosts.")
-				// 	}
-				// }
+				if datastore, err := cfg.GetDatastore(); err != nil {
+					log.Fatalln(err.Error())
+				} else {
+					log.Infof("datastore connection string: %s", datastore)
+				}
 
 				cluster := false
 				host := "localhost"
