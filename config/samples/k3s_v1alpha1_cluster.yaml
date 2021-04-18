@@ -45,7 +45,7 @@ spec:
   nodes:
     - name: developer-master
       role: master
-      bastion: local
+      # bastion: local
       # bastion: mybastion
       # bastion: ExternalIP
       addresses:

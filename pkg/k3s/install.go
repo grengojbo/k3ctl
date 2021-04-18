@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	execute "github.com/alexellis/go-execute/pkg/v1"
 	operator "github.com/alexellis/k3sup/pkg/operator"
+	"github.com/appleboy/easyssh-proxy"
 
 	oper "github.com/grengojbo/k3ctl/pkg/operator"
 
@@ -222,10 +224,10 @@ func RunK3sCommand(bastion *k3sv1alpha1.BastionNode, installk3sExec *K3sIstallOp
 			log.Errorf("stderr: %q", stdErr)
 		}
 		// log.Infof("stdout: %q", stdOut)
-	} else if _, isset := util.Find(k3sv1alpha1.ConnectionHosts, bastion.Name); isset {
-		log.Errorln("TODO: Run command in host ........")
 	} else {
-		log.Errorln("TODO: Run command in from bastion host ........")
+		if err := RunSshCommand(installK3scommand, bastion, true, dryRun); err != nil {
+			log.Fatalln(err.Error())
+		}
 	}
 	if dryRun {
 		log.Infof("Executing: %s\n", installK3scommand)
@@ -286,7 +288,47 @@ func RunLocalCommand(myCommand string, saveKubeconfig bool, dryRun bool) (stdOut
 }
 
 // RunSshCommand выполнение комманд на удаленном хосте по ssh TODO: tranclate
-func RunSshCommand() error {
+func RunSshCommand(myCommand string, bastion *k3sv1alpha1.BastionNode, saveKubeconfig bool, dryRun bool) error {
+	// https://github.com/appleboy/easyssh-proxy
+	ssh := &easyssh.MakeConfig{
+		User:   "appleboy",
+		Server: "example.com",
+		// Optional key or Password without either we try to contact your agent SOCKET
+		// Password: "password",
+		// Paste your source content of private key
+		// Key: `-----BEGIN RSA PRIVATE KEY-----
+		// MIIEpAIBAAKCAQEA4e2D/qPN08pzTac+a8ZmlP1ziJOXk45CynMPtva0rtK/RB26
+		// 7XC9wlRna4b3Ln8ew3q1ZcBjXwD4ppbTlmwAfQIaZTGJUgQbdsO9YA==
+		// -----END RSA PRIVATE KEY-----
+		// `,
+		KeyPath: "/Users/username/.ssh/id_rsa",
+		Port:    "22",
+		Timeout: 60 * time.Second,
+
+		// Parse PrivateKey With Passphrase
+		Passphrase: "1234",
+
+		// Optional fingerprint SHA256 verification
+		// Get Fingerprint: ssh.FingerprintSHA256(key)
+		// Fingerprint: "SHA256:mVPwvezndPv/ARoIadVY98vAC0g+P/5633yTC4d/wXE"
+
+		// Enable the use of insecure ciphers and key exchange methods.
+		// This enables the use of the the following insecure ciphers and key exchange methods:
+		// - aes128-cbc
+		// - aes192-cbc
+		// - aes256-cbc
+		// - 3des-cbc
+		// - diffie-hellman-group-exchange-sha256
+		// - diffie-hellman-group-exchange-sha1
+		// Those algorithms are insecure and may allow plaintext data to be recovered by an attacker.
+		// UseInsecureCipher: true,
+	}
+	if _, isset := util.Find(k3sv1alpha1.ConnectionHosts, bastion.Name); !isset {
+		log.Errorln("TODO: Run command in from bastion host ........")
+	} else {
+		log.Errorln("TODO: Run command in host ........")
+	}
+	log.Debugln("ssh: ", ssh.User)
 	return nil
 }
 
