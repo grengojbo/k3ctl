@@ -229,11 +229,7 @@ func RunK3sCommand(bastion *k3sv1alpha1.BastionNode, installk3sExec *K3sIstallOp
 			log.Fatalln(err.Error())
 		}
 	}
-	if dryRun {
-		log.Infof("Executing: %s\n", installK3scommand)
-	} else {
-		log.Errorln("TODO: add ssh run...")
-	}
+
 	// RunExampleCommand()
 	// RunExampleCommand2()
 	return nil
@@ -297,8 +293,7 @@ func RunSshCommand(myCommand string, bastion *k3sv1alpha1.BastionNode, saveKubec
 		// Password: "password",
 		// Paste your source content of private key
 		// Key: `-----BEGIN RSA PRIVATE KEY-----
-		// MIIEpAIBAAKCAQEA4e2D/qPN08pzTac+a8ZmlP1ziJOXk45CynMPtva0rtK/RB26
-		// 7XC9wlRna4b3Ln8ew3q1ZcBjXwD4ppbTlmwAfQIaZTGJUgQbdsO9YA==
+		// .........................
 		// -----END RSA PRIVATE KEY-----
 		// `,
 		KeyPath: "/Users/username/.ssh/id_rsa",
@@ -306,11 +301,11 @@ func RunSshCommand(myCommand string, bastion *k3sv1alpha1.BastionNode, saveKubec
 		Timeout: 60 * time.Second,
 
 		// Parse PrivateKey With Passphrase
-		Passphrase: "1234",
+		// Passphrase: "XXXX",
 
 		// Optional fingerprint SHA256 verification
 		// Get Fingerprint: ssh.FingerprintSHA256(key)
-		// Fingerprint: "SHA256:mVPwvezndPv/ARoIadVY98vAC0g+P/5633yTC4d/wXE"
+		// Fingerprint: "SHA256:................E"
 
 		// Enable the use of insecure ciphers and key exchange methods.
 		// This enables the use of the the following insecure ciphers and key exchange methods:
@@ -329,6 +324,13 @@ func RunSshCommand(myCommand string, bastion *k3sv1alpha1.BastionNode, saveKubec
 		log.Errorln("TODO: Run command in host ........")
 	}
 	log.Debugln("ssh: ", ssh.User)
+
+	if dryRun {
+		log.Infof("Executing: %s\n", myCommand)
+	} else {
+		log.Errorln("TODO: add ssh run...")
+	}
+
 	return nil
 }
 
