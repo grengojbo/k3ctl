@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"reflect"
+	// log "github.com/sirupsen/logrus"
 )
 
 // items := []string{"A", "1", "B", "2", "C", "3"}
@@ -21,7 +22,9 @@ import (
 // Find takes a slice and looks for an element in it. If found it will
 // return it's key, otherwise it will return -1 and a bool of false.
 func Find(slice []string, val string) (string, bool) {
+	// log.Errorln(slice)
 	for _, item := range slice {
+		// log.Warnf("==> item: %s = val: %s", item, val)
 		if item == val {
 			return item, true
 		}

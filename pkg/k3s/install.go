@@ -1,14 +1,20 @@
 package k3s
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
-	// operator "github.com/alexellis/k3sup/pkg/operator"
+	execute "github.com/alexellis/go-execute/pkg/v1"
+	operator "github.com/alexellis/k3sup/pkg/operator"
+
+	oper "github.com/grengojbo/k3ctl/pkg/operator"
+
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/types"
 	"github.com/grengojbo/k3ctl/pkg/util"
 	log "github.com/sirupsen/logrus"
+	// "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // https://github.com/alexellis/k3sup/blob/master/cmd/install.go
@@ -36,9 +42,12 @@ type K3sIstallOptions struct {
 	Ingress      string
 	CNI          string
 	Backend      string
+	K3sVersion   string
+	K3sChannel   string
+	Node         *k3sv1alpha1.Node
 }
 
-func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) K3sIstallOptions {
+func MakeInstallExec(cluster bool, tlsSAN string, options K3sExecOptions) K3sIstallOptions {
 	extraArgs := []string{}
 	k3sIstallOptions := K3sIstallOptions{}
 
@@ -176,29 +185,160 @@ func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) 
 	return k3sIstallOptions
 }
 
-// func RunSshCommand() {
+// RunK3sCommand Выполняем команды по SSH или локально
+// TODO: translate
+func RunK3sCommand(bastion *k3sv1alpha1.BastionNode, installk3sExec *K3sIstallOptions, dryRun bool) error {
+	installStr := util.CreateVersionStr(installk3sExec.K3sVersion, installk3sExec.K3sChannel)
+	installK3scommand := fmt.Sprintf("%s | %s %s sh -\n", types.K3sGetScript, installk3sExec.ExecString, installStr)
+
+	if len(installk3sExec.K3sChannel) == 0 && len(installk3sExec.K3sVersion) == 0 {
+		return errors.New("Set kubernetesVersion or channel (Release channel: stable, latest, or i.e. v1.19)")
+	}
+
+	log.Infof("KubernetesVersion: %s (K3sChannel: %s)", installk3sExec.K3sVersion, installk3sExec.K3sChannel)
+	log.Infof("CNI: %s Backend: %s", installk3sExec.CNI, installk3sExec.Backend)
+	log.Infof("LoadBalancer: %s", installk3sExec.LoadBalancer)
+	if len(installk3sExec.Ingress) > 0 {
+		log.Infof("Ingress Controllers: %s", installk3sExec.Ingress)
+	} else {
+		log.Infoln("Ingress Controllers: default k3s Traefik")
+	}
+	log.Warnf("Bastion %s host: %s (ssh port: %d key: %s)", bastion.Name, bastion.Address, bastion.SshPort, bastion.SSHAuthorizedKey)
+	log.Debugln("--------------------------------------------")
+
+	// sudoPrefix := ""
+	// if useSudo {
+	// 	sudoPrefix = "sudo "
+	// }
+	// getConfigcommand := fmt.Sprintf(sudoPrefix + "cat /etc/rancher/k3s/k3s.yaml\n")
+
+	if bastion.Name == "local" {
+		log.Infoln("Run command in localhost........")
+		// stdOut, stdErr, err := RunLocalCommand(installK3scommand, true, dryRun)
+		_, stdErr, err := RunLocalCommand(installK3scommand, true, dryRun)
+		if err != nil {
+			log.Fatalln(err.Error())
+		} else if len(stdErr) > 0 {
+			log.Errorf("stderr: %q", stdErr)
+		}
+		// log.Infof("stdout: %q", stdOut)
+	} else if _, isset := util.Find(k3sv1alpha1.ConnectionHosts, bastion.Name); isset {
+		log.Errorln("TODO: Run command in host ........")
+	} else {
+		log.Errorln("TODO: Run command in from bastion host ........")
+	}
+	if dryRun {
+		log.Infof("Executing: %s\n", installK3scommand)
+	} else {
+		log.Errorln("TODO: add ssh run...")
+	}
+	// RunExampleCommand()
+	// RunExampleCommand2()
+	return nil
+}
+
+// RunLocalCommand выполнение комманд на локальном хосте TODO: tranclate
+func RunLocalCommand(myCommand string, saveKubeconfig bool, dryRun bool) (stdOut []byte, stdErr []byte, err error) {
+
+	sudoPrefix := ""
+	uid := execute.ExecTask{
+		Command:     "echo",
+		Args:        []string{"${UID}"},
+		Shell:       true,
+		StreamStdio: false, // если true то выводит вконсоль и в Stdout
+	}
+	resUid, err := uid.Execute()
+	if err != nil {
+		return stdOut, stdErr, err
+	}
+
+	if val, err := oper.ParseInt64Output(resUid.Stdout); err != nil {
+		log.Fatalln(err.Error())
+	} else if val != 0 {
+		sudoPrefix = "sudo "
+		// log.Debugf("Result: %v sudoPrefix: %s", val, sudoPrefix)
+	}
+	command := fmt.Sprintf("%s%s", sudoPrefix, myCommand)
+	operator := operator.ExecOperator{}
+	log.Infof("Executing: %s\n", command)
+	log.Warningln("TODO: сейчас заглушка RunLocalCommand")
+	// res, err := operator.Execute(command)
+	res, err := operator.Execute("pwd")
+	if err != nil {
+		return stdOut, stdErr, err
+	}
+
+	if len(res.StdErr) > 0 {
+		stdErr = res.StdErr
+	}
+	if len(res.StdOut) > 0 {
+		stdOut = res.StdOut
+	}
+
+	if saveKubeconfig {
+		log.Warningln("TODO: доделать сохранение Kubeconfig (obtainKubeconfig)")
+		// if err = obtainKubeconfig(operator, getConfigcommand, host, context, localKubeconfig, merge, printConfig); err != nil {
+		// 	return err
+		// }
+	}
+
+	return stdOut, stdErr, nil
+}
+
+// RunSshCommand выполнение комманд на удаленном хосте по ssh TODO: tranclate
+func RunSshCommand() error {
+	return nil
+}
+
+// func RunExampleCommand() {
+// 	ls := execute.ExecTask{
+// 		Command: "exit 1",
+// 		Shell:   true,
+// 	}
+// 	res, err := ls.Execute()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	log.Warnf("==> stdout: %q, stderr: %q, exit-code: %d\n", res.Stdout, res.Stderr, res.ExitCode)
 // }
 
-// func RunLocalCommand() error {
-// 	operator := operator.ExecOperator{}
+func RunExampleCommand2() {
+	ls := execute.ExecTask{
+		// Command: "df",
+		// Args:    []string{"-P"},
+		Command:     "echo",
+		Args:        []string{"${UID}"},
+		Shell:       true,
+		StreamStdio: false, // если true то выводит вконсоль и в Stdout
+	}
+	res, err := ls.Execute()
+	if err != nil {
+		panic(err)
+	}
 
-// 			fmt.Printf("Executing: %s\n", installK3scommand)
+	log.Warnf("stdout: %q, stderr: %q, exit-code: %d\n", res.Stdout, res.Stderr, res.ExitCode)
+	if val, err := oper.ParseInt64Output(res.Stdout); err != nil {
+		log.Fatalln(err.Error())
+	} else {
+		log.Debugf("Result: %v", val)
+	}
+}
 
-// 			res, err := operator.Execute(installK3scommand)
-// 			if err != nil {
-// 				return err
-// 			}
+// func RunExampleCommand3() {
+// 	cmd := execute.ExecTask{
+// 		Command:     "docker",
+// 		Args:        []string{"version"},
+// 		StreamStdio: false,
+// 	}
 
-// 			if len(res.StdErr) > 0 {
-// 				fmt.Printf("stderr: %q", res.StdErr)
-// 			}
-// 			if len(res.StdOut) > 0 {
-// 				fmt.Printf("stdout: %q", res.StdOut)
-// 			}
+// 	res, err := cmd.Execute()
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-// 			if err = obtainKubeconfig(operator, getConfigcommand, host, context, localKubeconfig, merge, printConfig); err != nil {
-// 				return err
-// 			}
+// 	if res.ExitCode != 0 {
+// 		panic("Non-zero exit code: " + res.Stderr)
+// 	}
 
-// 			return nil
+// 	fmt.Printf("stdout: %s, stderr: %s, exit-code: %d\n", res.Stdout, res.Stderr, res.ExitCode)
 // }

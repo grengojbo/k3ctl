@@ -64,15 +64,21 @@ const (
 	// GzipBase64 implies the contents of the file are first base64 encoded and then gzip encoded.
 	GzipBase64 Encoding = "gzip+base64"
 	// Local      string   = "local"
-	Public              string = "ExternalIP"
-	Private             string = "InternalIP"
+	// Public              string = "ExternalIP"
+	// Private             string = "InternalIP"
+	ExternalIP          string = "ExternalIP"
+	ExternalDNS         string = "ExternalDNS"
+	InternalIP          string = "InternalIP"
+	InternalDNS         string = "InternalDNS"
 	SshKeyDefault       string = "~/.ssh/id_rsa"
 	SshPortDefault      int32  = 22
 	DatastoreMySql      string = "mysql"
 	DatastorePostgreSql string = "postgres"
 )
 
-var ConnectionHost = []string{Public, Private}
+var PrivateHost = []string{InternalIP, InternalDNS}
+var PublicHost = []string{ExternalIP, InternalIP}
+var ConnectionHosts = []string{ExternalIP, ExternalDNS, InternalDNS, InternalIP}
 
 // var LocalHost = []string{Local, "localhost", "127.0.0.1"}
 
@@ -245,6 +251,12 @@ type BastionNode struct {
 	// SSHAuthorizedKey specifies a list of ssh authorized keys for the user
 	// +optional
 	SSHAuthorizedKey string `mapstructure:"sshAuthorizedKey" yaml:"sshAuthorizedKey" json:"sshAuthorizedKey,omitempty"`
+	// RemoteConnectionString TODO: tranclate строка подключения к удаленному хосту если через bastion
+	// +optional
+	RemoteConnectionString string `mapstructure:"remoteConnectionString,omitempty" yaml:"remoteConnectionString,omitempty" json:"remoteConnectionString,omitempty"`
+	// RemoteSudo TODO: tranclate если через bastion и пользовател на приватном хосте не root устанавливается true
+	// +optional
+	RemoteSudo string `mapstructure:"remoteSudo,omitempty" yaml:"remoteSudo,omitempty" json:"remoteSudo,omitempty"`
 }
 
 // Node describes a k3d node
@@ -514,7 +526,7 @@ func (r *Cluster) GetDatastore() (string, error) {
 }
 
 // GetBastion search and return bastion host
-func (r *Cluster) GetBastion(name string, nodeName string, addrs clusterv1.MachineAddresses) (bastion *BastionNode, err error) {
+func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err error) {
 	bastion = &BastionNode{
 		SshPort:          SshPortDefault,
 		SSHAuthorizedKey: SshKeyDefault,
@@ -524,20 +536,20 @@ func (r *Cluster) GetBastion(name string, nodeName string, addrs clusterv1.Machi
 		bastion.Address = "127.0.0.1"
 		return bastion, nil
 	}
-	if len(addrs) == 0 {
-		return bastion, errors.New(fmt.Sprintf("Is not set addresses in node %s", nodeName))
+	if len(node.Addresses) == 0 {
+		return bastion, errors.New(fmt.Sprintf("Is not set addresses in node %s", node.Name))
 	}
 
-	if len(name) == 0 || name == Private || name == Public {
-		for _, addr := range addrs {
+	if len(name) == 0 || name == InternalIP || name == InternalDNS || name == ExternalDNS || name == ExternalIP {
+		for _, addr := range node.Addresses {
 			if name == string(addr.Type) {
 				bastion.Address = addr.Address
 				bastion.Name = string(addr.Type)
 				return bastion, nil
 			}
 		}
-		bastion.Address = addrs[0].Address
-		bastion.Name = string(addrs[0].Type)
+		bastion.Address = node.Addresses[0].Address
+		bastion.Name = string(node.Addresses[0].Type)
 		return bastion, nil
 	}
 
