@@ -198,30 +198,35 @@ func NewCmdClusterCreate() *cobra.Command {
 				} else {
 					log.Warnf("Bastion %s host: %s (ssh port: %d key: %s)", bastion.Name, bastion.Address, bastion.SshPort, bastion.SSHAuthorizedKey)
 				}
-				if datastore, err := cfg.GetDatastore(); err != nil {
-					log.Fatalln(err.Error())
-				} else {
-					log.Infof("datastore connection string: %s", datastore)
+
+				k3sOpt := k3s.K3sExecOptions{
+					// Datastore:    datastore,
+					// 	FlannelIPSec: flannelIPSec,
+					// 	NoExtras:     k3sNoExtras,
+					ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
+					Ingress:             cfg.Spec.Addons.Ingress.Name,
+					DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
+					DisableIngress:      cfg.Spec.Options.DisableIngress,
+					SecretsEncryption:   cfg.Spec.Options.SecretsEncryption,
+					SELinux:             cfg.Spec.Options.SELinux,
+					Rootless:            cfg.Spec.Options.Rootless,
+					LoadBalancer:        &cfg.Spec.LoadBalancer,
+					Networking:          &cfg.Spec.Networking,
+				}
+
+				if len(cfg.Spec.Datastore.Provider) > 0 {
+					if datastore, err := cfg.GetDatastore(); err != nil {
+						log.Fatalln(err.Error())
+					} else {
+						k3sOpt.Datastore = datastore
+						log.Infof("datastore connection string: %s", datastore)
+					}
 				}
 
 				cluster := false
 				host := "localhost"
 				tlsSAN := "none"
-				installk3sExec := k3s.MakeInstallExec(cluster, host, tlsSAN,
-					k3s.K3sExecOptions{
-						// 	Datastore:    datastore,
-						// 	FlannelIPSec: flannelIPSec,
-						// 	NoExtras:     k3sNoExtras,
-						ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
-						Ingress:             cfg.Spec.Addons.Ingress.Name,
-						DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
-						DisableIngress:      cfg.Spec.Options.DisableIngress,
-						SecretsEncryption:   cfg.Spec.Options.SecretsEncryption,
-						SELinux:             cfg.Spec.Options.SELinux,
-						Rootless:            cfg.Spec.Options.Rootless,
-						LoadBalancer:        &cfg.Spec.LoadBalancer,
-						Networking:          &cfg.Spec.Networking,
-					})
+				installk3sExec := k3s.MakeInstallExec(cluster, host, tlsSAN, k3sOpt)
 
 				if dryRun {
 					log.Infoln("[EXEC] ", installk3sExec.ExecString)

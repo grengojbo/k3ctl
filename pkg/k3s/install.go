@@ -40,12 +40,10 @@ type K3sIstallOptions struct {
 func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) K3sIstallOptions {
 	extraArgs := []string{}
 	k3sIstallOptions := K3sIstallOptions{}
-	// if len(options.Datastore) > 0 {
-	// 	extraArgs = append(extraArgs, fmt.Sprintf("--datastore-endpoint %s", options.Datastore))
-	// }
-	// if options.FlannelIPSec {
-	// 	extraArgs = append(extraArgs, "--flannel-backend ipsec")
-	// }
+
+	if len(options.Datastore) > 0 {
+		extraArgs = append(extraArgs, fmt.Sprintf("--datastore-endpoint %s", options.Datastore))
+	}
 
 	if options.DisableLoadbalancer {
 		extraArgs = append(extraArgs, "--no-deploy servicelb")
@@ -173,6 +171,6 @@ func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) 
 	if len(k3sIstallOptions.LoadBalancer) == 0 {
 		k3sIstallOptions.LoadBalancer = types.ServiceLb
 	}
-	// --tls-san developer.iwis.io --secrets-encryption --node-taint CriticalAddonsOnly=true:NoExecute
+	// --tls-san developer.cluster --node-taint CriticalAddonsOnly=true:NoExecute
 	return k3sIstallOptions
 }

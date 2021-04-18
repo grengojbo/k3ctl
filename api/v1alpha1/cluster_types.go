@@ -359,7 +359,7 @@ type Datastore struct {
 	Host     string `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
 	// Port DataBase port
 	// +optional
-	Port int32 `mapstructure:"ip" yaml:"ip,omitempty" json:"hostIP,omitempty"`
+	Port int32 `mapstructure:"port" yaml:"port,omitempty" json:"port,omitempty"`
 	// CertFile K3S_DATASTORE_CERTFILE='/path/to/client.crt'
 	// +optional
 	CertFile string `mapstructure:"certFile" yaml:"certFile,omitempty" json:"certFile,omitempty"`
@@ -478,10 +478,19 @@ func (r *Cluster) GetUser(name string) User {
 func (r *Cluster) GetDatastore() (string, error) {
 	conUrl := ""
 	if len(r.Spec.Datastore.Provider) == 0 {
-		return "", errors.New("Is not set Datastore provider.")
+		return "", errors.New("Is not set datastore.provider")
 	}
 	if len(r.Spec.Datastore.Name) == 0 {
 		r.Spec.Datastore.Name = "k3s"
+	}
+	if len(r.Spec.Datastore.Host) == 0 {
+		return "", errors.New("Is not set datastore.host")
+	}
+	if len(r.Spec.Datastore.Password) == 0 {
+		return "", errors.New("Is not set datastore.password")
+	}
+	if len(r.Spec.Datastore.Username) == 0 {
+		return "", errors.New("Is not set datastore.username")
 	}
 	if r.Spec.Datastore.Provider == DatastoreMySql {
 		if r.Spec.Datastore.Port == 0 {
@@ -491,13 +500,13 @@ func (r *Cluster) GetDatastore() (string, error) {
 		// K3S_DATASTORE_CERTFILE='/path/to/client.crt' \
 		// K3S_DATASTORE_KEYFILE='/path/to/client.key' \
 		// k3s server
-		conUrl = fmt.Sprintf("mysql://username:password@tcp(hostname:%d)/%s", r.Spec.Datastore.Port, r.Spec.Datastore.Name)
+		conUrl = fmt.Sprintf("mysql://%s:%s@tcp(%s:%d)/%s", r.Spec.Datastore.Username, r.Spec.Datastore.Password, r.Spec.Datastore.Host, r.Spec.Datastore.Port, r.Spec.Datastore.Name)
 	} else if r.Spec.Datastore.Provider == DatastorePostgreSql {
 		if r.Spec.Datastore.Port == 0 {
 			r.Spec.Datastore.Port = 5432
 		}
 		// K3S_DATASTORE_ENDPOINT='postgres://username:password@hostname:5432/k3s' k3s server
-		conUrl = fmt.Sprintf("postgres://username:password@hostname:%d/%s", r.Spec.Datastore.Port, r.Spec.Datastore.Name)
+		conUrl = fmt.Sprintf("postgres://%s:%s@%s:%d/%s", r.Spec.Datastore.Username, r.Spec.Datastore.Password, r.Spec.Datastore.Host, r.Spec.Datastore.Port, r.Spec.Datastore.Name)
 	} else {
 		return "", errors.New(fmt.Sprintf("Is not suport Datastore provider %s.", r.Spec.Datastore.Provider))
 	}
