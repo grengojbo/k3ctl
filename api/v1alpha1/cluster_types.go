@@ -386,8 +386,6 @@ type ClusterSpec struct {
 	ClusterToken      string                        `mapstructure:"token" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
 	Bastions          []*BastionNode                `mapstructure:"bastions" yaml:"bastions" json:"bastions,omitempty"`
 	Nodes             []*Node                       `mapstructure:"nodes" yaml:"nodes" json:"nodes,omitempty"`
-	Host              string                        `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
-	HostIP            string                        `mapstructure:"hostIP" yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
 	Labels            []LabelWithNodeFilters        `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
 	Env               []EnvVarWithNodeFilters       `mapstructure:"env" yaml:"env" json:"env,omitempty"`
 	Options           Options                       `mapstructure:"options" yaml:"options" json:"options,omitempty"`
@@ -396,6 +394,8 @@ type ClusterSpec struct {
 	Addons            Addons                        `mapstructure:"addons" yaml:"addons" json:"addons,omitempty"`
 	KubeconfigOptions SimpleConfigOptionsKubeconfig `mapstructure:"kubeconfig" yaml:"kubeconfig" json:"kubeconfig,omitempty"`
 	Volumes           []VolumeWithNodeFilters       `mapstructure:"volumes" yaml:"volumes" json:"volumes,omitempty"`
+	// Host              string                        `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
+	// HostIP            string                        `mapstructure:"hostIP" yaml:"hostIP,omitempty" json:"hostIP,omitempty"`
 	// Datastore k3s datastore to enable HA https://rancher.com/docs/k3s/latest/en/installation/datastore/
 	// +optional
 	Datastore Datastore `mapstructure:"datastore" yaml:"datastore" json:"datastore,omitempty"`
@@ -408,7 +408,7 @@ type ClusterSpec struct {
 	KubernetesVersion string `mapstructure:"kubernetesVersion" yaml:"kubernetesVersion" json:"kubernetesVersion,omitempty"`
 	// K3sChannel Release channel: stable, latest, or i.e. v1.19
 	// +optional
-	K3sChannel string `mapstructure:"channel" yaml:"channel" json:"channel,omitempty"`
+	K3sChannel string `mapstructure:"channel,omitempty" yaml:"channel,omitempty" json:"channel,omitempty"`
 	// Networking holds configuration for the networking topology of the cluster.
 	// NB: This value defaults to the Cluster object spec.clusterNetwork.
 	// +optional

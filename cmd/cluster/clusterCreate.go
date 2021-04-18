@@ -190,18 +190,7 @@ func NewCmdClusterCreate() *cobra.Command {
 			log.Infoln("Creating initializing server node")
 			for _, node := range servers {
 
-				// if len(node.Bastion) > 0 {
-				// 	if len(cfg.Spec.Bastions) > 0 {
-				// 		log.Infof("Bastion: %s", node.Bastion)
-				if bastion, err := cfg.GetBastion(node.Bastion, node.Name, node.Addresses); err != nil {
-					log.Fatalln(err.Error())
-				} else {
-					log.Warnf("Bastion %s host: %s (ssh port: %d key: %s)", bastion.Name, bastion.Address, bastion.SshPort, bastion.SSHAuthorizedKey)
-				}
-
 				k3sOpt := k3s.K3sExecOptions{
-					// Datastore:    datastore,
-					// 	FlannelIPSec: flannelIPSec,
 					// 	NoExtras:     k3sNoExtras,
 					ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
 					Ingress:             cfg.Spec.Addons.Ingress.Name,
@@ -214,6 +203,11 @@ func NewCmdClusterCreate() *cobra.Command {
 					Networking:          &cfg.Spec.Networking,
 				}
 
+				if len(cfg.Spec.K3sChannel) == 0 && len(cfg.Spec.KubernetesVersion) == 0 {
+					// } else if len(cfg.Spec.K3sChannel) > 0
+					log.Fatalln("Set kubernetesVersion or channel (Release channel: stable, latest, or i.e. v1.19)")
+				}
+
 				if len(cfg.Spec.Datastore.Provider) > 0 {
 					if datastore, err := cfg.GetDatastore(); err != nil {
 						log.Fatalln(err.Error())
@@ -223,13 +217,30 @@ func NewCmdClusterCreate() *cobra.Command {
 					}
 				}
 
+				if bastion, err := cfg.GetBastion(node.Bastion, node.Name, node.Addresses); err != nil {
+					log.Fatalln(err.Error())
+				} else {
+					log.Warnf("Bastion %s host: %s (ssh port: %d key: %s)", bastion.Name, bastion.Address, bastion.SshPort, bastion.SSHAuthorizedKey)
+				}
+
 				cluster := false
 				host := "localhost"
 				tlsSAN := "none"
 				installk3sExec := k3s.MakeInstallExec(cluster, host, tlsSAN, k3sOpt)
 
+				installStr := util.CreateVersionStr(cfg.Spec.KubernetesVersion, cfg.Spec.K3sChannel)
+				installK3scommand := fmt.Sprintf("%s | %s %s sh -\n", types.K3sGetScript, installk3sExec.ExecString, installStr)
+
+				// sudoPrefix := ""
+				// if useSudo {
+				// 	sudoPrefix = "sudo "
+				// }
+				// getConfigcommand := fmt.Sprintf(sudoPrefix + "cat /etc/rancher/k3s/k3s.yaml\n")
+
 				if dryRun {
-					log.Infoln("[EXEC] ", installk3sExec.ExecString)
+					// log.Infoln("[EXEC] ", installk3sExec.ExecString)
+					log.Infof("Executing: %s\n", installK3scommand)
+					log.Infof("KubernetesVersion: %s (K3sChannel: %s)", cfg.Spec.KubernetesVersion, cfg.Spec.K3sChannel)
 					log.Infof("CNI: %s Backend: %s", installk3sExec.CNI, installk3sExec.Backend)
 					log.Infof("LoadBalancer: %s", installk3sExec.LoadBalancer)
 					if len(installk3sExec.Ingress) > 0 {

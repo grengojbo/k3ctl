@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	// operator "github.com/alexellis/k3sup/pkg/operator"
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/types"
 	"github.com/grengojbo/k3ctl/pkg/util"
@@ -174,3 +175,30 @@ func MakeInstallExec(cluster bool, host, tlsSAN string, options K3sExecOptions) 
 	// --tls-san developer.cluster --node-taint CriticalAddonsOnly=true:NoExecute
 	return k3sIstallOptions
 }
+
+// func RunSshCommand() {
+// }
+
+// func RunLocalCommand() error {
+// 	operator := operator.ExecOperator{}
+
+// 			fmt.Printf("Executing: %s\n", installK3scommand)
+
+// 			res, err := operator.Execute(installK3scommand)
+// 			if err != nil {
+// 				return err
+// 			}
+
+// 			if len(res.StdErr) > 0 {
+// 				fmt.Printf("stderr: %q", res.StdErr)
+// 			}
+// 			if len(res.StdOut) > 0 {
+// 				fmt.Printf("stdout: %q", res.StdOut)
+// 			}
+
+// 			if err = obtainKubeconfig(operator, getConfigcommand, host, context, localKubeconfig, merge, printConfig); err != nil {
+// 				return err
+// 			}
+
+// 			return nil
+// }

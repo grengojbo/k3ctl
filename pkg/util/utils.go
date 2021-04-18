@@ -1,6 +1,9 @@
 package util
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+)
 
 // items := []string{"A", "1", "B", "2", "C", "3"}
 // // Missing Example
@@ -24,6 +27,17 @@ func Find(slice []string, val string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// CreateVersionStr Create install string kubernetesVersion or k3s channel
+func CreateVersionStr(k3sVersion, k3sChannel string) string {
+	installStr := ""
+	if len(k3sVersion) > 0 {
+		installStr = fmt.Sprintf("INSTALL_K3S_VERSION='%s'", k3sVersion)
+	} else {
+		installStr = fmt.Sprintf("INSTALL_K3S_CHANNEL='%s'", k3sChannel)
+	}
+	return installStr
 }
 
 // ItemExists - check if array element exists

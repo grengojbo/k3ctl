@@ -58,6 +58,8 @@ const DefaultRegistryImageTag = "2"
 // DefaultObjectNamePrefix defines the name prefix for every object created by k3d
 const DefaultObjectNamePrefix = "k3s"
 
+const K3sGetScript = "curl -sfL https://get.k3s.io"
+
 // ReadyLogMessageByRole defines the log messages we wait for until a server node is considered ready
 var ReadyLogMessageByRole = map[Role]string{
 	ServerRole:       "k3s is up and running",
