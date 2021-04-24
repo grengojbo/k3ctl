@@ -61,7 +61,7 @@ func MakeInstallExec(cluster bool, tlsSAN string, options K3sExecOptions) K3sIst
 		extraArgs = append(extraArgs, "--no-deploy servicelb")
 	} else {
 		if len(options.LoadBalancer.MetalLb) > 0 {
-			// TODO: добавить проверку на ip adress
+			// TODO: #3 добавить проверку на ip adress
 			log.Debugln("LoadBalancer MetalLB: ", options.LoadBalancer.MetalLb)
 			extraArgs = append(extraArgs, "--no-deploy servicelb")
 			k3sIstallOptions.LoadBalancer = types.MetalLb
