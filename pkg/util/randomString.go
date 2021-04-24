@@ -19,29 +19,41 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
 package util
 
 import (
-	"net"
-
-	log "github.com/sirupsen/logrus"
+	"math/rand"
+	"strings"
+	"time"
 )
 
-// GetFreePort tries to fetch an open port from the OS-Kernel
-func GetFreePort() (int, error) {
-	tcpAddress, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		log.Errorln("Failed to resolve address")
-		return 0, err
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+)
+
+var src = rand.NewSource(time.Now().UnixNano())
+
+// GenerateRandomString thanks to https://stackoverflow.com/a/31832326/6450189
+// GenerateRandomString is used to generate a random string that is used as a cluster token
+func GenerateRandomString(n int) string {
+
+	sb := strings.Builder{}
+	sb.Grow(n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			sb.WriteByte(letterBytes[idx])
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
 	}
 
-	tcpListener, err := net.ListenTCP("tcp", tcpAddress)
-	if err != nil {
-		log.Errorln("Failed to create TCP Listener")
-		return 0, err
-	}
-	defer tcpListener.Close()
-
-	return tcpListener.Addr().(*net.TCPAddr).Port, nil
+	return sb.String()
 }

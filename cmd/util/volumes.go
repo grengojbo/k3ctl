@@ -35,7 +35,10 @@ package util
 // // ValidateVolumeMount checks, if the source of volume mounts exists and if the destination is an absolute path
 // // - SRC: source directory/file -> tests: must exist
 // // - DEST: source directory/file -> tests: must be absolute path
-// func ValidateVolumeMount(runtime runtimes.Runtime, volumeMount string) error {
+// // ValidateVolumeMount checks, if the source of volume mounts exists and if the destination is an absolute path
+// // - SRC: source directory/file -> tests: must exist
+// // - DEST: source directory/file -> tests: must be absolute path
+// func ValidateVolumeMount(runtime runtimes.Runtime, volumeMount string) (string, error) {
 // 	src := ""
 // 	dest := ""
 
@@ -50,10 +53,10 @@ package util
 // 		maxParts++
 // 	}
 // 	if len(split) < 1 {
-// 		return fmt.Errorf("No volume/path specified")
+// 		return "", fmt.Errorf("No volume/path specified")
 // 	}
 // 	if len(split) > maxParts {
-// 		return fmt.Errorf("Invalid volume mount '%s': maximal %d ':' allowed", volumeMount, maxParts-1)
+// 		return "", fmt.Errorf("Invalid volume mount '%s': maximal %d ':' allowed", volumeMount, maxParts-1)
 // 	}
 
 // 	// we only have SRC specified -> DEST = SRC
@@ -85,10 +88,10 @@ package util
 
 // 	// verify that the destination is an absolute path
 // 	if !strings.HasPrefix(dest, "/") {
-// 		return fmt.Errorf("Volume mount destination doesn't appear to be an absolute path: '%s' in '%s'", dest, volumeMount)
+// 		return "", fmt.Errorf("Volume mount destination doesn't appear to be an absolute path: '%s' in '%s'", dest, volumeMount)
 // 	}
 
-// 	return nil
+// 	return volumeMount, nil
 // }
 
 // // verifyNamedVolume checks whether a named volume exists in the runtime

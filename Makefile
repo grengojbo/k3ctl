@@ -18,10 +18,11 @@ test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
 
 build: # Build k3ctl binary
-	go build -o k3ctl cli.go
+	@#go build -o k3ctl cli/main.go
+	go build -o k3ctl main.go
 
 manager: generate fmt vet
-	go build -o bin/manager main.go
+	go build -ldflags "-X main.isCli=no" -o bin/manager main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests

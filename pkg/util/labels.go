@@ -19,29 +19,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
 package util
 
 import (
-	"net"
-
-	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
-// GetFreePort tries to fetch an open port from the OS-Kernel
-func GetFreePort() (int, error) {
-	tcpAddress, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		log.Errorln("Failed to resolve address")
-		return 0, err
+// SplitLabelKeyValue separates the label key from the label value (if any)
+func SplitLabelKeyValue(label string) (string, string) {
+	// split only on first '=' sign (like `docker run` do)
+	labelSlice := strings.SplitN(label, "=", 2)
+
+	if len(labelSlice) > 1 {
+		return labelSlice[0], labelSlice[1]
 	}
 
-	tcpListener, err := net.ListenTCP("tcp", tcpAddress)
-	if err != nil {
-		log.Errorln("Failed to create TCP Listener")
-		return 0, err
-	}
-	defer tcpListener.Close()
-
-	return tcpListener.Addr().(*net.TCPAddr).Port, nil
+	// defaults to label key with empty value (like `docker run` do)
+	return label, ""
 }

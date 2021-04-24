@@ -19,29 +19,43 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
 package util
 
 import (
-	"net"
+	"os"
+	"path"
 
+	homedir "github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 )
 
-// GetFreePort tries to fetch an open port from the OS-Kernel
-func GetFreePort() (int, error) {
-	tcpAddress, err := net.ResolveTCPAddr("tcp", "localhost:0")
+// GetConfigDirOrCreate will return the base path of the k3d config directory or create it if it doesn't exist yet
+// k3d's config directory will be $HOME/.k3d (Unix)
+func GetConfigDirOrCreate() (string, error) {
+
+	// build the path
+	homeDir, err := homedir.Dir()
 	if err != nil {
-		log.Errorln("Failed to resolve address")
-		return 0, err
+		log.Errorln("Failed to get user's home directory")
+		return "", err
+	}
+	configDir := path.Join(homeDir, ".k3d")
+
+	// create directories if necessary
+	if err := createDirIfNotExists(configDir); err != nil {
+		log.Errorf("Failed to create config path '%s'", configDir)
+		return "", err
 	}
 
-	tcpListener, err := net.ListenTCP("tcp", tcpAddress)
-	if err != nil {
-		log.Errorln("Failed to create TCP Listener")
-		return 0, err
-	}
-	defer tcpListener.Close()
+	return configDir, nil
 
-	return tcpListener.Addr().(*net.TCPAddr).Port, nil
+}
+
+// createDirIfNotExists checks for the existence of a directory and creates it along with all required parents if not.
+// It returns an error if the directory (or parents) couldn't be created and nil if it worked fine or if the path already exists.
+func createDirIfNotExists(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return os.MkdirAll(path, os.ModePerm)
+	}
+	return nil
 }

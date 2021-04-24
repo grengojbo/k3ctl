@@ -19,29 +19,40 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
-package util
+package cluster
 
 import (
-	"net"
-
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
-// GetFreePort tries to fetch an open port from the OS-Kernel
-func GetFreePort() (int, error) {
-	tcpAddress, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		log.Errorln("Failed to resolve address")
-		return 0, err
+const GetScript = "curl -sfL https://get.k3s.io"
+
+// NewCmdCluster returns a new cobra command
+func NewCmdCluster() *cobra.Command {
+
+	// create new cobra command
+	cmd := &cobra.Command{
+		Use:   "cluster",
+		Short: "Manage cluster(s)",
+		Long:  `Manage cluster(s)`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := cmd.Help(); err != nil {
+				log.Errorln("Couldn't get help text")
+				log.Fatalln(err)
+			}
+		},
 	}
 
-	tcpListener, err := net.ListenTCP("tcp", tcpAddress)
-	if err != nil {
-		log.Errorln("Failed to create TCP Listener")
-		return 0, err
-	}
-	defer tcpListener.Close()
+	// add subcommands
+	cmd.AddCommand(NewCmdClusterCreate())
+	// cmd.AddCommand(NewCmdClusterStart())
+	// cmd.AddCommand(NewCmdClusterStop())
+	// cmd.AddCommand(NewCmdClusterDelete())
+	// cmd.AddCommand(NewCmdClusterList())
 
-	return tcpListener.Addr().(*net.TCPAddr).Port, nil
+	// add flags
+
+	// done
+	return cmd
 }

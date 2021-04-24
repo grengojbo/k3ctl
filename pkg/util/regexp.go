@@ -22,26 +22,12 @@ THE SOFTWARE.
 
 package util
 
-import (
-	"net"
-
-	log "github.com/sirupsen/logrus"
-)
-
-// GetFreePort tries to fetch an open port from the OS-Kernel
-func GetFreePort() (int, error) {
-	tcpAddress, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		log.Errorln("Failed to resolve address")
-		return 0, err
+// MapSubexpNames maps regex capturing group names to corresponding matches
+func MapSubexpNames(names, matches []string) map[string]string {
+	//names, matches = names[1:], matches[1:]
+	nameMatchMap := make(map[string]string, len(matches))
+	for index := range names {
+		nameMatchMap[names[index]] = matches[index]
 	}
-
-	tcpListener, err := net.ListenTCP("tcp", tcpAddress)
-	if err != nil {
-		log.Errorln("Failed to create TCP Listener")
-		return 0, err
-	}
-	defer tcpListener.Close()
-
-	return tcpListener.Addr().(*net.TCPAddr).Port, nil
+	return nameMatchMap
 }

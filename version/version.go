@@ -35,6 +35,11 @@ var HelperVersionOverride string
 // K3sVersion should contain the latest version tag of k3s (hardcoded at build time)
 var K3sVersion = "v1.20.0-k3s2"
 
+// PinnedK3sChannel is a predictable K8s version for use
+// with the examples in the README. You can override this via
+// a flag, or give a specific version, see the command help message.
+const PinnedK3sChannel = "v1.20"
+
 // GetVersion returns the version for cli, it gets it from "git describe --tags" or returns "dev" when doing simple go build
 func GetVersion() string {
 	if len(Version) == 0 {
@@ -61,12 +66,12 @@ func GetVersion() string {
 // GetK3sVersion returns the version string for K3s
 func GetK3sVersion(latest bool) string {
 	// if latest {
-		// version, err := fetchLatestK3sVersion()
-		// if err != nil || version == "" {
-		// 	log.Warnln("Failed to fetch latest K3s version from DockerHub, falling back to hardcoded version.")
-		// 	return K3sVersion
-		// }
-		// return version
+	// version, err := fetchLatestK3sVersion()
+	// if err != nil || version == "" {
+	// 	log.Warnln("Failed to fetch latest K3s version from DockerHub, falling back to hardcoded version.")
+	// 	return K3sVersion
+	// }
+	// return version
 	// }
 	return K3sVersion
 }

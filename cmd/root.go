@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,17 +30,19 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	// "context"
 	// "io/ioutil"
 	// "strings"
 	// rt "runtime"
-	// "github.com/rancher/k3d/v4/cmd/cluster"
+	"github.com/grengojbo/k3ctl/cmd/cluster"
 	// cfg "github.com/rancher/k3d/v4/cmd/config"
 	// "github.com/rancher/k3d/v4/cmd/image"
 	// "github.com/rancher/k3d/v4/cmd/kubeconfig"
 	// "github.com/rancher/k3d/v4/cmd/node"
 	// "github.com/rancher/k3d/v4/cmd/registry"
-	// cliutil "github.com/rancher/k3d/v4/cmd/util"
+	cliutil "github.com/grengojbo/k3ctl/cmd/util"
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
 	"github.com/grengojbo/k3ctl/version"
 	log "github.com/sirupsen/logrus"
@@ -67,10 +70,10 @@ k3ctl is a wrapper CLI that helps you to easily create k3s clusters.
 		// fmt.Println("Start...")
 		if flags.version {
 			printVersion()
-			} else {
-				if err := cmd.Usage(); err != nil {
-					log.Fatalln(err)
-				}
+		} else {
+			if err := cmd.Usage(); err != nil {
+				log.Fatalln(err)
+			}
 		}
 	},
 }
@@ -82,12 +85,12 @@ func Execute() {
 		parts := os.Args[1:]
 		// Check if it's a built-in command, else try to execute it as a plugin
 		if _, _, err := rootCmd.Find(parts); err != nil {
-		// 	pluginFound, err := cliutil.HandlePlugin(context.Background(), parts)
+			pluginFound, err := cliutil.HandlePlugin(context.Background(), parts)
 			if err != nil {
 				log.Errorf("Failed to execute plugin '%+v'", parts)
 				log.Fatalln(err)
-		// 	} else if pluginFound {
-		// 		os.Exit(0)
+			} else if pluginFound {
+				os.Exit(0)
 			}
 		}
 	}
@@ -101,13 +104,15 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flags.debugLogging, "verbose", false, "Enable verbose output (debug logging)")
 	rootCmd.PersistentFlags().BoolVar(&flags.traceLogging, "trace", false, "Enable super verbose output (trace logging)")
 	rootCmd.PersistentFlags().BoolVar(&flags.timestampedLogging, "timestamps", false, "Enable Log timestamps")
+	rootCmd.PersistentFlags().Bool("dry-run", false, "Show run command and skip the k3s installer")
+	_ = viper.BindPFlag("dry-run", rootCmd.PersistentFlags().Lookup("dry-run"))
 
 	// add local flags
 	rootCmd.Flags().BoolVar(&flags.version, "version", false, "Show k3ctl and default k3s version")
 
 	// add subcommands
 	rootCmd.AddCommand(NewCmdCompletion())
-	// rootCmd.AddCommand(cluster.NewCmdCluster())
+	rootCmd.AddCommand(cluster.NewCmdCluster())
 	// rootCmd.AddCommand(kubeconfig.NewCmdKubeconfig())
 	// rootCmd.AddCommand(node.NewCmdNode())
 	// rootCmd.AddCommand(image.NewCmdImage())
@@ -224,10 +229,10 @@ func NewCmdCompletion() *cobra.Command {
 		Args:  cobra.ExactArgs(1), // TODO: NewCmdCompletion: add support for 0 args = auto detection
 		Run: func(cmd *cobra.Command, args []string) {
 			if completionFunc, ok := completionFunctions[args[0]]; ok {
-			if err := completionFunc(os.Stdout); err != nil {
-				log.Fatalf("Failed to generate completion script for shell '%s'", args[0])
-			}
-			return
+				if err := completionFunc(os.Stdout); err != nil {
+					log.Fatalf("Failed to generate completion script for shell '%s'", args[0])
+				}
+				return
 			}
 			log.Fatalf("Shell '%s' not supported for completion", args[0])
 		},
