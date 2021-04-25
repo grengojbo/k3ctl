@@ -47,7 +47,7 @@ type K3sIstallOptions struct {
 	Node         *k3sv1alpha1.Node
 }
 
-func MakeInstallExec(cluster bool, tlsSAN string, options K3sExecOptions) K3sIstallOptions {
+func MakeInstallExec(cluster bool, tlsSAN []string, options K3sExecOptions) K3sIstallOptions {
 	extraArgs := []string{}
 	k3sIstallOptions := K3sIstallOptions{}
 
@@ -164,11 +164,11 @@ func MakeInstallExec(cluster bool, tlsSAN string, options K3sExecOptions) K3sIst
 		installExec += " --cluster-init"
 	}
 
-	// san := host
-	// if len(tlsSAN) > 0 {
-	// 	san = tlsSAN
-	// }
-	// installExec += fmt.Sprintf(" --tls-san %s", san)
+	if len(tlsSAN) > 0 {
+		for _, san := range tlsSAN {
+			installExec += fmt.Sprintf(" --tls-san %s", san)
+		}
+	}
 
 	if trimmed := strings.TrimSpace(extraArgsCmdline); len(trimmed) > 0 {
 		installExec += fmt.Sprintf(" %s", trimmed)
