@@ -3,6 +3,8 @@ package util
 import (
 	"fmt"
 	"reflect"
+
+	homedir "github.com/mitchellh/go-homedir"
 	// log "github.com/sirupsen/logrus"
 )
 
@@ -78,4 +80,10 @@ func GetNodeRole(val string) string {
 		return "agent"
 	}
 	return "server"
+}
+
+// ExpandPath
+func ExpandPath(path string) string {
+	res, _ := homedir.Expand(path)
+	return res
 }

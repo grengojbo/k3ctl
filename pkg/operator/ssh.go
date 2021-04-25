@@ -6,31 +6,18 @@ import (
 
 	"github.com/appleboy/easyssh-proxy"
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
+	"github.com/grengojbo/k3ctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 )
 
-// type SSHConfig struct {
-// 	User    string
-// 	Server  string
-// 	Port    string
-// 	KeyPath string
-// }
-// type SSHOperator struct {
-// 	Config *easyssh.MakeConfig
-// 	// ProxyConfig SSHConfig
-// }
-
 type SSHOperator struct {
 	Config *easyssh.MakeConfig
-	// ProxyConfig SSHConfig
 }
 
 // NewSshConnection New SSH Connection
 func (r *SSHOperator) NewSSHOperator(bastion *k3sv1alpha1.BastionNode) {
 	r.Config = &easyssh.MakeConfig{
 		User: bastion.User,
-		// User:   "ubuntu",
-		// Server: bastion.Address,
 		// Optional key or Password without either we try to contact your agent SOCKET
 		// Password: "password",
 		// Paste your source content of private key
@@ -38,9 +25,7 @@ func (r *SSHOperator) NewSSHOperator(bastion *k3sv1alpha1.BastionNode) {
 		// .........................
 		// -----END RSA PRIVATE KEY-----
 		// `,
-		KeyPath: "/home/jbo/.ssh/id_rsa",
 		Port:    fmt.Sprintf("%d", bastion.SshPort),
-		// KeyPath: bastion.SSHAuthorizedKey,
 		Timeout: 60 * time.Second,
 
 		// Parse PrivateKey With Passphrase
@@ -62,61 +47,17 @@ func (r *SSHOperator) NewSSHOperator(bastion *k3sv1alpha1.BastionNode) {
 		// UseInsecureCipher: true,
 	}
 	r.Config.Server = bastion.Address
-}
-
-func NewSshConnection(bastion *k3sv1alpha1.BastionNode) (ssh *easyssh.MakeConfig) {
-	// https://github.com/appleboy/easyssh-proxy
-	ssh = &easyssh.MakeConfig{
-		User: bastion.User,
-		// User:   "ubuntu",
-		// Server: bastion.Address,
-		// Optional key or Password without either we try to contact your agent SOCKET
-		// Password: "password",
-		// Paste your source content of private key
-		// Key: `-----BEGIN RSA PRIVATE KEY-----
-		// .........................
-		// -----END RSA PRIVATE KEY-----
-		// `,
-		Port: fmt.Sprintf("%d", bastion.SshPort),
-		// KeyPath: bastion.SSHAuthorizedKey,
-		Timeout: 60 * time.Second,
-
-		// Parse PrivateKey With Passphrase
-		// Passphrase: "XXXX",
-
-		// Optional fingerprint SHA256 verification
-		// Get Fingerprint: ssh.FingerprintSHA256(key)
-		// Fingerprint: "SHA256:................E"
-
-		// Enable the use of insecure ciphers and key exchange methods.
-		// This enables the use of the the following insecure ciphers and key exchange methods:
-		// - aes128-cbc
-		// - aes192-cbc
-		// - aes256-cbc
-		// - 3des-cbc
-		// - diffie-hellman-group-exchange-sha256
-		// - diffie-hellman-group-exchange-sha1
-		// Those algorithms are insecure and may allow plaintext data to be recovered by an attacker.
-		// UseInsecureCipher: true,
+	if len(bastion.SSHAuthorizedKey) > 0 {
+		r.Config.KeyPath = util.ExpandPath(bastion.SSHAuthorizedKey)
+		log.Debugf("sshKeyPath: %s", r.Config.KeyPath)
 	}
-	ssh.Server = bastion.Address
-	ssh.KeyPath = "/home/jbo/.ssh/id_rsa"
-
-	log.Debugf("ssh -i %s %s@%s:%s", ssh.KeyPath, ssh.User, ssh.Server, ssh.Port)
-	return ssh
+	// log.Debugf("ssh -i %s %s@%s:%s", ssh.KeyPath, ssh.User, ssh.Server, ssh.Port)
 }
 
 // Run command on remote machine
 //   Example:
 func (r *SSHOperator) Run(command string) (done bool, err error) {
 	stdOut, stdErr, done, err := r.Config.Run(command, 60*time.Second)
-	// stdout, stderr, done, err := ssh.Run("ls -al", 60*time.Second)
-	// // Handle errors
-	// if err != nil {
-	// 	log.Fatalln("Can't run remote command: " + err.Error())
-	// } else {
-	// 	log.Infoln("don is :", done, "stdout is :", stdout, ";   stderr is :", stderr)
-	// }
 	if len(stdOut) > 0 {
 		log.Debugln("===== stdOut ======")
 		log.Debugf("%v", stdOut)
@@ -174,43 +115,4 @@ func (r *SSHOperator) Stream(command string, isPrint bool) {
 			log.Errorln("Error: command timeout")
 		}
 	}
-}
-
-func MakeSsshConfig(config *easyssh.MakeConfig) {
-
-	// ssh := &easyssh.MakeConfig{
-	// 	User:   "appleboy",
-	// 	Server: "example.com",
-	// 	// Optional key or Password without either we try to contact your agent SOCKET
-	// 	// Password: "password",
-	// 	// Paste your source content of private key
-	// 	// Key: `-----BEGIN RSA PRIVATE KEY-----
-	// 	// MIIEpAIBAAKCAQEA4e2D/qPN08pzTac+a8ZmlP1ziJOXk45CynMPtva0rtK/RB26
-	// 	// 7XC9wlRna4b3Ln8ew3q1ZcBjXwD4ppbTlmwAfQIaZTGJUgQbdsO9YA==
-	// 	// -----END RSA PRIVATE KEY-----
-	// 	// `,
-	// 	KeyPath: "/Users/username/.ssh/id_rsa",
-	// 	Port:    "22",
-	// 	Timeout: 60 * time.Second,
-
-	// 	// Parse PrivateKey With Passphrase
-	// 	Passphrase: "1234",
-
-	// 	// Optional fingerprint SHA256 verification
-	// 	// Get Fingerprint: ssh.FingerprintSHA256(key)
-	// 	// Fingerprint: "SHA256:mVPwvezndPv/ARoIadVY98vAC0g+P/5633yTC4d/wXE"
-
-	// 	// Enable the use of insecure ciphers and key exchange methods.
-	// 	// This enables the use of the the following insecure ciphers and key exchange methods:
-	// 	// - aes128-cbc
-	// 	// - aes192-cbc
-	// 	// - aes256-cbc
-	// 	// - 3des-cbc
-	// 	// - diffie-hellman-group-exchange-sha256
-	// 	// - diffie-hellman-group-exchange-sha1
-	// 	// Those algorithms are insecure and may allow plaintext data to be recovered by an attacker.
-	// 	// UseInsecureCipher: true,
-	// }
-	// log.Debugln("ssh: ", ssh)
-	// return nil, nil
 }
