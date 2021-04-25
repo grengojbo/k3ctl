@@ -42,14 +42,16 @@ spec:
       address: 192.168.166.92
       # sshPort: 2222
       # sshAuthorizedKey: ~/keys/my_rsa
+      sshAuthorizedKey: /home/jbo/.ssh/id_rsa
   nodes:
-    - name: developer-master
+    - name: master-developer
+      user: ubuntu
       role: master
       # bastion: local
       # bastion: mybastion
       # bastion: ExternalIP
       addresses:
-        - address: 192.168.192.108
+        - address: 192.168.192.103
           type: InternalIP # Hostname, ExternalIP, InternalIP, ExternalDNS, InternalDNS
         - address: 1.1.1.1
           type: ExternalIP # Hostname, ExternalIP, InternalIP, ExternalDNS, InternalDNS

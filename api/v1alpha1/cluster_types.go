@@ -257,6 +257,9 @@ type BastionNode struct {
 	// RemoteSudo TODO: tranclate если через bastion и пользовател на приватном хосте не root устанавливается true
 	// +optional
 	RemoteSudo string `mapstructure:"remoteSudo,omitempty" yaml:"remoteSudo,omitempty" json:"remoteSudo,omitempty"`
+	// RemoteAddress адрес хоста за бастионом
+	// TODO: translate
+	RemoteAddress string
 }
 
 // Node describes a k3d node
@@ -545,11 +548,13 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 			if name == string(addr.Type) {
 				bastion.Address = addr.Address
 				bastion.Name = string(addr.Type)
+				bastion.RemoteAddress = addr.Address
 				return bastion, nil
 			}
 		}
 		bastion.Address = node.Addresses[0].Address
 		bastion.Name = string(node.Addresses[0].Type)
+		bastion.User = node.User
 		return bastion, nil
 	}
 
