@@ -23,3 +23,5 @@ k3ctl
 *.swp
 *.swo
 *~
+
+variables/
