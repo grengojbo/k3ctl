@@ -4,7 +4,7 @@ management k3s kubernetes clusters
 Example create cluster
 
 ```bash
-./k3ctl cluster create -c sample --dry-run --verbose
+./k3ctl cluster create sample --dry-run --verbosee
 ```
 
 ## For developers
