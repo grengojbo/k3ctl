@@ -64,7 +64,7 @@ var cfgViper = viper.New()
 var ppViper = viper.New()
 var dryRun bool
 
-func initConfig() {
+func initConfig(args []string) {
 
 	dryRun = viper.GetBool("dry-run")
 	// Viper for pre-processed config options
@@ -76,6 +76,8 @@ func initConfig() {
 
 	cfgViper.SetConfigType("yaml")
 
+	configFile = args[0]
+	log.Warnf("===== %v", args)
 	// Set config file, if specified
 	if configFile != "" {
 		if configFile == "sample" {
@@ -121,10 +123,11 @@ func NewCmdClusterCreate() *cobra.Command {
 		Use:   "create NAME",
 		Short: "Create a new cluster",
 		Long:  clusterCreateDescription,
-		Args:  cobra.RangeArgs(0, 1), // exactly one cluster name can be set (default: k3d.DefaultClusterName)
+		// Args:  cobra.RangeArgs(0, 1), // exactly one cluster name can be set (default: k3d.DefaultClusterName)
+		Args: cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// fmt.Println("PreRun...")
-			initConfig()
+			initConfig(args)
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {

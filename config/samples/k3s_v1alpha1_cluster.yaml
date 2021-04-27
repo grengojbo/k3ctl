@@ -50,8 +50,7 @@ spec:
       user: jbo
       address: 192.168.166.92
       # sshPort: 2222
-      # sshAuthorizedKey: ~/keys/my_rsa
-      sshAuthorizedKey: /home/jbo/.ssh/id_rsa
+      sshAuthorizedKey: ~/.ssh/id_rsa
   nodes:
     - name: master-developer
       user: ubuntu
