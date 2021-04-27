@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	execute "github.com/alexellis/go-execute/pkg/v1"
 	operator "github.com/alexellis/k3sup/pkg/operator"
-	"github.com/appleboy/easyssh-proxy"
 
 	oper "github.com/grengojbo/k3ctl/pkg/operator"
 
@@ -49,7 +47,7 @@ type K3sIstallOptions struct {
 	Node         *k3sv1alpha1.Node
 }
 
-func MakeInstallExec(cluster bool, tlsSAN string, options K3sExecOptions) K3sIstallOptions {
+func MakeInstallExec(cluster bool, tlsSAN []string, options K3sExecOptions) K3sIstallOptions {
 	extraArgs := []string{}
 	k3sIstallOptions := K3sIstallOptions{}
 
@@ -166,11 +164,11 @@ func MakeInstallExec(cluster bool, tlsSAN string, options K3sExecOptions) K3sIst
 		installExec += " --cluster-init"
 	}
 
-	// san := host
-	// if len(tlsSAN) > 0 {
-	// 	san = tlsSAN
-	// }
-	// installExec += fmt.Sprintf(" --tls-san %s", san)
+	if len(tlsSAN) > 0 {
+		for _, san := range tlsSAN {
+			installExec += fmt.Sprintf(" --tls-san %s", san)
+		}
+	}
 
 	if trimmed := strings.TrimSpace(extraArgsCmdline); len(trimmed) > 0 {
 		installExec += fmt.Sprintf(" %s", trimmed)
@@ -285,48 +283,22 @@ func RunLocalCommand(myCommand string, saveKubeconfig bool, dryRun bool) (stdOut
 
 // RunSshCommand выполнение комманд на удаленном хосте по ssh TODO: tranclate
 func RunSshCommand(myCommand string, bastion *k3sv1alpha1.BastionNode, saveKubeconfig bool, dryRun bool) error {
-	// https://github.com/appleboy/easyssh-proxy
-	ssh := &easyssh.MakeConfig{
-		User:   "appleboy",
-		Server: "example.com",
-		// Optional key or Password without either we try to contact your agent SOCKET
-		// Password: "password",
-		// Paste your source content of private key
-		// Key: `-----BEGIN RSA PRIVATE KEY-----
-		// .........................
-		// -----END RSA PRIVATE KEY-----
-		// `,
-		KeyPath: "/Users/username/.ssh/id_rsa",
-		Port:    "22",
-		Timeout: 60 * time.Second,
-
-		// Parse PrivateKey With Passphrase
-		// Passphrase: "XXXX",
-
-		// Optional fingerprint SHA256 verification
-		// Get Fingerprint: ssh.FingerprintSHA256(key)
-		// Fingerprint: "SHA256:................E"
-
-		// Enable the use of insecure ciphers and key exchange methods.
-		// This enables the use of the the following insecure ciphers and key exchange methods:
-		// - aes128-cbc
-		// - aes192-cbc
-		// - aes256-cbc
-		// - 3des-cbc
-		// - diffie-hellman-group-exchange-sha256
-		// - diffie-hellman-group-exchange-sha1
-		// Those algorithms are insecure and may allow plaintext data to be recovered by an attacker.
-		// UseInsecureCipher: true,
-	}
+	// ssh := oper.NewSshConnection(bastion)
+	ssh := oper.SSHOperator{}
+	ssh.NewSSHOperator(bastion)
+	// Проверяем запускаем комманду через бастион или напрямую
 	if _, isset := util.Find(k3sv1alpha1.ConnectionHosts, bastion.Name); !isset {
 		log.Errorln("TODO: Run command in from bastion host ........")
 	} else {
 		log.Errorln("TODO: Run command in host ........")
+		// Выполняем комманду по SSH
+		if _, err := ssh.Run("hostname -a"); err != nil {
+			log.Fatalln(err.Error())
+		}
 	}
-	log.Debugln("ssh: ", ssh.User)
-
 	if dryRun {
 		log.Infof("Executing: %s\n", myCommand)
+		// ssh.Stream("for i in {1..5}; do echo ${i}; sleep ; done; exit 2;", false)
 	} else {
 		log.Errorln("TODO: add ssh run...")
 	}

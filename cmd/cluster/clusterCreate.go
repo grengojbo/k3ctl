@@ -217,7 +217,7 @@ func NewCmdClusterCreate() *cobra.Command {
 				} else {
 
 					cluster := false
-					tlsSAN := "none"
+					tlsSAN := cfg.GetTlsSan(node, &cfg.Spec.Networking)
 					installk3sExec := k3s.MakeInstallExec(cluster, tlsSAN, k3sOpt)
 					installk3sExec.K3sChannel = cfg.Spec.K3sChannel
 					installk3sExec.K3sVersion = cfg.Spec.KubernetesVersion

@@ -162,6 +162,9 @@ type NTP struct {
 
 // Networking contains elements describing cluster's networking configuration
 type Networking struct {
+	// APIServerAddresses is a list of addresses assigned to the API Server.
+	// +optional
+	APIServerAddresses clusterv1.MachineAddresses `json:"apiServerAddresses,omitempty"`
 	// APIServerPort specifies the port the API Server should bind to.
 	// Defaults to 6443.
 	// +optional
@@ -257,6 +260,9 @@ type BastionNode struct {
 	// RemoteSudo TODO: tranclate если через bastion и пользовател на приватном хосте не root устанавливается true
 	// +optional
 	RemoteSudo string `mapstructure:"remoteSudo,omitempty" yaml:"remoteSudo,omitempty" json:"remoteSudo,omitempty"`
+	// RemoteAddress адрес хоста за бастионом
+	// TODO: translate
+	RemoteAddress string
 }
 
 // Node describes a k3d node
@@ -525,6 +531,21 @@ func (r *Cluster) GetDatastore() (string, error) {
 	return conUrl, nil
 }
 
+// GetTlsSan Add additional hostname or IP as a Subject Alternative Name in the TLS cert
+func (r *Cluster) GetTlsSan(node *Node, vpc *Networking) (tlsSAN []string) {
+	for _, addr := range vpc.APIServerAddresses {
+		if _, isset := Find(tlsSAN, addr.Address); !isset {
+			tlsSAN = append(tlsSAN, addr.Address)
+		}
+	}
+	for _, addr := range node.Addresses {
+		if _, isset := Find(tlsSAN, addr.Address); !isset {
+			tlsSAN = append(tlsSAN, addr.Address)
+		}
+	}
+	return tlsSAN
+}
+
 // GetBastion search and return bastion host
 func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err error) {
 	bastion = &BastionNode{
@@ -545,11 +566,13 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 			if name == string(addr.Type) {
 				bastion.Address = addr.Address
 				bastion.Name = string(addr.Type)
+				bastion.RemoteAddress = addr.Address
 				return bastion, nil
 			}
 		}
 		bastion.Address = node.Addresses[0].Address
 		bastion.Name = string(node.Addresses[0].Type)
+		bastion.User = node.User
 		return bastion, nil
 	}
 
@@ -565,6 +588,17 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 		}
 	}
 	return bastion, errors.New(fmt.Sprintf("Is not bastion %s host.", name))
+}
+
+func Find(slice []string, val string) (string, bool) {
+	// log.Errorln(slice)
+	for _, item := range slice {
+		// log.Warnf("==> item: %s = val: %s", item, val)
+		if item == val {
+			return item, true
+		}
+	}
+	return "", false
 }
 
 func init() {
