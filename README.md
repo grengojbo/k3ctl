@@ -14,3 +14,4 @@ kubeadm token generate
 kubeadm certs certificate-key
 ```
 
+a
