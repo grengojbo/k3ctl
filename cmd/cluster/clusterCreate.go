@@ -24,7 +24,6 @@ package cluster
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -76,36 +75,34 @@ func initConfig(args []string) {
 
 	cfgViper.SetConfigType("yaml")
 
-	configFile = args[0]
-	log.Warnf("===== %v", args)
+	// configFile = args[0]
+	configFile = util.GerConfigFileName(args[0])
+	// configFile = fmt.Sprintf("%s.yaml", args[0])
+	// log.Warnf("===== %v", args)
 	// Set config file, if specified
-	if configFile != "" {
-		if configFile == "sample" {
-			configFile = "config/samples/k3s_v1alpha1_cluster.yaml"
+
+	// if configFile != "" {
+
+	log.Infoln("configFile:", configFile)
+	cfgViper.SetConfigFile(configFile)
+	// log.Tracef("Schema: %+v", conf.JSONSchema)
+
+	// if err := config.ValidateSchemaFile(configFile, []byte(conf.JSONSchema)); err != nil {
+	// 	log.Fatalf("Schema Validation failed for config file %s: %+v", configFile, err)
+	// }
+
+	// try to read config into memory (viper map structure)
+	if err := cfgViper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Fatalf("Config file %s not found: %+v", configFile, err)
 		}
-		cfgViper.SetConfigFile(configFile)
-		log.Infoln("configFile:", configFile)
-
-		if _, err := os.Stat(configFile); err != nil {
-			log.Fatalf("Failed to stat config file %s: %+v", configFile, err)
-		}
-		// log.Tracef("Schema: %+v", conf.JSONSchema)
-
-		// if err := config.ValidateSchemaFile(configFile, []byte(conf.JSONSchema)); err != nil {
-		// 	log.Fatalf("Schema Validation failed for config file %s: %+v", configFile, err)
-		// }
-
-		// try to read config into memory (viper map structure)
-		if err := cfgViper.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-				log.Fatalf("Config file %s not found: %+v", configFile, err)
-			}
-			// config file found but some other error happened
-			log.Fatalf("Failed to read config file %s: %+v", configFile, err)
-		}
-
-		log.Infof("Using config file %s", cfgViper.ConfigFileUsed())
+		// config file found but some other error happened
+		log.Fatalf("Failed to read config file %s: %+v", configFile, err)
 	}
+
+	log.Infof("Using config file %s", cfgViper.ConfigFileUsed())
+	// }
+
 	if log.GetLevel() >= log.DebugLevel {
 		c, _ := yaml.Marshal(cfgViper.AllSettings())
 		log.Debugf("Configuration:\n%s", c)

@@ -22,11 +22,14 @@ THE SOFTWARE.
 package util
 
 import (
+	"fmt"
 	"os"
 	"path"
 
+	"github.com/grengojbo/k3ctl/pkg/types"
 	homedir "github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
+	// "github.com/spf13/afero"
 )
 
 // GetConfigDirOrCreate will return the base path of the k3d config directory or create it if it doesn't exist yet
@@ -58,4 +61,40 @@ func createDirIfNotExists(path string) error {
 		return os.MkdirAll(path, os.ModePerm)
 	}
 	return nil
+}
+
+func GerConfigFileName(configFile string) (configFilePath string) {
+	if configFile == "sample" {
+		return "config/samples/k3s_v1alpha1_cluster.yaml"
+	}
+	// file, err := afero.ReadFile(v.fs, filename)
+	// if err != nil {
+	// 	return err
+	// }
+	// if _, err := afero.Exists(configFile); err != nil {
+	// 	log.Errorf("")
+	// }
+	if _, err := os.Stat(configFile); err != nil {
+		log.Errorf("Failed to stat config file: %s", configFile)
+		configFileCurrentDir := fmt.Sprintf("./variables/%s.yaml", configFile)
+		if _, err := os.Stat(configFileCurrentDir); err != nil {
+			log.Errorf("Failed to stat config file: %s", configFileCurrentDir)
+			configFileHomeDir := fmt.Sprintf("~/%s/cluster.yaml", configFile)
+			if _, err := os.Stat(configFileHomeDir); err != nil {
+				log.Errorf("Failed to stat config file: %s", configFileHomeDir)
+				configFileDefaultDir := fmt.Sprintf("~/%s/%s.yaml", types.DefaultConfigDirName, configFile)
+				if _, err := os.Stat(configFileDefaultDir); err != nil {
+					log.Errorf("Failed to stat config file: %s", configFileDefaultDir)
+				} else {
+					return configFileDefaultDir
+				}
+			} else {
+				return configFileHomeDir
+			}
+		} else {
+			return configFileCurrentDir
+		}
+		log.Fatalf("%+v", err)
+	}
+	return configFile
 }
