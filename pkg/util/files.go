@@ -64,6 +64,7 @@ func createDirIfNotExists(path string) error {
 }
 
 func GerConfigFileName(configFile string) (configFilePath string) {
+	messageError := "Is NOT cluster config file:"
 	if configFile == "sample" {
 		return "config/samples/k3s_v1alpha1_cluster.yaml"
 	}
@@ -75,18 +76,24 @@ func GerConfigFileName(configFile string) (configFilePath string) {
 	// 	log.Errorf("")
 	// }
 	if _, err := os.Stat(configFile); err != nil {
-		log.Errorf("Failed to stat config file: %s", configFile)
+		messageError = fmt.Sprintf("%s %s", messageError, configFile)
 		configFileCurrentDir := fmt.Sprintf("./variables/%s.yaml", configFile)
 		if _, err := os.Stat(configFileCurrentDir); err != nil {
-			log.Errorf("Failed to stat config file: %s", configFileCurrentDir)
+			messageError = fmt.Sprintf("%s, %s", messageError, configFileCurrentDir)
 			configFileHomeDir := fmt.Sprintf("~/%s/cluster.yaml", configFile)
 			if _, err := os.Stat(configFileHomeDir); err != nil {
-				log.Errorf("Failed to stat config file: %s", configFileHomeDir)
-				configFileDefaultDir := fmt.Sprintf("~/%s/%s.yaml", types.DefaultConfigDirName, configFile)
-				if _, err := os.Stat(configFileDefaultDir); err != nil {
-					log.Errorf("Failed to stat config file: %s", configFileDefaultDir)
+				messageError = fmt.Sprintf("%s, %s", messageError, configFileHomeDir)
+				configFileDefaultFile := fmt.Sprintf("~/%s/%s.yaml", types.DefaultConfigDirName, configFile)
+				if _, err := os.Stat(configFileDefaultFile); err != nil {
+					messageError = fmt.Sprintf("%s, %s", messageError, configFileDefaultFile)
+					configFileDefaultDir := fmt.Sprintf("~/%s/%s/cluster.yaml", types.DefaultConfigDirName, configFile)
+					if _, err := os.Stat(configFileDefaultDir); err != nil {
+						messageError = fmt.Sprintf("%s, %s", messageError, configFileDefaultDir)
+					} else {
+						return configFileDefaultDir
+					}
 				} else {
-					return configFileDefaultDir
+					return configFileDefaultFile
 				}
 			} else {
 				return configFileHomeDir
@@ -94,7 +101,8 @@ func GerConfigFileName(configFile string) (configFilePath string) {
 		} else {
 			return configFileCurrentDir
 		}
-		log.Fatalf("%+v", err)
+		// log.Fatalf("%+v", err)
+		log.Fatalln(messageError)
 	}
 	return configFile
 }
