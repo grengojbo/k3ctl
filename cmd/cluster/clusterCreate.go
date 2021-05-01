@@ -75,15 +75,7 @@ func initConfig(args []string) {
 
 	cfgViper.SetConfigType("yaml")
 
-	// configFile = args[0]
 	configFile = util.GerConfigFileName(args[0])
-	// configFile = fmt.Sprintf("%s.yaml", args[0])
-	// log.Warnf("===== %v", args)
-	// Set config file, if specified
-
-	// if configFile != "" {
-
-	log.Infoln("configFile:", configFile)
 	cfgViper.SetConfigFile(configFile)
 	// log.Tracef("Schema: %+v", conf.JSONSchema)
 
