@@ -24,3 +24,11 @@ jobs:
       #       gotestsum --junitfile /tmp/test-reports/unit-tests.xml
       # - store_test_results:
       #     path: /tmp/test-reports
+orbs:
+  jira: circleci/jira@1.3.1
+workflows:
+  build:
+    jobs:
+      - build:
+          post-steps:
+            - jira/notify
