@@ -21,41 +21,42 @@ THE SOFTWARE.
 */
 package util
 
-// import (
-// 	"context"
-// 	"strings"
+import (
+	// 	"context"
+	// 	"strings"
 
-// 	k3dcluster "github.com/rancher/k3d/v4/pkg/client"
-// 	"github.com/rancher/k3d/v4/pkg/runtimes"
-// 	k3d "github.com/rancher/k3d/v4/pkg/types"
-// 	log "github.com/sirupsen/logrus"
-// 	"github.com/spf13/cobra"
-// )
+	// 	k3dcluster "github.com/rancher/k3d/v4/pkg/client"
+	// 	"github.com/rancher/k3d/v4/pkg/runtimes"
+	// 	k3d "github.com/rancher/k3d/v4/pkg/types"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+)
 
-// // ValidArgsAvailableClusters is used for shell completion: proposes the list of existing clusters
-// func ValidArgsAvailableClusters(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+// ValidArgsAvailableClusters is used for shell completion: proposes the list of existing clusters
+func ValidArgsAvailableClusters(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 
-// 	var completions []string
-// 	var clusters []*k3d.Cluster
-// 	clusters, err := k3dcluster.ClusterList(context.Background(), runtimes.SelectedRuntime)
-// 	if err != nil {
-// 		log.Errorln("Failed to get list of clusters for shell completion")
-// 		return nil, cobra.ShellCompDirectiveError
-// 	}
+	var completions []string
+	// 	var clusters []*k3d.Cluster
+	// 	clusters, err := k3dcluster.ClusterList(context.Background(), runtimes.SelectedRuntime)
+	// 	if err != nil {
+	// 		log.Errorln("Failed to get list of clusters for shell completion")
+	// 		return nil, cobra.ShellCompDirectiveError
+	// 	}
 
-// clusterLoop:
-// 	for _, cluster := range clusters {
-// 		for _, arg := range args {
-// 			if arg == cluster.Name { // only clusters, that are not in the args yet
-// 				continue clusterLoop
-// 			}
-// 		}
-// 		if strings.HasPrefix(cluster.Name, toComplete) {
-// 			completions = append(completions, cluster.Name)
-// 		}
-// 	}
-// 	return completions, cobra.ShellCompDirectiveDefault
-// }
+	// clusterLoop:
+	// 	for _, cluster := range clusters {
+	// 		for _, arg := range args {
+	// 			if arg == cluster.Name { // only clusters, that are not in the args yet
+	// 				continue clusterLoop
+	// 			}
+	// 		}
+	// 		if strings.HasPrefix(cluster.Name, toComplete) {
+	// 			completions = append(completions, cluster.Name)
+	// 		}
+	// 	}
+	log.Errorln("TODO: сделать автодополнение")
+	return completions, cobra.ShellCompDirectiveDefault
+}
 
 // // ValidArgsAvailableNodes is used for shell completion: proposes the list of existing nodes
 // func ValidArgsAvailableNodes(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
