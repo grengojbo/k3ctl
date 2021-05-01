@@ -91,13 +91,15 @@ func (r *SSHOperator) Stream(command string, isPrint bool) {
 				break loop
 			case outline := <-stdoutChan:
 				if isPrint && len(outline) > 0 {
-					fmt.Println("out:", outline)
+					// fmt.Println("out:", outline)
+					fmt.Println(outline)
 				} else if len(outline) > 0 {
 					log.Infoln(outline)
 				}
 			case errline := <-stderrChan:
 				if isPrint && len(errline) > 0 {
-					fmt.Println("err:", errline)
+					// fmt.Println("err:", errline)
+					fmt.Println(errline)
 				} else if len(errline) > 0 {
 					log.Errorln(errline)
 				}

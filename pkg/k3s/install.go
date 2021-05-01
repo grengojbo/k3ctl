@@ -290,16 +290,20 @@ func RunSshCommand(myCommand string, bastion *k3sv1alpha1.BastionNode, saveKubec
 	if _, isset := util.Find(k3sv1alpha1.ConnectionHosts, bastion.Name); !isset {
 		log.Errorln("TODO: Run command in from bastion host ........")
 	} else {
-		log.Errorln("TODO: Run command in host ........")
-		log.Infof("Executing: %s\n", myCommand)
-		myCommand = "hostname -a"
+		// log.Errorln("TODO: Run command in host ........")
+		// log.Infof("Executing: %s\n", myCommand)
+		// myCommand = "hostname -a"
 		if dryRun {
 			log.Infof("Executing: %s\n", myCommand)
 		} else {
+			log.Debugf("Executing: %s\n", myCommand)
 			// Выполняем комманду по SSH
 			if _, err := ssh.Run(myCommand); err != nil {
 				log.Fatalln(err.Error())
 			}
+			// Demo stream
+			// ssh.Stream("for i in {1..5}; do echo ${i}; sleep ; done; exit 2;", true)
+			// ssh.Stream("apt update -y", false)
 		}
 	}
 	// if dryRun {
