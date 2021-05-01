@@ -291,17 +291,23 @@ func RunSshCommand(myCommand string, bastion *k3sv1alpha1.BastionNode, saveKubec
 		log.Errorln("TODO: Run command in from bastion host ........")
 	} else {
 		log.Errorln("TODO: Run command in host ........")
-		// Выполняем комманду по SSH
-		if _, err := ssh.Run("hostname -a"); err != nil {
-			log.Fatalln(err.Error())
+		log.Infof("Executing: %s\n", myCommand)
+		myCommand = "hostname -a"
+		if dryRun {
+			log.Infof("Executing: %s\n", myCommand)
+		} else {
+			// Выполняем комманду по SSH
+			if _, err := ssh.Run(myCommand); err != nil {
+				log.Fatalln(err.Error())
+			}
 		}
 	}
-	if dryRun {
-		log.Infof("Executing: %s\n", myCommand)
-		// ssh.Stream("for i in {1..5}; do echo ${i}; sleep ; done; exit 2;", false)
-	} else {
-		log.Errorln("TODO: add ssh run...")
-	}
+	// if dryRun {
+	// 	log.Infof("Executing: %s\n", myCommand)
+	// 	// ssh.Stream("for i in {1..5}; do echo ${i}; sleep ; done; exit 2;", false)
+	// } else {
+	// 	log.Errorln("TODO: add ssh run...")
+	// }
 
 	return nil
 }
