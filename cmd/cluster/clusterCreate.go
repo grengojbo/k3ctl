@@ -116,7 +116,7 @@ func NewCmdClusterCreate() *cobra.Command {
 		Args: cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// fmt.Println("PreRun...")
-			configFile = config.InitConfig(args, cfgViper, ppViper)
+			configFile = config.InitConfig(args[0], cfgViper, ppViper)
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -244,16 +244,12 @@ func NewCmdClusterCreate() *cobra.Command {
 					if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
 						log.Fatalln(err.Error())
 					} else {
-						// nodeInternalIP, ok := cfg.GetNodeAddress(node, "internal")
-						// if ok {
-						// log.Errorf("------------> nodeInternalIP: %s, ok=%v", nodeInternalIP, ok)
-						// }
 						apiServerAddres, err := cfg.GetAPIServerAddress(node, &cfg.Spec.Networking)
 						if err != nil {
 							log.Fatal(err)
 						}
 						// log.Warnf("apiServerAddresses: %s", apiServerAddres)
-
+						
 						installk3sAgentExec := k3s.MakeAgentInstallExec(apiServerAddres, token, k3sOpt)
 						installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
 						installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion

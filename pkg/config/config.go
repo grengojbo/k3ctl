@@ -60,7 +60,7 @@ func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 // var ppViper = viper.New()
 // var dryRun bool
 
-func InitConfig(args []string, cfgViper *viper.Viper, ppViper *viper.Viper) (configFile string) {
+func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper) (configFile string) {
 
 	// dryRun = viper.GetBool("dry-run")
 	// Viper for pre-processed config options
@@ -72,7 +72,7 @@ func InitConfig(args []string, cfgViper *viper.Viper, ppViper *viper.Viper) (con
 
 	cfgViper.SetConfigType("yaml")
 
-	configFile = util.GerConfigFileName(args[0])
+	configFile = util.GerConfigFileName(clusterName)
 	cfgViper.SetConfigFile(configFile)
 	// log.Tracef("Schema: %+v", conf.JSONSchema)
 

@@ -25,7 +25,15 @@ import (
 	// l "github.com/rancher/k3d/v5/pkg/logger"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+var ClusterName string
+var NodeName string
+var ConfigFile string
+var CfgViper = viper.New()
+var PpViper = viper.New()
+var DryRun bool
 
 // NewCmdNode returns a new cobra command
 func NewCmdNode() *cobra.Command {
@@ -46,7 +54,7 @@ func NewCmdNode() *cobra.Command {
 	}
 
 	// add subcommands
-	cmd.AddCommand(NewCmdNodeCreate())
+	cmd.AddCommand(NewCmdNodeAdd())
 	// cmd.AddCommand(NewCmdNodeCreate(),
 	// 	NewCmdNodeStart(),
 	// 	NewCmdNodeStop(),
