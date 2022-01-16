@@ -40,7 +40,7 @@ import (
 	// cfg "github.com/rancher/k3d/v4/cmd/config"
 	// "github.com/rancher/k3d/v4/cmd/image"
 	// "github.com/rancher/k3d/v4/cmd/kubeconfig"
-	// "github.com/rancher/k3d/v4/cmd/node"
+	"github.com/grengojbo/k3ctl/cmd/node"
 	// "github.com/rancher/k3d/v4/cmd/registry"
 	cliutil "github.com/grengojbo/k3ctl/cmd/util"
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
@@ -114,7 +114,7 @@ func init() {
 	rootCmd.AddCommand(NewCmdCompletion())
 	rootCmd.AddCommand(cluster.NewCmdCluster())
 	// rootCmd.AddCommand(kubeconfig.NewCmdKubeconfig())
-	// rootCmd.AddCommand(node.NewCmdNode())
+	rootCmd.AddCommand(node.NewCmdNode())
 	// rootCmd.AddCommand(image.NewCmdImage())
 	// rootCmd.AddCommand(cfg.NewCmdConfig())
 	// rootCmd.AddCommand(registry.NewCmdRegistry())

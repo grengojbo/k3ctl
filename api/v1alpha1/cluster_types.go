@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+
 	// log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -168,7 +169,7 @@ type Networking struct {
 	// APIServerPort specifies the port the API Server should bind to.
 	// Defaults to 6443.
 	// +optional
-	APIServerPort *int32 `json:"apiServerPort,omitempty"`
+	APIServerPort int32 `json:"apiServerPort,omitempty"`
 	// ServiceSubnet is the subnet used by k8s services.
 	// Defaults to the first element of the Cluster object's spec.clusterNetwork.pods.cidrBlocks field, or
 	// to "10.96.0.0/12" if that's unset.
@@ -239,6 +240,11 @@ type VolumeWithNodeFilters struct {
 	NodeFilters []string `mapstructure:"nodeFilters" yaml:"nodeFilters" json:"nodeFilters,omitempty"`
 }
 
+type ContrelPlanNodes struct {
+	Bastion *BastionNode `mapstructure:"bastion" yaml:"bastion" json:"bastion"`
+	Node    *Node        `mapstructure:"node" yaml:"node" json:"node"`
+
+}
 type BastionNode struct {
 	// Name The bastion Name
 	Name string `mapstructure:"name" yaml:"name" json:"name,omitempty"`
@@ -401,7 +407,8 @@ type ClusterSpec struct {
 	Operator          bool                          `mapstructure:"operator" yaml:"operator" json:"operator,omitempty"`
 	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`         //nolint:lll    // default 1
 	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`            //nolint:lll    // default 0
-	ClusterToken      string                        `mapstructure:"token" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
+	ClusterToken      string                        `mapstructure:"clusterToken" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
+	AgentToken        string                       	`mapstructure:"agentToken" yaml:"agentToken" json:"agentToken,omitempty"` // default: auto-generated
 	Bastions          []*BastionNode                `mapstructure:"bastions" yaml:"bastions" json:"bastions,omitempty"`
 	Nodes             []*Node                       `mapstructure:"nodes" yaml:"nodes" json:"nodes,omitempty"`
 	Labels            []LabelWithNodeFilters        `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
@@ -546,7 +553,41 @@ func (r *Cluster) GetTlsSan(node *Node, vpc *Networking) (tlsSAN []string) {
 	return tlsSAN
 }
 
+// GetAPIServerAddress возвращает hostname  or ip API Server
+func (r *Cluster) GetAPIServerAddress(node *Node, vpc *Networking) (apiServerAddres string, err error) {
+	for _, item := range vpc.APIServerAddresses {
+		apiServerAddres = item.Address
+		nodeIP, ok := r.GetNodeAddress(node, "internal")
+		// log.Warnf("==> item: %s = val: %s", item, valType)
+		if ok {
+			if string(item.Type) == InternalDNS {
+				return item.Address, nil
+			} else if string(item.Type) == InternalIP {
+				return item.Address, nil
+			} else if string(item.Type) == ExternalDNS {
+				return item.Address, nil
+			} else if string(item.Type) == ExternalIP {
+				return item.Address, nil
+			}
+			err = errors.New(fmt.Sprintf("is set node internal IP: %s not set APIServerAddresses type (InternalDNS, InternalIP, ExternalDNS, ExternalIP)", nodeIP))
+		}
+
+		nodeIP, ok = r.GetNodeAddress(node, "external")
+		if ok {
+			if string(item.Type) == ExternalDNS {
+				return item.Address, nil
+			} else if string(item.Type) == ExternalIP {
+				return item.Address, nil
+			}
+			err = errors.New(fmt.Sprintf("is set node external IP: %s not set APIServerAddresses type (InternalDNS, InternalIP, ExternalDNS, ExternalIP)", nodeIP))
+		}
+		err = errors.New(fmt.Sprintf("is not set node internal or external type (InternalDNS, InternalIP, ExternalDNS, ExternalIP) IP: %s", nodeIP))
+	}
+	return apiServerAddres, err
+}
+
 // GetBastion search and return bastion host
+// для работы через baston смотреть README
 func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err error) {
 	bastion = &BastionNode{
 		SshPort:          SshPortDefault,
@@ -600,6 +641,31 @@ func Find(slice []string, val string) (string, bool) {
 	}
 	return "", false
 }
+
+// GetNodeAddress возращает hostnamr или ip в зависимости от valType (internal|external)
+func (r *Cluster) GetNodeAddress(node *Node, valType string) (string, bool) {
+	// log.Errorln(slice)
+	res := ""
+	for _, item := range node.Addresses {
+		res = item.Address
+		// log.Warnf("==> item: %s = val: %s", item, valType)
+		if valType == "internal" {
+			if string(item.Type) == InternalDNS {
+				return item.Address, true
+			} else if string(item.Type) == InternalIP {
+				return item.Address, true
+			}
+		} else if valType == "external" {
+			if string(item.Type) == ExternalDNS {
+				return item.Address, true
+			} else if string(item.Type) == ExternalIP {
+				return item.Address, true
+			}
+		}
+	}
+	return res, false
+}
+
 
 func init() {
 	SchemeBuilder.Register(&Cluster{}, &ClusterList{})

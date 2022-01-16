@@ -38,7 +38,8 @@ var K3sVersion = "v1.20.0-k3s2"
 // PinnedK3sChannel is a predictable K8s version for use
 // with the examples in the README. You can override this via
 // a flag, or give a specific version, see the command help message.
-const PinnedK3sChannel = "v1.20"
+// const PinnedK3sChannel = "v1.20"
+const PinnedK3sChannel = "stable"
 
 // GetVersion returns the version for cli, it gets it from "git describe --tags" or returns "dev" when doing simple go build
 func GetVersion() string {

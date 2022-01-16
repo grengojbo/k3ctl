@@ -25,7 +25,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/grengojbo/k3ctl/pkg/util"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 
 	"github.com/spf13/viper"
 
@@ -47,8 +49,57 @@ func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 
 		return cfg, err
 	}
-
+	if cfg.Spec.Networking.APIServerPort == 0 {
+		cfg.Spec.Networking.APIServerPort = 6443
+	}
 	return cfg, nil
+}
+
+// var configFile string
+// var cfgViper = viper.New()
+// var ppViper = viper.New()
+// var dryRun bool
+
+func InitConfig(args []string, cfgViper *viper.Viper, ppViper *viper.Viper) (configFile string) {
+
+	// dryRun = viper.GetBool("dry-run")
+	// Viper for pre-processed config options
+	ppViper.SetEnvPrefix("K3S")
+
+	// viper for the general config (file, env and non pre-processed flags)
+	cfgViper.SetEnvPrefix("K3S")
+	cfgViper.AutomaticEnv()
+
+	cfgViper.SetConfigType("yaml")
+
+	configFile = util.GerConfigFileName(args[0])
+	cfgViper.SetConfigFile(configFile)
+	// log.Tracef("Schema: %+v", conf.JSONSchema)
+
+	// if err := config.ValidateSchemaFile(configFile, []byte(conf.JSONSchema)); err != nil {
+	// 	log.Fatalf("Schema Validation failed for config file %s: %+v", configFile, err)
+	// }
+
+	// try to read config into memory (viper map structure)
+	if err := cfgViper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Fatalf("Config file %s not found: %+v", configFile, err)
+		}
+		// config file found but some other error happened
+		log.Fatalf("Failed to read config file %s: %+v", configFile, err)
+	}
+
+	log.Infof("Using config file %s", cfgViper.ConfigFileUsed())
+	// }
+
+	if log.GetLevel() >= log.DebugLevel {
+		c, _ := yaml.Marshal(cfgViper.AllSettings())
+		log.Debugf("Configuration:\n%s", c)
+
+		c, _ = yaml.Marshal(ppViper.AllSettings())
+		log.Debugf("Additional CLI Configuration:\n%s", c)
+	}
+	return configFile
 }
 
 // func FromViper(config *viper.Viper) (conf.Config, error) {

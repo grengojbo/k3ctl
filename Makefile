@@ -12,11 +12,26 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+GO ?= go
+GO_MD2MAN ?= go-md2man
+
 all: manager
 
 # Run tests
 test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
+
+dep: api ## Get the dependencies
+	@$(GO) get -v -d ./...
+
+update: api ## Get and update the dependencies
+	@$(GO) get -v -d -u ./...
+
+tidy: ## Clean up dependencies
+	@$(GO) mod tidy
+
+vendor: dep ## Create vendor directory
+	@$(GO) mod vendor
 
 build: # Build k3ctl binary
 	@#go build -o k3ctl cli/main.go

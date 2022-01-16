@@ -1,3 +1,4 @@
 {
-  "githubIssues.issueBranchTitle": "KCTL-${issueNumber}"
+  "githubIssues.issueBranchTitle": "KCTL-${issueNumber}",
+  "jira-plugin.workingProject": ""
 }

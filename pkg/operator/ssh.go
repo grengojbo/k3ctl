@@ -71,6 +71,11 @@ func (r *SSHOperator) Run(command string) (done bool, err error) {
 	return done, err
 }
 
+// выполнить комманду на удаленном компьютере и вернуть результат как строка
+func (r *SSHOperator) Execute(command string) (stdOut string, stdErr string, err error) {
+	stdOut, stdErr, _, err = r.Config.Run(command, 60*time.Second)
+	return stdOut, stdErr, err
+}
 // Stream returns one channel that combines the stdout and stderr of the command
 // as it is run on the remote machine, and another that sends true when the
 // command is done. The sessions and channels will then be closed.

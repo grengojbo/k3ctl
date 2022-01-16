@@ -47,6 +47,17 @@ type K3sIstallOptions struct {
 	Node         *k3sv1alpha1.Node
 }
 
+func MakeAgentInstallExec(apiServerAddres string, token string, options K3sExecOptions) K3sIstallOptions {
+	// extraArgs := []string{}
+	// curl -sfL https://get.k3s.io | K3S_URL='https://<IP>6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='stable' sh -s - --node-taint key=value:NoExecute
+	k3sIstallOptions := K3sIstallOptions{}
+
+	installExec := fmt.Sprintf("K3S_URL='https://%s:%d' K3S_TOKEN='%s'", apiServerAddres, options.Networking.APIServerPort, token)
+	k3sIstallOptions.ExecString = installExec
+	return k3sIstallOptions
+}
+
+// MakeInstallExec установка сервера
 func MakeInstallExec(cluster bool, tlsSAN []string, options K3sExecOptions) K3sIstallOptions {
 	extraArgs := []string{}
 	k3sIstallOptions := K3sIstallOptions{}
@@ -185,6 +196,43 @@ func MakeInstallExec(cluster bool, tlsSAN []string, options K3sExecOptions) K3sI
 	return k3sIstallOptions
 }
 
+// GetAgentToken подключаемся к мастеру и получает токен для подключения агента
+func GetAgentToken(masters []k3sv1alpha1.ContrelPlanNodes, dryRun bool) (token string, err error) {
+	if len(masters) == 0 {
+		return "", fmt.Errorf("Is NOT set control plane nodes")
+	}
+	runCommand := "cat /var/lib/rancher/k3s/server/node-token"
+	for _, item := range masters {
+		if item.Bastion.Name == "local" {
+			log.Infoln("Run command in localhost........")
+			// stdOut, stdErr, err := RunLocalCommand(installK3scommand, true, dryRun)
+			_, stdErr, err := RunLocalCommand(runCommand, true, dryRun)
+			if err != nil {
+				log.Fatalln(err.Error())
+			} else if len(stdErr) > 0 {
+				log.Errorf("stderr: %q", stdErr)
+			}
+			// log.Infof("stdout: %q", stdOut)
+		} else {
+			if item.Node.User != "root" {
+				runCommand = fmt.Sprintf("sudo %s", runCommand)
+			}
+			ssh := oper.SSHOperator{}
+			ssh.NewSSHOperator(item.Bastion)
+			stdOut, stdErr, err := ssh.Execute(runCommand)
+			if err != nil {
+				log.Errorln(stdErr)
+				// log.Fatalln(err.Error())
+			} else {
+				return stdOut, err
+			}
+			// log.Warnln(stdOut)
+			// RunExampleCommand2()
+		}
+	}
+	return token, err
+}
+
 // RunK3sCommand Выполняем команды по SSH или локально
 // TODO: translate
 func RunK3sCommand(bastion *k3sv1alpha1.BastionNode, installk3sExec *K3sIstallOptions, dryRun bool) error {
@@ -196,12 +244,14 @@ func RunK3sCommand(bastion *k3sv1alpha1.BastionNode, installk3sExec *K3sIstallOp
 	}
 
 	log.Infof("KubernetesVersion: %s (K3sChannel: %s)", installk3sExec.K3sVersion, installk3sExec.K3sChannel)
-	log.Infof("CNI: %s Backend: %s", installk3sExec.CNI, installk3sExec.Backend)
-	log.Infof("LoadBalancer: %s", installk3sExec.LoadBalancer)
-	if len(installk3sExec.Ingress) > 0 {
-		log.Infof("Ingress Controllers: %s", installk3sExec.Ingress)
-	} else {
-		log.Infoln("Ingress Controllers: default k3s Traefik")
+	if installk3sExec.Node.Role ==  "master" {
+		log.Infof("CNI: %s Backend: %s", installk3sExec.CNI, installk3sExec.Backend)
+		log.Infof("LoadBalancer: %s", installk3sExec.LoadBalancer)
+		if len(installk3sExec.Ingress) > 0 {
+			log.Infof("Ingress Controllers: %s", installk3sExec.Ingress)
+		} else {
+			log.Infoln("Ingress Controllers: default k3s Traefik")
+		}
 	}
 	log.Warnf("Bastion %s host: %s (ssh port: %d key: %s)", bastion.Name, bastion.Address, bastion.SshPort, bastion.SSHAuthorizedKey)
 	log.Debugln("--------------------------------------------")
@@ -288,7 +338,8 @@ func RunSshCommand(myCommand string, bastion *k3sv1alpha1.BastionNode, saveKubec
 	ssh.NewSSHOperator(bastion)
 	// Проверяем запускаем комманду через бастион или напрямую
 	if _, isset := util.Find(k3sv1alpha1.ConnectionHosts, bastion.Name); !isset {
-		log.Errorln("TODO: Run command in from bastion host ........")
+		log.Fatalln("TODO: Run command in from bastion host ........")
+		// log.Errorln("TODO: Run command in from bastion host ........")
 	} else {
 		// log.Errorln("TODO: Run command in host ........")
 		// log.Infof("Executing: %s\n", myCommand)

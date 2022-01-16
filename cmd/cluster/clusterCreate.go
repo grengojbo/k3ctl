@@ -63,46 +63,46 @@ var cfgViper = viper.New()
 var ppViper = viper.New()
 var dryRun bool
 
-func initConfig(args []string) {
+// func initConfig(args []string) {
 
-	dryRun = viper.GetBool("dry-run")
-	// Viper for pre-processed config options
-	ppViper.SetEnvPrefix("K3S")
+// 	dryRun = viper.GetBool("dry-run")
+// 	// Viper for pre-processed config options
+// 	ppViper.SetEnvPrefix("K3S")
 
-	// viper for the general config (file, env and non pre-processed flags)
-	cfgViper.SetEnvPrefix("K3S")
-	cfgViper.AutomaticEnv()
+// 	// viper for the general config (file, env and non pre-processed flags)
+// 	cfgViper.SetEnvPrefix("K3S")
+// 	cfgViper.AutomaticEnv()
 
-	cfgViper.SetConfigType("yaml")
+// 	cfgViper.SetConfigType("yaml")
 
-	configFile = util.GerConfigFileName(args[0])
-	cfgViper.SetConfigFile(configFile)
-	// log.Tracef("Schema: %+v", conf.JSONSchema)
+// 	configFile = util.GerConfigFileName(args[0])
+// 	cfgViper.SetConfigFile(configFile)
+// 	// log.Tracef("Schema: %+v", conf.JSONSchema)
 
-	// if err := config.ValidateSchemaFile(configFile, []byte(conf.JSONSchema)); err != nil {
-	// 	log.Fatalf("Schema Validation failed for config file %s: %+v", configFile, err)
-	// }
+// 	// if err := config.ValidateSchemaFile(configFile, []byte(conf.JSONSchema)); err != nil {
+// 	// 	log.Fatalf("Schema Validation failed for config file %s: %+v", configFile, err)
+// 	// }
 
-	// try to read config into memory (viper map structure)
-	if err := cfgViper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Fatalf("Config file %s not found: %+v", configFile, err)
-		}
-		// config file found but some other error happened
-		log.Fatalf("Failed to read config file %s: %+v", configFile, err)
-	}
+// 	// try to read config into memory (viper map structure)
+// 	if err := cfgViper.ReadInConfig(); err != nil {
+// 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+// 			log.Fatalf("Config file %s not found: %+v", configFile, err)
+// 		}
+// 		// config file found but some other error happened
+// 		log.Fatalf("Failed to read config file %s: %+v", configFile, err)
+// 	}
 
-	log.Infof("Using config file %s", cfgViper.ConfigFileUsed())
-	// }
+// 	log.Infof("Using config file %s", cfgViper.ConfigFileUsed())
+// 	// }
 
-	if log.GetLevel() >= log.DebugLevel {
-		c, _ := yaml.Marshal(cfgViper.AllSettings())
-		log.Debugf("Configuration:\n%s", c)
+// 	if log.GetLevel() >= log.DebugLevel {
+// 		c, _ := yaml.Marshal(cfgViper.AllSettings())
+// 		log.Debugf("Configuration:\n%s", c)
 
-		c, _ = yaml.Marshal(ppViper.AllSettings())
-		log.Debugf("Additional CLI Configuration:\n%s", c)
-	}
-}
+// 		c, _ = yaml.Marshal(ppViper.AllSettings())
+// 		log.Debugf("Additional CLI Configuration:\n%s", c)
+// 	}
+// }
 
 // NewCmdClusterCreate returns a new cobra command
 func NewCmdClusterCreate() *cobra.Command {
@@ -116,10 +116,12 @@ func NewCmdClusterCreate() *cobra.Command {
 		Args: cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// fmt.Println("PreRun...")
-			initConfig(args)
+			configFile = config.InitConfig(args, cfgViper, ppViper)
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+
+			dryRun = viper.GetBool("dry-run")
 
 			/*************************
 			 * Compute Configuration *
@@ -180,21 +182,20 @@ func NewCmdClusterCreate() *cobra.Command {
 				log.Fatalln(err)
 			}
 			log.Infoln("Creating initializing server node")
+			k3sOpt := k3s.K3sExecOptions{
+				// 	NoExtras:     k3sNoExtras,
+				ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
+				Ingress:             cfg.Spec.Addons.Ingress.Name,
+				DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
+				DisableIngress:      cfg.Spec.Options.DisableIngress,
+				SecretsEncryption:   cfg.Spec.Options.SecretsEncryption,
+				SELinux:             cfg.Spec.Options.SELinux,
+				Rootless:            cfg.Spec.Options.Rootless,
+				LoadBalancer:        &cfg.Spec.LoadBalancer,
+				Networking:          &cfg.Spec.Networking,
+			}
+			masters := []conf.ContrelPlanNodes{}
 			for _, node := range servers {
-
-				k3sOpt := k3s.K3sExecOptions{
-					// 	NoExtras:     k3sNoExtras,
-					ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
-					Ingress:             cfg.Spec.Addons.Ingress.Name,
-					DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
-					DisableIngress:      cfg.Spec.Options.DisableIngress,
-					SecretsEncryption:   cfg.Spec.Options.SecretsEncryption,
-					SELinux:             cfg.Spec.Options.SELinux,
-					Rootless:            cfg.Spec.Options.Rootless,
-					LoadBalancer:        &cfg.Spec.LoadBalancer,
-					Networking:          &cfg.Spec.Networking,
-				}
-
 				if len(cfg.Spec.Datastore.Provider) > 0 {
 					if datastore, err := cfg.GetDatastore(); err != nil {
 						log.Fatalln(err.Error())
@@ -218,17 +219,54 @@ func NewCmdClusterCreate() *cobra.Command {
 					if err := k3s.RunK3sCommand(bastion, &installk3sExec, dryRun); err != nil {
 						log.Fatalln(err.Error())
 					}
-
+					masters = append(masters, conf.ContrelPlanNodes{
+						Bastion: bastion,
+						Node: node,
+					})
 					log.Infof("Name: %s (Role: %v) User: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
 					log.Infoln("-------------------")
 				}
 			}
+
 			if len(agents) > 0 {
+				// if len(masters) == 0 {
+				// 	log.Fatalln("Is NOT set control plane nodes")
+				// }
+				token, err := k3s.GetAgentToken(masters, dryRun)
+				if err != nil {
+					log.Fatalln(err.Error())
+				}
 				log.Infoln("=====================")
 				log.Infoln("Install agents")
+				
+				log.Debugf("K3S_TOKEN=%s", token)
 				for _, node := range agents {
-					log.Infof("Name: %s (Role: %v) User: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
-					log.Infoln("-------------------")
+					if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
+						log.Fatalln(err.Error())
+					} else {
+						// nodeInternalIP, ok := cfg.GetNodeAddress(node, "internal")
+						// if ok {
+						// log.Errorf("------------> nodeInternalIP: %s, ok=%v", nodeInternalIP, ok)
+						// }
+						apiServerAddres, err := cfg.GetAPIServerAddress(node, &cfg.Spec.Networking)
+						if err != nil {
+							log.Fatal(err)
+						}
+						// log.Warnf("apiServerAddresses: %s", apiServerAddres)
+
+						installk3sAgentExec := k3s.MakeAgentInstallExec(apiServerAddres, token, k3sOpt)
+						installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
+						installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion
+						installk3sAgentExec.Node = node
+
+						if err := k3s.RunK3sCommand(bastion, &installk3sAgentExec, dryRun); err != nil {
+							log.Fatalln(err.Error())
+						}
+
+						log.Infof("Name: %s (Role: %v) User: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
+						// log.Debugln(bastion)
+						log.Infoln("-------------------")
+					}
 				}
 			}
 			log.Infoln("DRY RUN: ", dryRun)
