@@ -116,8 +116,6 @@ func NewCmdNodeAdd() *cobra.Command {
 				if err != nil {
 					log.Fatalln(err.Error())
 				}
-				// log.Infoln("=====================")
-				// log.Infoln("Install agents")
 				
 				// log.Debugf("K3S_TOKEN=%s", token)
 				for _, node := range agents {
@@ -138,7 +136,7 @@ func NewCmdNodeAdd() *cobra.Command {
 							if err := k3s.RunK3sCommand(bastion, &installk3sAgentExec, DryRun); err != nil {
 								log.Fatalln(err.Error())
 							}
-							log.Debugf("Add agent Node: %s", node.Name)
+							log.Infof("Successfully added Agent Node: %s", node.Name)
 							isAddNode = true
 						}
 					}

@@ -239,7 +239,7 @@ func NewCmdClusterCreate() *cobra.Command {
 				log.Infoln("=====================")
 				log.Infoln("Install agents")
 				
-				log.Debugf("K3S_TOKEN=%s", token)
+				// log.Debugf("K3S_TOKEN=%s", token)
 				for _, node := range agents {
 					if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
 						log.Fatalln(err.Error())
@@ -249,7 +249,7 @@ func NewCmdClusterCreate() *cobra.Command {
 							log.Fatal(err)
 						}
 						// log.Warnf("apiServerAddresses: %s", apiServerAddres)
-						
+
 						installk3sAgentExec := k3s.MakeAgentInstallExec(apiServerAddres, token, k3sOpt)
 						installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
 						installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion
