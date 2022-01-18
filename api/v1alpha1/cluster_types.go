@@ -642,6 +642,17 @@ func Find(slice []string, val string) (string, bool) {
 	return "", false
 }
 
+func (r *Cluster) GetNodeLabels(node *Node) (cnt int) {
+	labels := []string{}
+	if len(node.Labels) > 0 {
+		if node.Role != "master" {
+			labels = append(labels, "")
+		}
+		return len(node.Labels)
+	}
+	return 0
+}
+
 // GetNodeAddress возращает hostnamr или ip в зависимости от valType (internal|external)
 func (r *Cluster) GetNodeAddress(node *Node, valType string) (string, bool) {
 	// log.Errorln(slice)

@@ -127,6 +127,8 @@ func NewCmdNodeAdd() *cobra.Command {
 							if err != nil {
 								log.Fatal(err)
 							}
+							cnt := cfg.GetNodeLabels(node)
+							log.Warnf("=-> cnt: %d", cnt)
 							// log.Warnf("apiServerAddresses: %s", apiServerAddres)
 							installk3sAgentExec := k3s.MakeAgentInstallExec(apiServerAddres, token, k3sOpt)
 							installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel

@@ -1,0 +1,24 @@
+@goal downloaded
+@reached_if [[ -f code.tar.gz ]]
+  wget http://domain/code.tar.gz
+  
+@goal extracted
+@depends_on downloaded
+  tar xzf code.tar.gz 
+
+@goal built
+@depends_on extracted
+  npm install
+  npm run build
+
+@goal deployed
+@depends_on built
+  scp -C -r build/* user@domain:~/www
+
+@goal help
+@doc список комманд
+echo "hello"
+env
+
+@goal default
+@depends_on help

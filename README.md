@@ -55,6 +55,9 @@ kubectl get nodes -o wide
 
 
 ```bash
+kubectl label nodes --all node-role.kubernetes.io/MyRole=true
+# --node-label 'kubernetes.io/role=agent'
+
 ./k3ctl cluster create --verbose -c sample -h
  4326  ./k3ctl cluster create -c sample --k3s-version v1.19
  4327  ./k3ctl cluster create --verbose -c sample --k3s-version v1.19
