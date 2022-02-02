@@ -39,8 +39,10 @@ import (
 	"github.com/grengojbo/k3ctl/cmd/cluster"
 	// cfg "github.com/rancher/k3d/v4/cmd/config"
 	// "github.com/rancher/k3d/v4/cmd/image"
-	// "github.com/rancher/k3d/v4/cmd/kubeconfig"
+
+	"github.com/grengojbo/k3ctl/cmd/kubeconfig"
 	"github.com/grengojbo/k3ctl/cmd/node"
+
 	// "github.com/rancher/k3d/v4/cmd/registry"
 	cliutil "github.com/grengojbo/k3ctl/cmd/util"
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
@@ -101,6 +103,10 @@ func Execute() {
 
 func init() {
 
+	rootCmd.PersistentFlags().String("kubeconfig", "", "Local path for your kubeconfig file")
+	_ = viper.BindPFlag("kubeconfig", rootCmd.PersistentFlags().Lookup("kubeconfig"))
+	viper.AutomaticEnv()
+	_ = viper.BindEnv("kubeconfig")
 	rootCmd.PersistentFlags().BoolVar(&flags.debugLogging, "verbose", false, "Enable verbose output (debug logging)")
 	rootCmd.PersistentFlags().BoolVar(&flags.traceLogging, "trace", false, "Enable super verbose output (trace logging)")
 	rootCmd.PersistentFlags().BoolVar(&flags.timestampedLogging, "timestamps", false, "Enable Log timestamps")
@@ -113,7 +119,7 @@ func init() {
 	// add subcommands
 	rootCmd.AddCommand(NewCmdCompletion())
 	rootCmd.AddCommand(cluster.NewCmdCluster())
-	// rootCmd.AddCommand(kubeconfig.NewCmdKubeconfig())
+	rootCmd.AddCommand(kubeconfig.NewCmdKubeconfig())
 	rootCmd.AddCommand(node.NewCmdNode())
 	// rootCmd.AddCommand(image.NewCmdImage())
 	// rootCmd.AddCommand(cfg.NewCmdConfig())

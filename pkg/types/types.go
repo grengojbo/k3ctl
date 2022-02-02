@@ -60,6 +60,18 @@ const DefaultObjectNamePrefix = "k3s"
 
 const K3sGetScript = "curl -sfL https://get.k3s.io"
 
+var (
+	InitMasterCommand      = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --node-external-ip %s %s' %s sh -"
+	JoinMasterCommand      = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
+	JoinAgentCommand       = "K3S_URL='https://%s:%d' K3S_TOKEN='%s'"
+	CatTokenCommand        = "cat /var/lib/rancher/k3s/server/node-token"
+	CatCfgCommand          = "cat /etc/rancher/k3s/k3s.yaml"
+	DockerCommand          = "if ! type docker; then curl -sSL %s | sh - %s; fi"
+	DeployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
+	MasterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
+	WorkerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
+)
+
 // ReadyLogMessageByRole defines the log messages we wait for until a server node is considered ready
 var ReadyLogMessageByRole = map[Role]string{
 	ServerRole:       "k3s is up and running",

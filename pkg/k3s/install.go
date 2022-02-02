@@ -52,7 +52,7 @@ func MakeAgentInstallExec(apiServerAddres string, token string, options K3sExecO
 	// curl -sfL https://get.k3s.io | K3S_URL='https://<IP>6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='stable' sh -s - --node-taint key=value:NoExecute
 	k3sIstallOptions := K3sIstallOptions{}
 
-	installExec := fmt.Sprintf("K3S_URL='https://%s:%d' K3S_TOKEN='%s'", apiServerAddres, options.Networking.APIServerPort, token)
+	installExec := fmt.Sprintf(types.JoinAgentCommand, apiServerAddres, options.Networking.APIServerPort, token)
 	k3sIstallOptions.ExecString = installExec
 	return k3sIstallOptions
 }
@@ -201,7 +201,8 @@ func GetAgentToken(masters []k3sv1alpha1.ContrelPlanNodes, dryRun bool) (token s
 	if len(masters) == 0 {
 		return "", fmt.Errorf("Is NOT set control plane nodes")
 	}
-	runCommand := "cat /var/lib/rancher/k3s/server/node-token"
+	// runCommand := "cat /var/lib/rancher/k3s/server/node-token"
+	runCommand := types.CatTokenCommand
 	for _, item := range masters {
 		if item.Bastion.Name == "local" {
 			log.Infoln("Run command in localhost........")
@@ -232,6 +233,7 @@ func GetAgentToken(masters []k3sv1alpha1.ContrelPlanNodes, dryRun bool) (token s
 	}
 	return token, err
 }
+
 
 // RunK3sCommand Выполняем команды по SSH или локально
 // TODO: translate

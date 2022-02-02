@@ -21,20 +21,22 @@ THE SOFTWARE.
 */
 package client
 
-// "bytes"
-// "context"
-// "fmt"
-// "io"
-// "os"
-// "path/filepath"
-// "time"
+import (
+	// "bytes"
+	// "context"
+	// "fmt"
+	// "io"
+	// "os"
+	// "path/filepath"
+	// "time"
 
-// l "github.com/rancher/k3d/v5/pkg/logger"
-// "github.com/rancher/k3d/v5/pkg/runtimes"
-// k3d "github.com/rancher/k3d/v5/pkg/types"
-// log "github.com/sirupsen/logrus"
-// "k8s.io/client-go/tools/clientcmd"
-// clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	// l "github.com/rancher/k3d/v5/pkg/logger"
+	// "github.com/rancher/k3d/v5/pkg/runtimes"
+	// k3d "github.com/rancher/k3d/v5/pkg/types"
+	// log "github.com/sirupsen/logrus"
+	// "k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+)
 
 // WriteKubeConfigOptions provide a set of options for writing a KubeConfig file
 type WriteKubeConfigOptions struct {
@@ -225,6 +227,10 @@ type WriteKubeConfigOptions struct {
 
 // }
 
+func KubeconfigMerge(srcKubeConfig string) (newKubeConfig *clientcmdapi.Config) {
+	newKubeConfig = clientcmdapi.NewCmdKubeconfig()
+	return nil
+}
 // // KubeconfigMerge merges a new kubeconfig into an existing kubeconfig and returns the result
 // func KubeconfigMerge(ctx context.Context, newKubeConfig *clientcmdapi.Config, existingKubeConfig *clientcmdapi.Config, outPath string, overwriteConflicting bool, updateCurrentContext bool) error {
 
