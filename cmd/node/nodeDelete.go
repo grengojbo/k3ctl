@@ -59,7 +59,7 @@ func NewCmdNodeDelete() *cobra.Command {
 		Args:  cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			DryRun = viper.GetBool("dry-run")
-			
+
 			NodeName = args[0]
 			// --cluster
 			ClusterName, err := cmd.Flags().GetString("cluster")
@@ -112,7 +112,7 @@ func NewCmdNodeDelete() *cobra.Command {
 			// 			Node: node,
 			// 		})
 			// 		if node.Name == NodeName {
-			// 			log.Infof("TODO: Add master Node: %s", node.Name)		
+			// 			log.Infof("TODO: Add master Node: %s", node.Name)
 			// 		}
 			// 	}
 			// }
@@ -121,7 +121,7 @@ func NewCmdNodeDelete() *cobra.Command {
 			// 	if err != nil {
 			// 		log.Fatalln(err.Error())
 			// 	}
-				
+
 			// 	// log.Debugf("K3S_TOKEN=%s", token)
 			// 	for _, node := range agents {
 			// 		if node.Name == NodeName {

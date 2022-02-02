@@ -243,7 +243,6 @@ type VolumeWithNodeFilters struct {
 type ContrelPlanNodes struct {
 	Bastion *BastionNode `mapstructure:"bastion" yaml:"bastion" json:"bastion"`
 	Node    *Node        `mapstructure:"node" yaml:"node" json:"node"`
-
 }
 type BastionNode struct {
 	// Name The bastion Name
@@ -405,10 +404,10 @@ type ClusterSpec struct {
 
 	Region            string                        `mapstructure:"region" yaml:"region" json:"region,omitempty"`
 	Operator          bool                          `mapstructure:"operator" yaml:"operator" json:"operator,omitempty"`
-	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`         //nolint:lll    // default 1
-	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`            //nolint:lll    // default 0
+	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`                //nolint:lll    // default 1
+	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`                   //nolint:lll    // default 0
 	ClusterToken      string                        `mapstructure:"clusterToken" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
-	AgentToken        string                       	`mapstructure:"agentToken" yaml:"agentToken" json:"agentToken,omitempty"` // default: auto-generated
+	AgentToken        string                        `mapstructure:"agentToken" yaml:"agentToken" json:"agentToken,omitempty"`       // default: auto-generated
 	Bastions          []*BastionNode                `mapstructure:"bastions" yaml:"bastions" json:"bastions,omitempty"`
 	Nodes             []*Node                       `mapstructure:"nodes" yaml:"nodes" json:"nodes,omitempty"`
 	Labels            []LabelWithNodeFilters        `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
@@ -676,7 +675,6 @@ func (r *Cluster) GetNodeAddress(node *Node, valType string) (string, bool) {
 	}
 	return res, false
 }
-
 
 func init() {
 	SchemeBuilder.Register(&Cluster{}, &ClusterList{})

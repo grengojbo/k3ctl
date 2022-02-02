@@ -221,7 +221,7 @@ func NewCmdClusterCreate() *cobra.Command {
 					}
 					masters = append(masters, conf.ContrelPlanNodes{
 						Bastion: bastion,
-						Node: node,
+						Node:    node,
 					})
 					log.Infof("Name: %s (Role: %v) User: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
 					log.Infoln("-------------------")
@@ -238,7 +238,7 @@ func NewCmdClusterCreate() *cobra.Command {
 				}
 				log.Infoln("=====================")
 				log.Infoln("Install agents")
-				
+
 				// log.Debugf("K3S_TOKEN=%s", token)
 				for _, node := range agents {
 					if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {

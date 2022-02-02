@@ -244,7 +244,7 @@ func RunK3sCommand(bastion *k3sv1alpha1.BastionNode, installk3sExec *K3sIstallOp
 	}
 
 	log.Infof("KubernetesVersion: %s (K3sChannel: %s)", installk3sExec.K3sVersion, installk3sExec.K3sChannel)
-	if installk3sExec.Node.Role ==  "master" {
+	if installk3sExec.Node.Role == "master" {
 		log.Infof("CNI: %s Backend: %s", installk3sExec.CNI, installk3sExec.Backend)
 		log.Infof("LoadBalancer: %s", installk3sExec.LoadBalancer)
 		if len(installk3sExec.Ingress) > 0 {

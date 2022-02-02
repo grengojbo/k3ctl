@@ -23,8 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
+	// k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 )
 
 // ClusterReconciler reconciles a Cluster object
@@ -47,7 +46,9 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 }
 
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&k3sv1alpha1.Cluster{}).
-		Complete(r)
+	// return ctrl.NewControllerManagedBy(mgr).
+	// 	For(&k3sv1alpha1.Cluster{}).
+	// 	Complete(r)
+	// TODO: ошибка Complete(r) 
+	return nil
 }
