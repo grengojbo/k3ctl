@@ -10,11 +10,11 @@ require (
 	github.com/docker/go-units v0.4.0
 	github.com/go-logr/logr v0.1.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/onsi/ginkgo v1.12.1
-	github.com/onsi/gomega v1.10.1
+	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/gomega v1.18.1 // indirect
 	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/cobra v1.1.3
-	github.com/spf13/viper v1.7.1
+	github.com/spf13/cobra v1.2.1
+	github.com/spf13/viper v1.9.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.17.9
 	k8s.io/client-go v0.17.9
