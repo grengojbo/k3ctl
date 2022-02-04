@@ -108,7 +108,29 @@ func NewCmdKubeconfigGet() *cobra.Command {
 					if err != nil {
 						log.Fatalln(err.Error())
 					}
-					log.Infof("dry-run: %v | kubeconfig:\n%v", DryRun, kubeconfig)
+
+					// TODO: добавить в cli всперва внешний URL
+					isExternal := true
+					apiServerUrl, err := cfg.GetAPIServerUrl(masters, &cfg.Spec.Networking, isExternal)
+					if err != nil {
+						log.Fatal(err)
+					}
+					log.Debugf("apiServerUrl: %s", apiServerUrl)
+					
+					opts := k3s.WriteKubeConfigOptions{
+						OverwriteExisting: true,
+						UpdateCurrentContext: cfg.Spec.KubeconfigOptions.SwitchCurrentContext,
+					}
+					if !DryRun {
+						log.Debugf("source kubeconfig:\n%v", kubeconfig)
+						pathKubeConfig, err := k3s.SaveCfg(kubeconfig, apiServerUrl, clusterName, opts)
+						if err !=nil {
+							log.Errorln(err.Error())
+						}
+						// c, _ := yaml.Marshal(newKubeConfig.Clusters)
+						log.Infof("new kubeconfig: %s", pathKubeConfig)
+						// log.Warnf(" cfg.Spec.KubeconfigOptions.SwitchCurrentContext: %v",  cfg.Spec.KubeconfigOptions.SwitchCurrentContext)
+					}
 			// 		retrievedCluster, err := client.ClusterGet(cmd.Context(), runtimes.SelectedRuntime, &k3d.Cluster{Name: clusterName})
 			// 		if err != nil {
 			// 			l.Log().Fatalln(err)
@@ -122,6 +144,13 @@ func NewCmdKubeconfigGet() *cobra.Command {
 			// 		l.Log().Fatalln(err)
 			// 	}
 			}
+			// k, err := k3s.KubeconfigGetDefaultFile()
+			// if err != nil {
+			// 	log.Fatalln(err.Error())
+			// }
+			// log.Debugf("KubeconfigGetDefaultFile: %v", k)
+			// c, _ := k3s.KubeconfigGetDefaultFile()
+			// log.Warnf("clusters: %v", c.Clusters)
 
 			// // get kubeconfigs from all clusters
 			// errorGettingKubeconfig := false
@@ -138,12 +167,14 @@ func NewCmdKubeconfigGet() *cobra.Command {
 			// if errorGettingKubeconfig {
 			// 	os.Exit(1)
 			// }
-			// log.Errorf("TODO: %s", viper.GetString("kubeconfig"))
+			log.Errorf("TODO: %s", viper.GetString("kubeconfig"))
 		},
 	}
 
 	// add flags
 	cmd.Flags().BoolVarP(&getKubeconfigFlags.all, "all", "a", false, "Output kubeconfigs from all existing clusters")
+	cmd.Flags().Bool("kubeconfig-switch-context", true, "Directly switch the default kubeconfig's current-context to the new cluster's context (requires --kubeconfig-update-default)")
+		_ = CfgViper.BindPFlag("spec.kubeconfig.switchcurrentcontext", cmd.Flags().Lookup("kubeconfig-switch-context"))
 
 	// done
 	return cmd

@@ -105,8 +105,8 @@ func init() {
 
 	rootCmd.PersistentFlags().String("kubeconfig", "", "Local path for your kubeconfig file")
 	_ = viper.BindPFlag("kubeconfig", rootCmd.PersistentFlags().Lookup("kubeconfig"))
-	viper.AutomaticEnv()
-	_ = viper.BindEnv("kubeconfig")
+	// viper.AutomaticEnv()
+	// _ = viper.BindEnv("kubeconfig")
 	rootCmd.PersistentFlags().BoolVar(&flags.debugLogging, "verbose", false, "Enable verbose output (debug logging)")
 	rootCmd.PersistentFlags().BoolVar(&flags.traceLogging, "trace", false, "Enable super verbose output (trace logging)")
 	rootCmd.PersistentFlags().BoolVar(&flags.timestampedLogging, "timestamps", false, "Enable Log timestamps")
