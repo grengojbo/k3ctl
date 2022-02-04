@@ -22,9 +22,19 @@ THE SOFTWARE.
 package cluster
 
 import (
+	"github.com/grengojbo/k3ctl/pkg/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+var NodeName string
+var ConfigFile string
+var cfgViper = viper.New()
+var ppViper = viper.New()
+
+var clusterName string
+var cmdFlags types.CmdFlags
 
 const GetScript = "curl -sfL https://get.k3s.io"
 

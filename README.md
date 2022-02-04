@@ -51,7 +51,11 @@ for n in ${WORKER_NODE}
 kubectl get nodes -o wide
 ```
 
+Неизменять текущий контест
 
+```bash
+./k3ctl kubeconfig get sample --kubeconfig-switch-context=false
+```
 
 
 ```bash

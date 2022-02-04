@@ -23,17 +23,20 @@ package node
 
 import (
 	// l "github.com/rancher/k3d/v5/pkg/logger"
+	"github.com/grengojbo/k3ctl/pkg/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var ClusterName string
+// var ClusterName string
 var NodeName string
 var ConfigFile string
 var CfgViper = viper.New()
 var PpViper = viper.New()
-var DryRun bool
+
+var clusterName string
+var cmdFlags types.CmdFlags
 
 // NewCmdNode returns a new cobra command
 func NewCmdNode() *cobra.Command {

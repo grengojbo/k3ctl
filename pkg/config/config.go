@@ -35,6 +35,7 @@ import (
 	// conf "github.com/grengojbo/api/v1alpha1"
 )
 
+// TODO: удалить перенес в контроллен
 func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 
 	var cfg k3sv1alpha1.Cluster
@@ -53,6 +54,10 @@ func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 	cfg.TypeMeta.Kind = config.GetString("kind")
 
 	cfg.ObjectMeta.Name = config.GetString("metadata.name")
+
+	// if !cfg.Spec.KubeconfigOptions.SwitchCurrentContext {
+		// cfg.Spec.KubeconfigOptions.SwitchCurrentContext = true
+	// }
 
 	if cfg.Spec.Networking.APIServerPort == 0 {
 		cfg.Spec.Networking.APIServerPort = 6443
@@ -96,6 +101,10 @@ func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper)
 
 	log.Infof("Using config file %s", cfgViper.ConfigFileUsed())
 	// }
+
+	// TODO: Default Configs
+	cfgViper.SetDefault("spec.kubeconfig.updateDefaultKubeconfig", true)
+	cfgViper.SetDefault("spec.kubeconfig.switchCurrentContext", true)
 
 	if log.GetLevel() >= log.DebugLevel {
 		c, _ := yaml.Marshal(cfgViper.AllSettings())

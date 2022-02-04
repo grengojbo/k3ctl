@@ -11,12 +11,11 @@ import (
 	// yamlv3 "gopkg.in/yaml.v3"
 	// v1 "k8s.io/api/core/v1"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
+	"github.com/grengojbo/k3ctl/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
-	"github.com/grengojbo/k3ctl/pkg/types"
 	// "github.com/grengojbo/k3ctl/pkg/util"
 )
 
@@ -31,8 +30,9 @@ func buildConfigFromFlags(context, kubeconfigPath string) (*rest.Config, error) 
 }
 
 // GetClusterConfig generate kube config.
-func GetClusterConfig(name, kubeconfig string) (*kubernetes.Clientset, error) {
-	config, err := buildConfigFromFlags(name, kubeconfig)
+func GetClusterConfig(context string) (*kubernetes.Clientset, error) {
+	// config, err := buildConfigFromFlags(name, kubeconfig)
+	config, err := BuildKubeConfigFromFlags(context)
 	if err != nil {
 		return nil, err
 	}

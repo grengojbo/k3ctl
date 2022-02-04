@@ -22,6 +22,7 @@ THE SOFTWARE.
 package util
 
 import (
+	"encoding/hex"
 	"math/rand"
 	"strings"
 	"time"
@@ -56,4 +57,15 @@ func GenerateRandomString(n int) string {
 	}
 
 	return sb.String()
+}
+
+
+// // RandomToken generate random token.
+func RandomToken(size int) (string, error) {
+	token := make([]byte, size)
+	_, err := rand.Read(token)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(token), err
 }

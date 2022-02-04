@@ -75,6 +75,7 @@ const (
 	SshPortDefault      int32  = 22
 	DatastoreMySql      string = "mysql"
 	DatastorePostgreSql string = "postgres"
+	DatastoreEtcd 			string = "etcd"
 )
 
 var PrivateHost = []string{InternalIP, InternalDNS}
@@ -240,9 +241,25 @@ type VolumeWithNodeFilters struct {
 	NodeFilters []string `mapstructure:"nodeFilters" yaml:"nodeFilters" json:"nodeFilters,omitempty"`
 }
 
+// ClusterNode struct for cluster node.
+type ClusterNode struct {
+	InstanceID              string   `json:"instance-id,omitempty" yaml:"instance-id,omitempty"`
+	InstanceStatus          string   `json:"instance-status,omitempty" yaml:"instance-statu,omitempty"`
+	ExternalIP              []string `json:"external-ip,omitempty" yaml:"external-ip,omitempty"`
+	InternalIP              []string `json:"internal-ip,omitempty" yaml:"internal-ip,omitempty"`
+	Roles                   string   `json:"roles,omitempty" yaml:"status,omitempty"`
+	Status                  string   `json:"status,omitempty" yaml:"status,omitempty"`
+	HostName                string   `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	ContainerRuntimeVersion string   `json:"containerRuntimeVersion,omitempty" yaml:"containerRuntimeVersion,omitempty"`
+	Version                 string   `json:"version,omitempty" yaml:"version,omitempty"`
+	Master                  bool     `json:"-" yaml:"master,omitempty"`
+}
+
 type ContrelPlanNodes struct {
-	Bastion *BastionNode `mapstructure:"bastion" yaml:"bastion" json:"bastion"`
-	Node    *Node        `mapstructure:"node" yaml:"node" json:"node"`
+	ClusterName			string   `mapstructure:"clusterName" yaml:"clusterName" json:"clusterName,omitempty"`
+	ApiServerAddres	string   `mapstructure:"apiServerAddres" yaml:"apiServerAddres" json:"apiServerAddres,omitempty"`
+	Bastion 				*BastionNode `mapstructure:"bastion" yaml:"bastion" json:"bastion"`
+	Node    				*Node        `mapstructure:"node" yaml:"node" json:"node"`
 }
 type BastionNode struct {
 	// Name The bastion Name
@@ -340,8 +357,11 @@ type SimpleConfigOptionsK3s struct {
 
 // SimpleConfigOptionsKubeconfig describes the set of options referring to the kubeconfig during cluster creation.
 type SimpleConfigOptionsKubeconfig struct {
-	UpdateDefaultKubeconfig bool `mapstructure:"updateDefaultKubeconfig" yaml:"updateDefaultKubeconfig" json:"updateDefaultKubeconfig,omitempty"` // default: true
-	SwitchCurrentContext    bool `mapstructure:"switchCurrentContext" yaml:"switchCurrentContext" json:"switchCurrentContext,omitempty"`          //nolint:lll    // default: true
+	// kubeconfig connection from k3ctl to server ExternalIP | InternalIP 
+	ConnectType 						string `mapstructure:"connectType" yaml:"connectType" json:"connectType,omitempty"`
+	Patch 									string `mapstructure:"patch" yaml:"patch" json:"patch,omitempty"`
+	UpdateDefaultKubeconfig bool   `mapstructure:"updateDefaultKubeconfig" yaml:"updateDefaultKubeconfig" json:"updateDefaultKubeconfig,omitempty"` // default: true
+	SwitchCurrentContext    bool   `mapstructure:"switchCurrentContext" yaml:"switchCurrentContext" json:"switchCurrentContext,omitempty"`          //nolint:lll    // default: true
 }
 
 type Options struct {
@@ -349,7 +369,7 @@ type Options struct {
 	Wait                       bool          `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
 	Timeout                    time.Duration `mapstructure:"timeout" yaml:"timeout" json:"timeout,omitempty"`
 	DisableLoadbalancer        bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer" json:"disableLoadbalancer,omitempty"`
-	DisableIngress             bool          `mapstructure:"disableIngress" yaml:"disableIngress" json:"disableIngress,omitempty"`
+	// EnableIngress             bool          `mapstructure:"enableIngress" yaml:"enableIngress" json:"enableIngress,omitempty"`
 	DisableImageVolume         bool          `mapstructure:"disableImageVolume" yaml:"disableImageVolume" json:"disableImageVolume,omitempty"`
 	NoRollback                 bool          `mapstructure:"disableRollback" yaml:"disableRollback" json:"disableRollback,omitempty"`
 	PrepDisableHostIPInjection bool          `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection" json:"disableHostIPInjection,omitempty"`
@@ -403,11 +423,12 @@ type ClusterSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Region            string                        `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Provider        	string      									`mapstructure:"provider" json:"provider" yaml:"provider"`
 	Operator          bool                          `mapstructure:"operator" yaml:"operator" json:"operator,omitempty"`
 	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`                //nolint:lll    // default 1
 	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`                   //nolint:lll    // default 0
-	ClusterToken      string                        `mapstructure:"clusterToken" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
-	AgentToken        string                        `mapstructure:"agentToken" yaml:"agentToken" json:"agentToken,omitempty"`       // default: auto-generated
+	ClusterToken      string                        `mapstructure:"clusterToken" yaml:"clusterToken" json:"clusterToken,omitempty"`
+	AgentToken        string                        `mapstructure:"agentToken" yaml:"agentToken" json:"agentToken,omitempty"`
 	Bastions          []*BastionNode                `mapstructure:"bastions" yaml:"bastions" json:"bastions,omitempty"`
 	Nodes             []*Node                       `mapstructure:"nodes" yaml:"nodes" json:"nodes,omitempty"`
 	Labels            []LabelWithNodeFilters        `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
@@ -465,6 +486,9 @@ type ClusterSpec struct {
 type ClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Status      string `json:"status,omitempty"`
+	MasterNodes []*Node `json:"masters,omitempty"`
+	WorkerNodes []*Node `json:"workers,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -485,6 +509,52 @@ type ClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Cluster `json:"items"`
+}
+
+// type K3sExecOptions struct {
+// 	Datastore           string
+// 	ExtraArgs           []string
+// 	FlannelIPSec        bool
+// 	NoExtras            bool
+// 	LoadBalancer        *LoadBalancer
+// 	Networking          *Networking
+// 	Options 						*Options
+// 	K3sChannel          string
+// 	KubernetesVersion 	string
+// 	ClusterToken 				string
+// 	AgentToken 					string
+// 	Ingress             string
+// 	// DisableLoadbalancer bool
+// 	// DisableIngress      bool
+// 	// SELinux             bool
+// 	// Rootless            bool
+	
+// 	// SecretsEncryption   bool
+// }
+
+type K3sIstallOptions struct {
+	ExecString   string
+	LoadBalancer string
+	Ingress      string
+	CNI          string
+	Backend      string
+	K3sVersion   string
+	K3sChannel   string
+	IsCluster 	 bool
+	Node         *Node
+}
+type K3sWorkerOptions struct {
+	JoinAgentCommand  string `json:"joinAgentCommand,omitempty"`
+	ExecString   			string `json:"execString,omitempty"`
+	ApiServerAddres 	string `json:"apiServerAddres,omitempty"`
+	ApiServerPort 		int32 `json:"apiServerPort,omitempty"`
+	Token 						string `json:"token,omitempty"`
+	K3sVersion 			  string `json:"k3sVersion,omitempty"`
+	K3sChannel 			  string `json:"k3sChannel,omitempty"`
+}
+
+func (r *Cluster) GetProvider() string {
+	return r.Spec.Provider
 }
 
 func (r *Cluster) GetUser(name string) User {
@@ -550,6 +620,45 @@ func (r *Cluster) GetTlsSan(node *Node, vpc *Networking) (tlsSAN []string) {
 		}
 	}
 	return tlsSAN
+}
+
+// GetAPIServerUrl url для подключения к API серверу
+// TODO: delete
+func (r *Cluster) GetAPIServerUrl(masters []ContrelPlanNodes, vpc *Networking, isExternal bool) (apiServerUrl string, err error) {
+	if isExternal {
+		for _, item := range vpc.APIServerAddresses {
+			if string(item.Type) == ExternalDNS {
+				return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+			} else if string(item.Type) == ExternalIP {
+				return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+			}
+		}
+	} 
+	for _, item := range vpc.APIServerAddresses {
+		if string(item.Type) == InternalDNS {
+			return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+		} else if string(item.Type) == InternalIP {
+			return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+		} else if string(item.Type) == ExternalDNS {
+			return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+		} else if string(item.Type) == ExternalIP {
+			return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+		}
+	}
+
+	for _, item := range masters {
+		if isExternal {
+			nodeIP, ok := r.GetNodeAddress(item.Node, "external")
+			if ok {
+				return fmt.Sprintf("https://%s:%d", nodeIP, vpc.APIServerPort), nil
+			}
+		}
+		nodeIP, ok := r.GetNodeAddress(item.Node, "internal")
+		if ok {
+			return fmt.Sprintf("https://%s:%d", nodeIP, vpc.APIServerPort), nil
+		}
+	}
+	return "", fmt.Errorf("Is NOT set Api server URL")
 }
 
 // GetAPIServerAddress возвращает hostname  or ip API Server
