@@ -40,6 +40,7 @@ import (
 	"github.com/grengojbo/k3ctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -376,6 +377,40 @@ func SaveCfg(cfg, ip, context string, opts WriteKubeConfigOptions) (pathKubeConf
 	// }
 	// log.Warnf("------- file: %s", path.Name())
 	return pathKubeConfig, err
+}
+
+func SwitchContext(ctx, kubeconfig string) (err error) {
+	// config := LoadConfigFromPath(kubeconfig)
+	// rawConfig, err := config.RawConfig()
+	// if err != nil {
+	// 	return err
+	// }
+	// if rawConfig.Contexts[ctx] == nil {
+	// 	return fmt.Errorf("context %s doesn't exists", ctx)
+	// }
+	// rawConfig.CurrentContext = ctx
+	// err = clientcmd.ModifyConfig(clientcmd.NewDefaultPathOptions(), rawConfig, true)
+	return
+}
+
+func BuildKubeConfigFromFlags(context string) (*rest.Config, error) {
+	var err error
+	var path string
+	
+	pathKubeConfig := viper.GetString("kubeconfig")
+	if len(pathKubeConfig) > 0 {
+		path, _ = filepath.Abs(util.ExpandPath(pathKubeConfig))
+	} else {
+		path, err = KubeconfigGetDefaultPath()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get default kubeconfig path: %w", err)
+		}
+	}
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+					&clientcmd.ClientConfigLoadingRules{ExplicitPath: path},
+					&clientcmd.ConfigOverrides{
+									CurrentContext: context,
+					}).ClientConfig()
 }
 
 // KubeconfigGetDefaultFile loads the default KubeConfig file

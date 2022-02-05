@@ -28,6 +28,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 
 	// "github.com/spf13/viper"
 
@@ -79,6 +80,9 @@ func NewCmdNodeAdd() *cobra.Command {
 			if err != nil {
 				log.Fatalln(err)
 			}
+			c, _ := yaml.Marshal(cfg)
+			log.Debugf("Simple Config:\n%s", c)
+
 			if len(cfg.Spec.Nodes) == 0 {
 				log.Fatalln("Is Not Nodes to install k3s cluster")
 			}

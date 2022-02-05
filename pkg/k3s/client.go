@@ -31,8 +31,9 @@ func buildConfigFromFlags(context, kubeconfigPath string) (*rest.Config, error) 
 }
 
 // GetClusterConfig generate kube config.
-func GetClusterConfig(name, kubeconfig string) (*kubernetes.Clientset, error) {
-	config, err := buildConfigFromFlags(name, kubeconfig)
+func GetClusterConfig(context string) (*kubernetes.Clientset, error) {
+	// config, err := buildConfigFromFlags(name, kubeconfig)
+	config, err := BuildKubeConfigFromFlags(context)
 	if err != nil {
 		return nil, err
 	}

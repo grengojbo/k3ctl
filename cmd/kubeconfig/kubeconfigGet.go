@@ -167,7 +167,7 @@ func NewCmdKubeconfigGet() *cobra.Command {
 			// if errorGettingKubeconfig {
 			// 	os.Exit(1)
 			// }
-			log.Errorf("TODO: %s", viper.GetString("kubeconfig"))
+			// log.Errorf("TODO: %s", viper.GetString("kubeconfig"))
 		},
 	}
 

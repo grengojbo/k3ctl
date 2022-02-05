@@ -33,8 +33,9 @@ import (
 	// conf "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/config"
 	// k3s "github.com/grengojbo/k3ctl/pkg/k3s"
+	k8sClient "github.com/grengojbo/k3ctl/pkg/client"
 	"github.com/grengojbo/k3ctl/pkg/types"
-	// "github.com/grengojbo/k3ctl/pkg/util"
+	"github.com/grengojbo/k3ctl/pkg/util"
 
 	// dockerunits "github.com/docker/go-units"
 	// cliutil "github.com/rancher/k3d/v5/cmd/util"
@@ -45,6 +46,8 @@ import (
 	// k3d "github.com/rancher/k3d/v5/pkg/types"
 	// "github.com/rancher/k3d/v5/version"
 )
+
+var clusterName string
 
 // NewCmdNodeCreate returns a new cobra command
 func NewCmdNodeDelete() *cobra.Command {
@@ -78,7 +81,6 @@ func NewCmdNodeDelete() *cobra.Command {
 			if err != nil {
 				log.Fatalln(err)
 			}
-			// log.Debugf("========== Simple Config ==========\n%+v\n==========================\n", cfg)
 			c, _ := yaml.Marshal(cfg)
 			log.Debugf("Simple Config:\n%s", c)
 
@@ -86,7 +88,7 @@ func NewCmdNodeDelete() *cobra.Command {
 				log.Fatalln("Is Not Nodes to install k3s cluster")
 			}
 
-			// servers, agents, err := util.GetGroupNodes(cfg.Spec.Nodes)
+			servers, agents, err := util.GetGroupNodes(cfg.Spec.Nodes)
 			// if err != nil {
 			// 	log.Fatalln(err)
 			// }
@@ -103,7 +105,9 @@ func NewCmdNodeDelete() *cobra.Command {
 			// 	Networking:          &cfg.Spec.Networking,
 			// }
 			// masters := []conf.ContrelPlanNodes{}
-			// for _, node := range servers {
+			for _, node := range servers {
+				if node.Name == NodeName {
+					log.Infof("Delete Master node: %s", node.Name)
 			// 	if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
 			// 		log.Fatalln(err.Error())
 			// 	} else {
@@ -114,40 +118,47 @@ func NewCmdNodeDelete() *cobra.Command {
 			// 		if node.Name == NodeName {
 			// 			log.Infof("TODO: Add master Node: %s", node.Name)
 			// 		}
-			// 	}
-			// }
+				}
+			}
 
-			// token, err := k3s.GetAgentToken(masters, DryRun)
-			// 	if err != nil {
-			// 		log.Fatalln(err.Error())
-			// 	}
+			for _, node := range agents {
+				if node.Name == NodeName {
+					log.Infof("Delete Worker node: %s", node.Name)
+					if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
+						log.Fatalln(err.Error())
+						} else {
+							// log.Warnf("=-> cnt: %d", cnt)
+							// log.Warnf("apiServerAddresses: %s", apiServerAddres)
+							// installk3sAgentExec := k3s.MakeAgentInstallExec(apiServerAddres, token, k3sOpt)
+							// installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
+							// installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion
+							// installk3sAgentExec.Node = node
 
-			// 	// log.Debugf("K3S_TOKEN=%s", token)
-			// 	for _, node := range agents {
-			// 		if node.Name == NodeName {
-			// 			if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
-			// 				log.Fatalln(err.Error())
-			// 			} else {
-			// 				apiServerAddres, err := cfg.GetAPIServerAddress(node, &cfg.Spec.Networking)
-			// 				if err != nil {
-			// 					log.Fatal(err)
-			// 				}
-			// 				cnt := cfg.GetNodeLabels(node)
-			// 				log.Warnf("=-> cnt: %d", cnt)
-			// 				// log.Warnf("apiServerAddresses: %s", apiServerAddres)
-			// 				installk3sAgentExec := k3s.MakeAgentInstallExec(apiServerAddres, token, k3sOpt)
-			// 				installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
-			// 				installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion
-			// 				installk3sAgentExec.Node = node
+							// if err := k3s.RunK3sCommand(bastion, &installk3sAgentExec, DryRun); err != nil {
+							// 	log.Fatalln(err.Error())
+							// }
+							log.Debugf("bastion: %s", bastion.Address)
 
-			// 				if err := k3s.RunK3sCommand(bastion, &installk3sAgentExec, DryRun); err != nil {
-			// 					log.Fatalln(err.Error())
-			// 				}
-			// 				log.Infof("Successfully added Agent Node: %s", node.Name)
-			// 				isAddNode = true
-			// 			}
-			// 		}
-			// 	}
+							// pathKubeConfig, kubeConfig, err := k3s.KubeconfigGetDefaultFile()
+							// _, _, err := k3s.KubeconfigGetDefaultFile()
+
+							// client, err := k8sClient.NewK8sClient(clusterName)
+							client, err := k8sClient.NewClient(clusterName)
+							if err !=nil {
+								log.Fatalln(err.Error())
+							}
+							// clusterStatus := client.GetClusterStatus()
+							// log.Debugf("------------------------------\n%v\n------------------------------", clusterStatus)
+							n, err := client.ListNodes()
+							if err != nil {
+								log.Errorf(err.Error())
+							}
+							log.Warnf("list nodes: %v", n[0].Status.Conditions)
+							log.Infof("Successfully delete Agent Node: %s", node.Name)
+							isDeleteNode = true
+					}
+				}
+			}
 			// node, clusterName := parseCreateNodeCmd(cmd, args)
 			// if strings.HasPrefix(clusterName, "https://") {
 			// 	l.Log().Infof("Adding %d node(s) to the remote cluster '%s'...", len(nodes), clusterName)
@@ -173,7 +184,8 @@ func NewCmdNodeDelete() *cobra.Command {
 	// if err := cmd.RegisterFlagCompletionFunc("role", util.ValidArgsNodeRoles); err != nil {
 	// 	l.Log().Fatalln("Failed to register flag completion for '--role'", err)
 	// }
-	cmd.Flags().StringP("cluster", "c", types.DefaultClusterName, "Cluster URL or k3s cluster name to connect to.")
+	cmd.Flags().StringVarP(&clusterName, "cluster", "c", types.DefaultClusterName, "Cluster URL or k3s cluster name to connect to.")
+	// cmd.Flags().StringP("cluster", "c", types.DefaultClusterName, "Cluster URL or k3s cluster name to connect to.")
 	// if err := cmd.RegisterFlagCompletionFunc("cluster", util.ValidArgsAvailableClusters); err != nil {
 	// 	log.Fatalln("Failed to register flag completion for '--cluster'", err)
 	// }

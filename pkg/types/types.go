@@ -80,12 +80,19 @@ var ReadyLogMessageByRole = map[Role]string{
 	RegistryRole:     "listening on",
 }
 
-// NodeWaitForLogMessageRestartWarnTime is the time after which to warn about a restarting container
-const NodeWaitForLogMessageRestartWarnTime = 2 * time.Minute
 
-// NodeStatusRestarting defines the status string that signals the node container is restarting
-const NodeStatusRestarting = "restarting"
-
+const (
+	// NodeWaitForLogMessageRestartWarnTime is the time after which to warn about a restarting container
+	NodeWaitForLogMessageRestartWarnTime = 2 * time.Minute
+	// NodeStatusRestarting defines the status string that signals the node container is restarting
+	NodeStatusRestarting = "restarting"
+	// ClusterStatusRunning cluster running status.
+	ClusterStatusRunning = "Running"
+	// ClusterStatusStopped cluster stopped status.
+	ClusterStatusStopped = "Stopped"
+	// ClusterStatusUnknown cluster unknown status.
+	ClusterStatusUnknown = "Unknown"
+)
 // Role defines a k3s node role
 type Role string
 
