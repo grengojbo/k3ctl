@@ -405,6 +405,7 @@ type ClusterSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Region            string                        `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Provider        	string      									`mapstructure:"provider" json:"provider" yaml:"provider"`
 	Operator          bool                          `mapstructure:"operator" yaml:"operator" json:"operator,omitempty"`
 	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`                //nolint:lll    // default 1
 	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`                   //nolint:lll    // default 0
@@ -500,6 +501,10 @@ type K3sWorkerOptions struct {
 	Token 						string `json:"token,omitempty"`
 	K3sVersion 			  string `json:"k3sVersion,omitempty"`
 	K3sChannel 			  string `json:"k3sChannel,omitempty"`
+}
+
+func (r *Cluster) GetProvider() string {
+	return r.Spec.Provider
 }
 
 func (r *Cluster) GetUser(name string) User {

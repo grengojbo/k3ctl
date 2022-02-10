@@ -99,7 +99,9 @@ func NewClusterFromConfig(configViper *viper.Viper, cmdFlags types.CmdFlags) (pr
 
 	// добавляем в статус списое master, worker нод
 	providerBase.setGroupNodes()
-	
+	// устанавливаем настройки для кластера в зависимости от количества и типов инстант
+	providerBase.SetDefaulSettings()
+
 	return providerBase, err
 }
 
@@ -130,7 +132,225 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) (error) {
 	if cfg.Spec.Networking.APIServerPort == 0 {
 		cfg.Spec.Networking.APIServerPort = 6443
 	}
+
+	// CNI драйвер по умолчанию
+	if len(cfg.Spec.Networking.CNI) == 0 {
+		cfg.Spec.Networking.CNI = "flannel"
+	}
+
+	// host-gw default backend for flannel
+	if cfg.Spec.Networking.CNI == "flannel" && len(cfg.Spec.Networking.Backend) == 0 {
+		cfg.Spec.Networking.Backend = "host-gw"
+	}
+
+	if len(cfg.GetProvider()) == 0 {
+		cfg.Spec.Provider = "native"
+	}
+
+	if len(p.Cluster.Spec.ClusterToken) == 0 {
+		p.Cluster.Spec.ClusterToken = util.GenerateRandomString(32)
+	}
+	
+	if len(p.Cluster.Spec.AgentToken) == 0 {
+		p.Cluster.Spec.AgentToken = util.GenerateRandomString(32)
+	}
+
 	p.Cluster = &cfg
+	return nil
+}
+
+// SetDefaulSettings
+func (p *ProviderBase) SetDefaulSettings() {
+	if p.Cluster.Spec.Agents == 0 && p.Cluster.Spec.Servers == 1 {
+		p.Log.Infoln("[SetDefaulSettings] TODO: Settings for single node cluster...")
+	} else if p.Cluster.Spec.Agents > 0 && p.Cluster.Spec.Servers == 1 {
+		p.Log.Infoln("[SetDefaulSettings] TODO: Settings for one master cluster...")
+	} else if p.Cluster.Spec.Agents > 0 && p.Cluster.Spec.Servers > 1 {
+		p.Log.Infoln("[SetDefaulSettings] TODO: Settings for multi master cluster...")
+	}
+}
+
+// InitK3sCluster initial K3S cluster.
+func (p *ProviderBase) InitK3sCluster() error {
+	p.Log.Infof("[%s] executing init k3s cluster logic...", p.Cluster.GetProvider())
+
+	// provider, err := providers.GetProvider(p.Cluster.GetProvider())
+	// if err != nil {
+	// 	return err
+	// }
+
+	// k3sScript := cluster.InstallScript
+	// k3sMirror := cluster.Mirror
+	// dockerMirror := cluster.DockerMirror
+
+	// if p.Cluster.Spec.ClusterToken == "" {
+	// 	token, err := util.RandomToken(16)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	p.Clus = token
+	// }
+
+	// if len(cluster.MasterNodes) <= 0 || len(cluster.MasterNodes[0].InternalIPAddress) <= 0 {
+	// 	return errors.New("[cluster] master node internal ip address can not be empty")
+	// }
+
+	// publicIP := cluster.IP
+	// if cluster.IP == "" {
+	// 	cluster.IP = cluster.MasterNodes[0].InternalIPAddress[0]
+	// 	publicIP = cluster.MasterNodes[0].PublicIPAddress[0]
+	// }
+
+	// // append tls-sans to k3s install script:
+	// // 1. appends from --tls-sans flags.
+	// // 2. appends all master nodes' first public address.
+	// var tlsSans string
+	// p.TLSSans = append(p.TLSSans, publicIP)
+	// for _, master := range cluster.MasterNodes {
+	// 	if master.PublicIPAddress[0] != "" && master.PublicIPAddress[0] != publicIP {
+	// 		p.TLSSans = append(p.TLSSans, master.PublicIPAddress[0])
+	// 	}
+	// }
+	// for _, tlsSan := range p.TLSSans {
+	// 	tlsSans = tlsSans + fmt.Sprintf(" --tls-san %s", tlsSan)
+	// }
+	// // save p.TlsSans to db.
+	// cluster.TLSSans = p.TLSSans
+
+	// masterExtraArgs := cluster.MasterExtraArgs
+	// workerExtraArgs := cluster.WorkerExtraArgs
+
+	// if cluster.DataStore != "" {
+	// 	cluster.Cluster = false
+	// 	masterExtraArgs += " --datastore-endpoint " + cluster.DataStore
+	// }
+
+	// if cluster.Network != "" {
+	// 	masterExtraArgs += fmt.Sprintf(" --flannel-backend=%s", cluster.Network)
+	// }
+
+	// if cluster.ClusterCidr != "" {
+	// 	masterExtraArgs += " --cluster-cidr " + cluster.ClusterCidr
+	// }
+
+	// p.Logger.Infof("[%s] creating k3s master-%d...", p.Provider, 1)
+	// master0ExtraArgs := masterExtraArgs
+	// providerExtraArgs := provider.GenerateMasterExtraArgs(cluster, cluster.MasterNodes[0])
+	// if providerExtraArgs != "" {
+	// 	master0ExtraArgs += providerExtraArgs
+	// }
+	// if cluster.Cluster {
+	// 	master0ExtraArgs += " --cluster-init"
+	// }
+
+	// if err := p.initMaster(k3sScript, k3sMirror, dockerMirror, tlsSans, publicIP, master0ExtraArgs, cluster, cluster.MasterNodes[0]); err != nil {
+	// 	return err
+	// }
+	// p.Logger.Infof("[%s] successfully created k3s master-%d", p.Provider, 1)
+
+	// for i, master := range cluster.MasterNodes {
+	// 	// skip first master nodes.
+	// 	if i == 0 {
+	// 		continue
+	// 	}
+	// 	p.Logger.Infof("[%s] creating k3s master-%d...", p.Provider, i+1)
+	// 	masterNExtraArgs := masterExtraArgs
+	// 	providerExtraArgs := provider.GenerateMasterExtraArgs(cluster, master)
+	// 	if providerExtraArgs != "" {
+	// 		masterNExtraArgs += providerExtraArgs
+	// 	}
+	// 	if err := p.initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, tlsSans, publicIP, masterNExtraArgs, cluster, master); err != nil {
+	// 		return err
+	// 	}
+	// 	p.Logger.Infof("[%s] successfully created k3s master-%d", p.Provider, i+1)
+	// }
+
+	// workerErrChan := make(chan error)
+	// workerWaitGroupDone := make(chan bool)
+	// workerWaitGroup := &sync.WaitGroup{}
+	// workerWaitGroup.Add(len(cluster.WorkerNodes))
+
+	// for i, worker := range cluster.WorkerNodes {
+	// 	go func(i int, worker types.Node) {
+	// 		p.Logger.Infof("[%s] creating k3s worker-%d...", p.Provider, i+1)
+	// 		extraArgs := workerExtraArgs
+	// 		providerExtraArgs := provider.GenerateWorkerExtraArgs(cluster, worker)
+	// 		if providerExtraArgs != "" {
+	// 			extraArgs += providerExtraArgs
+	// 		}
+	// 		p.initWorker(workerWaitGroup, workerErrChan, k3sScript, k3sMirror, dockerMirror, extraArgs, cluster, worker)
+	// 		p.Logger.Infof("[%s] successfully created k3s worker-%d", p.Provider, i+1)
+	// 	}(i, worker)
+	// }
+
+	// go func() {
+	// 	workerWaitGroup.Wait()
+	// 	close(workerWaitGroupDone)
+	// }()
+
+	// select {
+	// case <-workerWaitGroupDone:
+	// 	break
+	// case err := <-workerErrChan:
+	// 	return err
+	// }
+
+	// // get k3s cluster config.
+	// cfg, err := p.execute(&cluster.MasterNodes[0], []string{catCfgCommand})
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // merge current cluster to kube config.
+	// if err := SaveCfg(cfg, publicIP, cluster.ContextName); err != nil {
+	// 	return err
+	// }
+	// _ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, filepath.Join(common.CfgPath, common.KubeCfgFile))
+	// cluster.Status.Status = common.StatusRunning
+
+	// // write current cluster to state file.
+	// // native provider no need to operate .state file.
+	// if p.Provider != "native" {
+	// 	if err := common.DefaultDB.SaveCluster(cluster); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	// p.Logger.Infof("[%s] deploying additional manifests", p.Provider)
+
+	// // deploy additional UI manifests.
+	// enabledPlugins := map[string]bool{}
+	// if cluster.UI {
+	// 	enabledPlugins["dashboard"] = true
+	// }
+
+	// // deploy plugin
+	// if cluster.Enable != nil {
+	// 	for _, comp := range cluster.Enable {
+	// 		enabledPlugins[comp] = true
+	// 	}
+	// }
+
+	// for plugin := range enabledPlugins {
+	// 	if plugin == "dashboard" {
+	// 		if _, err := p.execute(&cluster.MasterNodes[0], []string{fmt.Sprintf(deployUICommand,
+	// 			base64.StdEncoding.EncodeToString([]byte(dashboardTmpl)), common.K3sManifestsDir)}); err != nil {
+	// 			return err
+	// 		}
+	// 	} else if plugin == "explorer" {
+	// 		// start kube-explorer
+	// 		port, err := common.EnableExplorer(context.Background(), cluster.ContextName)
+	// 		if err != nil {
+	// 			p.Logger.Errorf("[%s] failed to start kube-explorer for cluster %s: %v", p.Provider, cluster.ContextName, err)
+	// 		}
+	// 		if port != 0 {
+	// 			p.Logger.Infof("[%s] kube-explorer for cluster %s will listen on 127.0.0.1:%d...", p.Provider, cluster.Name, port)
+	// 		}
+	// 	}
+	// }
+
+	// p.Logger.Infof("[%s] successfully deployed additional manifests", p.Provider)
+	// p.Logger.Infof("[%s] successfully executed init k3s cluster logic", p.Provider)
 	return nil
 }
 
@@ -348,6 +568,75 @@ func (p *ProviderBase) GetAgentToken(master *k3sv1alpha1.Node) (token string, er
 	return strings.Trim(token, "\n"), err
 }
 
+// CreateK3sCluster create K3S cluster.
+func (p *ProviderBase) CreateK3sCluster() (err error) {
+	// logFile, err := common.GetLogFile(p.Name)
+	// if err != nil {
+	// 	return err
+	// }
+	// c := &types.Cluster{
+	// 	Metadata: p.Metadata,
+	// 	Options:  p.Options,
+	// 	Status:   p.Status,
+	// }
+	defer func() {
+		if err != nil {
+			p.Log.Errorf("[%s] failed to create cluster: %v", p.Cluster.GetName(), err)
+			// TODO: сделать откат кластера при ошибке
+			// p.RollbackCluster(p.rollbackInstance)
+		}
+		// if err == nil && len(p.Cluster.Status.MasterNodes) > 0 {
+		// 	p.Log.Info(types.UsageInfoTitle)
+		// 	p.Log.Infof(types.UsageContext, p.Cluster.GetName())
+		// 	p.Log.Info(types.UsagePods)
+		// }
+		// _ = logFile.Close()
+		if p.Callbacks != nil {
+			if process, ok := p.Callbacks[p.Cluster.GetName()]; ok && process.Event == "create" {
+				logEvent := &types.LogEvent{
+					Name:        "create",
+					ContextName: p.Cluster.GetName(),
+				}
+				process.Fn(logEvent)
+			}
+		}
+	}()
+
+	// p.Logger = common.NewLogger(common.Debug, logFile)
+	// p.Logger.Infof("[%s] executing create logic...", p.GetProviderName())
+
+	// // set ssh default value.
+	// if p.SSHUser == "" {
+	// 	p.SSHUser = defaultUser
+	// }
+	// if p.SSHPassword == "" && p.SSHKeyPath == "" {
+	// 	p.SSHKeyPath = defaultSSHKeyPath
+	// }
+	// // assemble node status.
+	// if c, err = p.assembleNodeStatus(&p.SSH); err != nil {
+	// 	return err
+	// }
+	// c.SSH = p.SSH
+	// // initialize K3s cluster.
+	if err = p.InitK3sCluster(); err != nil {
+		return err
+	}
+
+	// // deploy custom manifests.
+	// if p.Manifests != "" {
+	// 	deployCmd, err := p.GetCustomManifests()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if err = p.DeployExtraManifest(c, deployCmd); err != nil {
+	// 		return err
+	// 	}
+	// 	p.Logger.Infof("[%s] successfully deployed custom manifests", p.Provider)
+	// }
+	// p.Logger.Infof("[%s] successfully executed create logic", p.GetProviderName())
+	return nil
+}
+
 // DeleteNode delete node from cluster
 func (p *ProviderBase) AddNode(nodeName string) (ok bool) {
 	var err error
@@ -465,6 +754,8 @@ func (p *ProviderBase) setGroupNodes() {
 			p.Cluster.Status.WorkerNodes = append(p.Cluster.Status.WorkerNodes, node)
 		}
 	}
+	p.Cluster.Spec.Servers = len(p.Cluster.Status.MasterNodes)
+	p.Cluster.Spec.Agents = len(p.Cluster.Status.WorkerNodes)
 	// if len(serverNodes) == 0 {
 	// 	log.Fatalln("Is not set server node :(")
 	// }

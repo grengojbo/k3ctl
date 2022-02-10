@@ -35,15 +35,15 @@ import (
 	// "github.com/docker/go-connections/nat"
 
 	cliutil "github.com/grengojbo/k3ctl/cmd/util"
+	"github.com/grengojbo/k3ctl/controllers"
+
 	// k3dCluster "github.com/rancher/k3d/v4/pkg/client"
 	conf "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/config"
-	k3s "github.com/grengojbo/k3ctl/pkg/k3s"
 	"github.com/grengojbo/k3ctl/pkg/types"
 
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
 
-	"github.com/grengojbo/k3ctl/pkg/util"
 	"github.com/grengojbo/k3ctl/version"
 
 	log "github.com/sirupsen/logrus"
@@ -58,10 +58,6 @@ Every cluster will consist of one or more containers:
 	- (optionally) 1 loadbalancer container as the entrypoint to the cluster (nginx)
 	- (optionally) 1 (or more) agent node containers (k3s)
 `
-
-var cfgViper = viper.New()
-var ppViper = viper.New()
-var dryRun bool
 
 // func initConfig(args []string) {
 
@@ -115,34 +111,49 @@ func NewCmdClusterCreate() *cobra.Command {
 		// Args:  cobra.RangeArgs(0, 1), // exactly one cluster name can be set (default: k3d.DefaultClusterName)
 		Args: cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			// fmt.Println("PreRun...")
-			configFile = config.InitConfig(args[0], cfgViper, ppViper)
+			
+			cmdFlags.DryRun = viper.GetBool("dry-run")
+			cmdFlags.DebugLogging = viper.GetBool("verbose")
+			cmdFlags.TraceLogging = viper.GetBool("trace")
+			
+			clusterName = args[0]
+			// NodeName = args[0]
+			// --cluster
+			// clusterName, err := cmd.Flags().GetString("cluster")
+			// if err != nil {
+			// 	log.Fatalln(err)
+			// }
+			ConfigFile = config.InitConfig(clusterName, cfgViper, ppViper)
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
-			dryRun = viper.GetBool("dry-run")
-
 			/*************************
 			 * Compute Configuration *
 			 *************************/
-			cfg, err := config.FromViperSimple(cfgViper)
-			if err != nil {
-				log.Fatalln(err)
-			}
+			 c, err := controllers.NewClusterFromConfig(cfgViper, cmdFlags)
+			 if err != nil {
+				 log.Fatalln(err)
+			 }
+ 
+			 cfg, _ := yaml.Marshal(c.Cluster)
 
-			log.Debugf("========== Simple Config ==========\n%+v\n==========================\n", cfg)
+			log.Debugf("========== Simple Config ==========\n%s\n==========================\n", cfg)
 
-			cfg, err = applyCLIOverrides(cfg)
-			if err != nil {
-				log.Fatalf("Failed to apply CLI overrides: %+v", err)
-			}
+			log.Infof("cni: %s (backend: %s)", c.Cluster.Spec.Networking.CNI, c.Cluster.Spec.Networking.Backend)
+			log.Infof("secretsEncryption: %v", c.Cluster.Spec.Options.SecretsEncryption)
+			log.Infof("datastore: %s", c.Cluster.Spec.Datastore.Provider)
 
-			if log.GetLevel() >= log.DebugLevel {
-				log.Debugf("========== Merged Simple Config ==========\n%+v\n==========================\n", cfg)
-				c, _ := yaml.Marshal(cfg)
-				log.Debugf("Merge Configuration:\n%s", c)
-			}
+			// c, err = applyCLIOverrides(c)
+			// if err != nil {
+			// 	log.Fatalf("Failed to apply CLI overrides: %+v", err)
+			// }
+
+			// if log.GetLevel() >= log.DebugLevel {
+			// 	log.Debugf("========== Merged Simple Config ==========\n%+v\n==========================\n", cfg)
+			// 	c, _ := yaml.Marshal(cfg)
+			// 	log.Debugf("Merge Configuration:\n%s", c)
+			// }
 
 			/**************************************
 			 * Transform, Process & Validate Configuration *
@@ -173,163 +184,164 @@ func NewCmdClusterCreate() *cobra.Command {
 			 * Create cluster if it doesn't exist *
 			**************************************/
 
-			if len(cfg.Spec.Nodes) == 0 {
+			if len(c.Cluster.Spec.Nodes) == 0 {
 				log.Fatalln("Is Not Nodes to install k3s cluster")
 			}
 
-			servers, agents, err := util.GetGroupNodes(cfg.Spec.Nodes)
+			err = c.CreateK3sCluster()
+			// servers, agents, err := util.GetGroupNodes(cfg.Spec.Nodes)
 			if err != nil {
 				log.Fatalln(err)
 			}
-			log.Infoln("Creating initializing server node")
-			k3sOpt := k3s.K3sExecOptions{
-				// 	NoExtras:     k3sNoExtras,
-				ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
-				Ingress:             cfg.Spec.Addons.Ingress.Name,
-				DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
-				DisableIngress:      cfg.Spec.Options.DisableIngress,
-				SecretsEncryption:   cfg.Spec.Options.SecretsEncryption,
-				SELinux:             cfg.Spec.Options.SELinux,
-				Rootless:            cfg.Spec.Options.Rootless,
-				LoadBalancer:        &cfg.Spec.LoadBalancer,
-				Networking:          &cfg.Spec.Networking,
-			}
-			masters := []conf.ContrelPlanNodes{}
-			for _, node := range servers {
-				if len(cfg.Spec.Datastore.Provider) > 0 {
-					if datastore, err := cfg.GetDatastore(); err != nil {
-						log.Fatalln(err.Error())
-					} else {
-						k3sOpt.Datastore = datastore
-						log.Infof("datastore connection string: %s", datastore)
-					}
-				}
-
-				if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
-					log.Fatalln(err.Error())
-				} else {
-
-					cluster := false
-					tlsSAN := cfg.GetTlsSan(node, &cfg.Spec.Networking)
-					installk3sExec := k3s.MakeInstallExec(cluster, tlsSAN, k3sOpt)
-					installk3sExec.K3sChannel = cfg.Spec.K3sChannel
-					installk3sExec.K3sVersion = cfg.Spec.KubernetesVersion
-					installk3sExec.Node = node
-
-					if err := k3s.RunK3sCommand(bastion, &installk3sExec, dryRun); err != nil {
-						log.Fatalln(err.Error())
-					}
-					masters = append(masters, conf.ContrelPlanNodes{
-						Bastion: bastion,
-						Node:    node,
-					})
-					log.Infof("Name: %s (Role: %v) User: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
-					log.Infoln("-------------------")
-				}
-			}
-
-			if len(agents) > 0 {
-				// if len(masters) == 0 {
-				// 	log.Fatalln("Is NOT set control plane nodes")
-				// }
-				token, err := k3s.GetAgentToken(masters, dryRun)
-				if err != nil {
-					log.Fatalln(err.Error())
-				}
-				log.Infoln("=====================")
-				log.Infoln("Install agents")
-
-				// log.Debugf("K3S_TOKEN=%s", token)
-				for _, node := range agents {
-					if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
-						log.Fatalln(err.Error())
-					} else {
-						apiServerAddres, err := cfg.GetAPIServerAddress(node, &cfg.Spec.Networking)
-						if err != nil {
-							log.Fatal(err)
-						}
-						// log.Warnf("apiServerAddresses: %s", apiServerAddres)
-
-						installk3sAgentExec := k3s.MakeAgentInstallExec(apiServerAddres, token, k3sOpt)
-						installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
-						installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion
-						installk3sAgentExec.Node = node
-
-						if err := k3s.RunK3sCommand(bastion, &installk3sAgentExec, dryRun); err != nil {
-							log.Fatalln(err.Error())
-						}
-
-						log.Infof("Name: %s (Role: %v) User: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
-						// log.Debugln(bastion)
-						log.Infoln("-------------------")
-					}
-				}
-			}
-			log.Infoln("DRY RUN: ", dryRun)
-			// // check if a cluster with that name exists already
-			// if _, err := k3dCluster.ClusterGet(cmd.Context(), runtimes.SelectedRuntime, &clusterConfig.Cluster); err == nil {
-			// 	log.Fatalf("Failed to create cluster '%s' because a cluster with that name already exists", clusterConfig.Cluster.Name)
+			// log.Infoln("Creating initializing server node")
+			// k3sOpt := k3s.K3sExecOptions{
+			// 	// 	NoExtras:     k3sNoExtras,
+			// 	ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
+			// 	Ingress:             cfg.Spec.Addons.Ingress.Name,
+			// 	DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
+			// 	DisableIngress:      cfg.Spec.Options.DisableIngress,
+			// 	SecretsEncryption:   cfg.Spec.Options.SecretsEncryption,
+			// 	SELinux:             cfg.Spec.Options.SELinux,
+			// 	Rootless:            cfg.Spec.Options.Rootless,
+			// 	LoadBalancer:        &cfg.Spec.LoadBalancer,
+			// 	Networking:          &cfg.Spec.Networking,
 			// }
-
-			// // create cluster
-			// if clusterConfig.KubeconfigOpts.UpdateDefaultKubeconfig {
-			// 	log.Debugln("'--kubeconfig-update-default set: enabling wait-for-server")
-			// 	clusterConfig.ClusterCreateOpts.WaitForServer = true
-			// }
-			// //if err := k3dCluster.ClusterCreate(cmd.Context(), runtimes.SelectedRuntime, &clusterConfig.Cluster, &clusterConfig.ClusterCreateOpts); err != nil {
-			// if err := k3dCluster.ClusterRun(cmd.Context(), runtimes.SelectedRuntime, clusterConfig); err != nil {
-			// 	// rollback if creation failed
-			// 	log.Errorln(err)
-			// 	if cfg.Options.K3dOptions.NoRollback { // TODO: move rollback mechanics to pkg/
-			// 		log.Fatalln("Cluster creation FAILED, rollback deactivated.")
+			// masters := []conf.ContrelPlanNodes{}
+			// for _, node := range servers {
+			// 	if len(cfg.Spec.Datastore.Provider) > 0 {
+			// 		if datastore, err := cfg.GetDatastore(); err != nil {
+			// 			log.Fatalln(err.Error())
+			// 		} else {
+			// 			k3sOpt.Datastore = datastore
+			// 			log.Infof("datastore connection string: %s", datastore)
+			// 		}
 			// 	}
-			// 	// rollback if creation failed
-			// 	log.Errorln("Failed to create cluster >>> Rolling Back")
-			// 	if err := k3dCluster.ClusterDelete(cmd.Context(), runtimes.SelectedRuntime, &clusterConfig.Cluster, k3d.ClusterDeleteOpts{SkipRegistryCheck: true}); err != nil {
-			// 		log.Errorln(err)
-			// 		log.Fatalln("Cluster creation FAILED, also FAILED to rollback changes!")
-			// 	}
-			// 	log.Fatalln("Cluster creation FAILED, all changes have been rolled back!")
-			// }
-			// log.Infof("Cluster '%s' created successfully!", clusterConfig.Cluster.Name)
 
-			/**************
-			 * Kubeconfig *
-			 **************/
-
-			// if clusterConfig.KubeconfigOpts.UpdateDefaultKubeconfig && clusterConfig.KubeconfigOpts.SwitchCurrentContext {
-			// 	log.Infoln("--kubeconfig-update-default=false --> sets --kubeconfig-switch-context=false")
-			// 	clusterConfig.KubeconfigOpts.SwitchCurrentContext = false
-			// }
-
-			// if clusterConfig.KubeconfigOpts.UpdateDefaultKubeconfig {
-			// 	log.Debugf("Updating default kubeconfig with a new context for cluster %s", clusterConfig.Cluster.Name)
-			// 	if _, err := k3dCluster.KubeconfigGetWrite(cmd.Context(), runtimes.SelectedRuntime, &clusterConfig.Cluster, "", &k3dCluster.WriteKubeConfigOptions{UpdateExisting: true, OverwriteExisting: false, UpdateCurrentContext: cfg.Options.KubeconfigOptions.SwitchCurrentContext}); err != nil {
-			// 		log.Warningln(err)
-			// 	}
-			// }
-
-			/*****************
-			 * User Feedback *
-			 *****************/
-
-			// // print information on how to use the cluster with kubectl
-			// log.Infoln("You can now use it like this:")
-			// if clusterConfig.KubeconfigOpts.UpdateDefaultKubeconfig && !clusterConfig.KubeconfigOpts.SwitchCurrentContext {
-			// 	fmt.Printf("kubectl config use-context %s\n", fmt.Sprintf("%s-%s", k3d.DefaultObjectNamePrefix, clusterConfig.Cluster.Name))
-			// } else if !clusterConfig.KubeconfigOpts.SwitchCurrentContext {
-			// 	if runtime.GOOS == "windows" {
-			// 		fmt.Printf("$env:KUBECONFIG=(%s kubeconfig write %s)\n", os.Args[0], clusterConfig.Cluster.Name)
+			// 	if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
+			// 		log.Fatalln(err.Error())
 			// 	} else {
-			// 		fmt.Printf("export KUBECONFIG=$(%s kubeconfig write %s)\n", os.Args[0], clusterConfig.Cluster.Name)
+
+			// 		cluster := false
+			// 		tlsSAN := cfg.GetTlsSan(node, &cfg.Spec.Networking)
+			// 		installk3sExec := k3s.MakeInstallExec(cluster, tlsSAN, k3sOpt)
+			// 		installk3sExec.K3sChannel = cfg.Spec.K3sChannel
+			// 		installk3sExec.K3sVersion = cfg.Spec.KubernetesVersion
+			// 		installk3sExec.Node = node
+
+			// 		if err := k3s.RunK3sCommand(bastion, &installk3sExec, dryRun); err != nil {
+			// 			log.Fatalln(err.Error())
+			// 		}
+			// 		masters = append(masters, conf.ContrelPlanNodes{
+			// 			Bastion: bastion,
+			// 			Node:    node,
+			// 		})
+			// 		log.Infof("Name: %s (Role: %v) User: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
+			// 		log.Infoln("-------------------")
 			// 	}
 			// }
 
-			// k3sup install --ip 192.168.192.103 --print-command \
-			// --k3s-extra-args="--tls-san developer.iwis.io --disable servicelb --disable traefik
-			// --cluster-cidr 10.42.0.0/19 --service-cidr 10.42.32.0/19 --cluster-dns 10.42.32.10
-			// --flannel-backend=none --secrets-encryption --node-taint CriticalAddonsOnly=true:NoExecute" \
-			// --user ubuntu  --local-path ~/.kube/developer.yaml --context developer
+			// if len(agents) > 0 {
+			// 	// if len(masters) == 0 {
+			// 	// 	log.Fatalln("Is NOT set control plane nodes")
+			// 	// }
+			// 	token, err := k3s.GetAgentToken(masters, dryRun)
+			// 	if err != nil {
+			// 		log.Fatalln(err.Error())
+			// 	}
+			// 	log.Infoln("=====================")
+			// 	log.Infoln("Install agents")
+
+			// 	// log.Debugf("K3S_TOKEN=%s", token)
+			// 	for _, node := range agents {
+			// 		if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
+			// 			log.Fatalln(err.Error())
+			// 		} else {
+			// 			apiServerAddres, err := cfg.GetAPIServerAddress(node, &cfg.Spec.Networking)
+			// 			if err != nil {
+			// 				log.Fatal(err)
+			// 			}
+			// 			// log.Warnf("apiServerAddresses: %s", apiServerAddres)
+
+			// 			installk3sAgentExec := k3s.MakeAgentInstallExec(apiServerAddres, token, k3sOpt)
+			// 			installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
+			// 			installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion
+			// 			installk3sAgentExec.Node = node
+
+			// 			if err := k3s.RunK3sCommand(bastion, &installk3sAgentExec, dryRun); err != nil {
+			// 				log.Fatalln(err.Error())
+			// 			}
+
+			// 			log.Infof("Name: %s (Role: %v) User: %v\n", node.Name, node.Role, cfg.GetUser(node.User).Name)
+			// 			// log.Debugln(bastion)
+			// 			log.Infoln("-------------------")
+			// 		}
+			// 	}
+			// }
+			// log.Infoln("DRY RUN: ", dryRun)
+			// // // check if a cluster with that name exists already
+			// // if _, err := k3dCluster.ClusterGet(cmd.Context(), runtimes.SelectedRuntime, &clusterConfig.Cluster); err == nil {
+			// // 	log.Fatalf("Failed to create cluster '%s' because a cluster with that name already exists", clusterConfig.Cluster.Name)
+			// // }
+
+			// // // create cluster
+			// // if clusterConfig.KubeconfigOpts.UpdateDefaultKubeconfig {
+			// // 	log.Debugln("'--kubeconfig-update-default set: enabling wait-for-server")
+			// // 	clusterConfig.ClusterCreateOpts.WaitForServer = true
+			// // }
+			// // //if err := k3dCluster.ClusterCreate(cmd.Context(), runtimes.SelectedRuntime, &clusterConfig.Cluster, &clusterConfig.ClusterCreateOpts); err != nil {
+			// // if err := k3dCluster.ClusterRun(cmd.Context(), runtimes.SelectedRuntime, clusterConfig); err != nil {
+			// // 	// rollback if creation failed
+			// // 	log.Errorln(err)
+			// // 	if cfg.Options.K3dOptions.NoRollback { // TODO: move rollback mechanics to pkg/
+			// // 		log.Fatalln("Cluster creation FAILED, rollback deactivated.")
+			// // 	}
+			// // 	// rollback if creation failed
+			// // 	log.Errorln("Failed to create cluster >>> Rolling Back")
+			// // 	if err := k3dCluster.ClusterDelete(cmd.Context(), runtimes.SelectedRuntime, &clusterConfig.Cluster, k3d.ClusterDeleteOpts{SkipRegistryCheck: true}); err != nil {
+			// // 		log.Errorln(err)
+			// // 		log.Fatalln("Cluster creation FAILED, also FAILED to rollback changes!")
+			// // 	}
+			// // 	log.Fatalln("Cluster creation FAILED, all changes have been rolled back!")
+			// // }
+			// // log.Infof("Cluster '%s' created successfully!", clusterConfig.Cluster.Name)
+
+			// /**************
+			//  * Kubeconfig *
+			//  **************/
+
+			// // if clusterConfig.KubeconfigOpts.UpdateDefaultKubeconfig && clusterConfig.KubeconfigOpts.SwitchCurrentContext {
+			// // 	log.Infoln("--kubeconfig-update-default=false --> sets --kubeconfig-switch-context=false")
+			// // 	clusterConfig.KubeconfigOpts.SwitchCurrentContext = false
+			// // }
+
+			// // if clusterConfig.KubeconfigOpts.UpdateDefaultKubeconfig {
+			// // 	log.Debugf("Updating default kubeconfig with a new context for cluster %s", clusterConfig.Cluster.Name)
+			// // 	if _, err := k3dCluster.KubeconfigGetWrite(cmd.Context(), runtimes.SelectedRuntime, &clusterConfig.Cluster, "", &k3dCluster.WriteKubeConfigOptions{UpdateExisting: true, OverwriteExisting: false, UpdateCurrentContext: cfg.Options.KubeconfigOptions.SwitchCurrentContext}); err != nil {
+			// // 		log.Warningln(err)
+			// // 	}
+			// // }
+
+			// /*****************
+			//  * User Feedback *
+			//  *****************/
+
+			// // // print information on how to use the cluster with kubectl
+			// // log.Infoln("You can now use it like this:")
+			// // if clusterConfig.KubeconfigOpts.UpdateDefaultKubeconfig && !clusterConfig.KubeconfigOpts.SwitchCurrentContext {
+			// // 	fmt.Printf("kubectl config use-context %s\n", fmt.Sprintf("%s-%s", k3d.DefaultObjectNamePrefix, clusterConfig.Cluster.Name))
+			// // } else if !clusterConfig.KubeconfigOpts.SwitchCurrentContext {
+			// // 	if runtime.GOOS == "windows" {
+			// // 		fmt.Printf("$env:KUBECONFIG=(%s kubeconfig write %s)\n", os.Args[0], clusterConfig.Cluster.Name)
+			// // 	} else {
+			// // 		fmt.Printf("export KUBECONFIG=$(%s kubeconfig write %s)\n", os.Args[0], clusterConfig.Cluster.Name)
+			// // 	}
+			// // }
+
+			// // k3sup install --ip 192.168.192.103 --print-command \
+			// // --k3s-extra-args="--tls-san developer.iwis.io --disable servicelb --disable traefik
+			// // --cluster-cidr 10.42.0.0/19 --service-cidr 10.42.32.0/19 --cluster-dns 10.42.32.10
+			// // --flannel-backend=none --secrets-encryption --node-taint CriticalAddonsOnly=true:NoExecute" \
+			// // --user ubuntu  --local-path ~/.kube/developer.yaml --context developer
 			fmt.Println("kubectl cluster-info :)")
 		},
 	}

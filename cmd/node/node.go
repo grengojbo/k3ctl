@@ -34,7 +34,6 @@ var NodeName string
 var ConfigFile string
 var CfgViper = viper.New()
 var PpViper = viper.New()
-// var DryRun bool
 
 var clusterName string
 var cmdFlags types.CmdFlags

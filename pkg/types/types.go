@@ -96,6 +96,22 @@ const (
 	ClusterStatusStopped = "Stopped"
 	// ClusterStatusUnknown cluster unknown status.
 	ClusterStatusUnknown = "Unknown"
+	// StatusRunning instance running status.
+	StatusRunning = "Running"
+	// StatusCreating instance creating status.
+	StatusCreating = "Creating"
+	// StatusMissing instance missing status.
+	StatusMissing = "Missing"
+	// StatusFailed instance failed status.
+	StatusFailed = "Failed"
+	// StatusUpgrading instance upgrading status.
+	StatusUpgrading = "Upgrading"
+	// UsageInfoTitle usage info title.
+	UsageInfoTitle = "=========================== Prompt Info ==========================="
+	// UsageContext usage info context.
+	UsageContext = "Use 'kubectl config use-context %s'"
+	// UsagePods usage  info pods.
+	UsagePods = "Use 'kubectl get pods -A' get POD status`"
 )
 // Role defines a k3s node role
 type Role string
@@ -137,6 +153,11 @@ var DefaultObjectLabels = map[string]string{
 // DefaultObjectLabelsVar specifies a set of labels that will be attached to k3d objects by default but are not static (e.g. across k3d versions)
 var DefaultObjectLabelsVar = map[string]string{
 	"k3s.version": version.GetVersion(),
+}
+
+type LogEvent struct {
+	Name        string
+	ContextName string
 }
 
 const (
