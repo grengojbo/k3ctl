@@ -467,6 +467,9 @@ type ClusterSpec struct {
 type ClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Status      string `json:"status,omitempty"`
+	MasterNodes []*Node `json:"masters,omitempty"`
+	WorkerNodes []*Node `json:"workers,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -487,6 +490,16 @@ type ClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Cluster `json:"items"`
+}
+
+type K3sWorkerOptions struct {
+	JoinAgentCommand  string `json:"joinAgentCommand,omitempty"`
+	ExecString   			string `json:"execString,omitempty"`
+	ApiServerAddres 	string `json:"apiServerAddres,omitempty"`
+	ApiServerPort 		int32 `json:"apiServerPort,omitempty"`
+	Token 						string `json:"token,omitempty"`
+	K3sVersion 			  string `json:"k3sVersion,omitempty"`
+	K3sChannel 			  string `json:"k3sChannel,omitempty"`
 }
 
 func (r *Cluster) GetUser(name string) User {

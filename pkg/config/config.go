@@ -35,6 +35,7 @@ import (
 	// conf "github.com/grengojbo/api/v1alpha1"
 )
 
+// TODO: удалить перенес в контроллен
 func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 
 	var cfg k3sv1alpha1.Cluster

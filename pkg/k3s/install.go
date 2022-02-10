@@ -196,7 +196,7 @@ func MakeInstallExec(cluster bool, tlsSAN []string, options K3sExecOptions) K3sI
 	return k3sIstallOptions
 }
 
-// GetAgentToken подключаемся к мастеру и получает токен для подключения агента
+// GetAgentToken TODO: delete подключаемся к мастеру и получает токен для подключения агента
 func GetAgentToken(masters []k3sv1alpha1.ContrelPlanNodes, dryRun bool) (token string, err error) {
 	if len(masters) == 0 {
 		return "", fmt.Errorf("Is NOT set control plane nodes")

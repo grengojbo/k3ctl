@@ -24,6 +24,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ExecuteMaster TODO: delete
 func ExecuteMaster(runCommand string, node *k3sv1alpha1.ContrelPlanNodes, dryRun bool) (result string, err error)  {
 	if node.Bastion.Name == "local" {
 		log.Infoln("Run command in localhost........")
