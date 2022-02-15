@@ -6,6 +6,8 @@ require (
 	github.com/alexellis/go-execute v0.0.0-20200124154445-8697e4e28c5e
 	github.com/alexellis/k3sup v0.0.0-20210413182206-de10fc701f46
 	github.com/appleboy/easyssh-proxy v1.3.9
+	github.com/avast/retry-go/v4 v4.0.3 // indirect
+	github.com/cloverstd/tcping v0.1.1
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0
 	github.com/go-logr/logr v1.2.0

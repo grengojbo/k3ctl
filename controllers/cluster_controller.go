@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/appleboy/easyssh-proxy"
+	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/k3s"
@@ -33,10 +34,16 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/sync/syncmap"
 	"gopkg.in/yaml.v2"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"sigs.k8s.io/cluster-api/api/v1alpha3"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ClusterReconciler reconciles a Cluster object
@@ -53,6 +60,7 @@ type ProviderBase struct {
 	CmdFlags	 	types.CmdFlags
 	Cluster    	*k3sv1alpha1.Cluster
 	Clientset  	*kubernetes.Clientset
+	Config 			*clientcmdapi.Config
 	SSH 				*easyssh.MakeConfig
 	M          	*sync.Map
 	Log        	*logrus.Logger
@@ -147,12 +155,24 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) (error) {
 		cfg.Spec.Provider = "native"
 	}
 
-	if len(p.Cluster.Spec.ClusterToken) == 0 {
-		p.Cluster.Spec.ClusterToken = util.GenerateRandomString(32)
+	if len(cfg.Spec.ClusterToken) == 0 {
+		// p.Log.Errorf("ClusterToken: %s", cfg.Spec.ClusterToken)
+		cfg.Spec.ClusterToken = util.GenerateRandomString(32)
 	}
 	
-	if len(p.Cluster.Spec.AgentToken) == 0 {
-		p.Cluster.Spec.AgentToken = util.GenerateRandomString(32)
+	if len(cfg.Spec.AgentToken) == 0 {
+		cfg.Spec.AgentToken = util.GenerateRandomString(32)
+	}
+
+	if len(cfg.Spec.KubeconfigOptions.ConnectType) == 0 {
+		cfg.Spec.KubeconfigOptions.ConnectType = k3sv1alpha1.InternalIP
+	}
+	if len(cfg.Spec.KubeconfigOptions.Patch) == 0 {
+		kcfg, err := k3s.KubeconfigGetDefaultPath()
+		if err != nil {
+			p.Log.Errorf(err.Error())
+		}
+		cfg.Spec.KubeconfigOptions.Patch = kcfg
 	}
 
 	p.Cluster = &cfg
@@ -183,14 +203,6 @@ func (p *ProviderBase) InitK3sCluster() error {
 	// k3sMirror := cluster.Mirror
 	// dockerMirror := cluster.DockerMirror
 
-	// if p.Cluster.Spec.ClusterToken == "" {
-	// 	token, err := util.RandomToken(16)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	p.Clus = token
-	// }
-
 	// if len(cluster.MasterNodes) <= 0 || len(cluster.MasterNodes[0].InternalIPAddress) <= 0 {
 	// 	return errors.New("[cluster] master node internal ip address can not be empty")
 	// }
@@ -200,6 +212,57 @@ func (p *ProviderBase) InitK3sCluster() error {
 	// 	cluster.IP = cluster.MasterNodes[0].InternalIPAddress[0]
 	// 	publicIP = cluster.MasterNodes[0].PublicIPAddress[0]
 	// }
+	
+	// k3sOpt := k3sv1alpha1.K3sExecOptions{
+	// 	// 	NoExtras:     k3sNoExtras,
+	// 	ExtraArgs:           p.Cluster.Spec.K3sOptions.ExtraServerArgs,
+	// 	Ingress:             p.Cluster.Spec.Addons.Ingress.Name,
+	// 	// DisableLoadbalancer: p.Cluster.Spec.Options.DisableLoadbalancer,
+	// 	// DisableIngress:      p.Cluster.Spec.Options.DisableIngress,
+	// 	// SecretsEncryption:   p.Cluster.Spec.Options.SecretsEncryption,
+	// 	// SELinux:             p.Cluster.Spec.Options.SELinux,
+	// 	// Rootless:            p.Cluster.Spec.Options.Rootless,
+		
+	// 	Options: 						 &p.Cluster.Spec.Options,
+	// 	LoadBalancer:        &p.Cluster.Spec.LoadBalancer,
+	// 	Networking:          &p.Cluster.Spec.Networking,
+	// 	K3sChannel: 				 p.Cluster.Spec.K3sChannel,
+	// 	KubernetesVersion: 	 p.Cluster.Spec.KubernetesVersion,
+	// }
+
+	// isCluster := false
+	// if len(p.Cluster.Spec.Datastore.Provider) > 0 {
+	// 	if p.Cluster.Spec.Datastore.Provider == k3sv1alpha1.DatastoreEtcd {
+	// 		isCluster = true
+	// 	} else if datastore, err := p.Cluster.GetDatastore(); err != nil {
+	// 		p.Log.Fatalln(err.Error())
+	// 	} else {
+	// 		k3sOpt.Datastore = datastore
+	// 		p.Log.Infof("datastore connection string: %s", datastore)
+	// 	}
+	// }
+
+	masters := p.GetMasterNodes()
+	firstMaster := true
+	for i, node := range masters {
+		if node.State.Status == types.StatusMissing {
+			if firstMaster {
+				masters[i].State.Status = types.StatusCreating
+				installk3sExec := p.MakeInstallExec()
+				// installk3sExec.Node = node
+
+				tlsSAN := p.Cluster.GetTlsSan(node, &p.Cluster.Spec.Networking)
+				p.initAdditionalMaster(tlsSAN, node, &installk3sExec)
+				p.LoadNodeStatus()
+				firstMaster = false
+			}
+		} else {
+			firstMaster = false
+			p.Log.Warningln("[InitK3sCluster] TODO: присоединение master node к первому мастеру")
+		}
+	}
+
+	p.LoadNodeStatus()
 
 	// // append tls-sans to k3s install script:
 	// // 1. appends from --tls-sans flags.
@@ -354,6 +417,143 @@ func (p *ProviderBase) InitK3sCluster() error {
 	return nil
 }
 
+// GetAPIServerUrl url для подключения к API серверу
+// сперва проверяется InternalDNS, InternalIP, ExternalDNS, ExternalIP
+// если isExternal=true то сперва ExternalDNS, ExternalIP, InternalDNS, InternalIP
+// если retry > 0 то проверяется tcp ping на API сервер (время между повторами с каждым радом больше в 2 раза)
+func (p *ProviderBase) GetAPIServerUrl(master *k3sv1alpha1.Node, retry int, isExternal bool) (apiServerUrl string, err error) {
+	if isExternal {
+		for _, item := range p.Cluster.Spec.Networking.APIServerAddresses {
+			if item.Type == v1alpha3.MachineAddressType(k3sv1alpha1.ExternalDNS) {
+				p.Log.Debugf("[GetAPIServerUrl] check %v", item.Type)
+				if retry == 0 {
+					return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+				}
+				if err := util.PingRetry(&util.PingArgs{
+					Host: item.Address,
+					Port: int(p.Cluster.Spec.Networking.APIServerPort),
+					Retry: retry,
+				}); err == nil {
+					return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+				}
+			} 
+		}
+		for _, item := range p.Cluster.Spec.Networking.APIServerAddresses {
+		 if item.Type == v1alpha3.MachineAddressType(k3sv1alpha1.ExternalIP) {
+				p.Log.Debugf("[GetAPIServerUrl] check %v", item.Type)
+				if retry == 0 {
+					return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+				}
+				if err := util.PingRetry(&util.PingArgs{
+					Host: item.Address,
+					Port: int(p.Cluster.Spec.Networking.APIServerPort),
+					Retry: retry,
+				}); err == nil {
+					return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+				}
+			}
+		}
+	} 
+	
+	for _, item := range p.Cluster.Spec.Networking.APIServerAddresses {
+		if item.Type == v1alpha3.MachineAddressType(k3sv1alpha1.InternalDNS) {
+			p.Log.Debugf("[GetAPIServerUrl] check %v", item.Type)
+			if retry == 0 {
+				return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+			}
+			if err := util.PingRetry(&util.PingArgs{
+				Host: item.Address,
+				Port: int(p.Cluster.Spec.Networking.APIServerPort),
+				Retry: retry,
+			}); err == nil {
+				return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+			}
+		}
+	}
+	for _, item := range p.Cluster.Spec.Networking.APIServerAddresses {
+		if item.Type == v1alpha3.MachineAddressType(k3sv1alpha1.InternalIP) {
+			p.Log.Debugf("[GetAPIServerUrl] check %v", item.Type)
+			if retry == 0 {
+				return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+			}
+			if err := util.PingRetry(&util.PingArgs{
+				Host: item.Address,
+				Port: int(p.Cluster.Spec.Networking.APIServerPort),
+				Retry: retry,
+			}); err == nil {
+				return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+			}
+		}
+	}
+
+	if !isExternal {
+		for _, item := range p.Cluster.Spec.Networking.APIServerAddresses {
+			if item.Type == v1alpha3.MachineAddressType(k3sv1alpha1.ExternalDNS) {
+				p.Log.Debugf("[GetAPIServerUrl] check %v", item.Type)
+				if retry == 0 {
+					return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+				}
+				if err := util.PingRetry(&util.PingArgs{
+					Host: item.Address,
+					Port: int(p.Cluster.Spec.Networking.APIServerPort),
+					Retry: retry,
+				}); err == nil {
+					return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+				}
+			}
+		}
+		for _, item := range p.Cluster.Spec.Networking.APIServerAddresses {
+			if item.Type == v1alpha3.MachineAddressType(k3sv1alpha1.ExternalIP) {
+				p.Log.Debugf("[GetAPIServerUrl] check %v", item.Type)
+				if retry == 0 {
+					return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+				}
+				if err := util.PingRetry(&util.PingArgs{
+					Host: item.Address,
+					Port: int(p.Cluster.Spec.Networking.APIServerPort),
+					Retry: retry,
+				}); err == nil {
+					return fmt.Sprintf("https://%s:%d", item.Address, p.Cluster.Spec.Networking.APIServerPort), nil
+				}
+			}
+		}
+	}
+
+  if isExternal {
+		nodeIP, ok := p.Cluster.GetNodeAddress(master, "external")
+		if ok {
+			p.Log.Debugf("[GetAPIServerUrl] check %s node ip", "external")
+			if retry == 0 {
+				return fmt.Sprintf("https://%s:%d", nodeIP, p.Cluster.Spec.Networking.APIServerPort), nil
+			}
+			if err := util.PingRetry(&util.PingArgs{
+				Host: nodeIP,
+				Port: int(p.Cluster.Spec.Networking.APIServerPort),
+				Retry: retry,
+			}); err == nil {
+			return fmt.Sprintf("https://%s:%d", nodeIP, p.Cluster.Spec.Networking.APIServerPort), nil
+			}
+		}
+	}
+	
+	nodeIP, ok := p.Cluster.GetNodeAddress(master, "internal")
+	if ok {
+		p.Log.Debugf("[GetAPIServerUrl] check %s node ip", "internal")
+		if retry == 0 {
+			return fmt.Sprintf("https://%s:%d", nodeIP, p.Cluster.Spec.Networking.APIServerPort), nil
+		}
+		if err := util.PingRetry(&util.PingArgs{
+			Host: nodeIP,
+			Port: int(p.Cluster.Spec.Networking.APIServerPort),
+			Retry: retry,
+		}); err == nil {
+			return fmt.Sprintf("https://%s:%d", nodeIP, p.Cluster.Spec.Networking.APIServerPort), nil
+		}
+	}
+
+	return "", fmt.Errorf("Is NOT set Api server URL")
+}
+
 // SetClientset setting Clientset for clusterName
 func (p *ProviderBase) SetClientset(clusterName string) (err error) {
 	
@@ -372,6 +572,30 @@ func (p *ProviderBase) SetClientset(clusterName string) (err error) {
 	return err
 }
 
+// SetClientsetFromConfig create Clientset from clientcmdapi.Config
+func (p *ProviderBase) SetClientsetFromConfig() (err error) {
+	
+	// // use the current context in kubeconfig
+	// config, err := k3s.BuildKubeConfigFromFlags(clusterName)
+	// config, err := clientcmd.DefaultClientConfig.ClientConfig()
+	// if err != nil {
+	// 		return err
+	// }
+
+	// clientConfig, err := clientcmd.NewDefaultClientConfig(*kubeconfig, &clientcmd.ConfigOverrides{
+	// 	ClusterDefaults: clientcmdapi.Cluster{Server: master},
+	// }).ClientConfig()
+	clientConfig, err := clientcmd.NewDefaultClientConfig(*p.Config, &clientcmd.ConfigOverrides{}).ClientConfig()
+
+	clientset, err := kubernetes.NewForConfig(clientConfig)
+	if err !=nil {
+		return err
+	}
+	p.Clientset=clientset
+
+	return err
+}
+
 // GetClusterStatus cluster status
 func (p *ProviderBase) GetClusterStatus() string {
 	// _, err := c.Clientset.RESTClient().Get().Timeout(15 * time.Second).RequestURI("/readyz").DoRaw(context.TODO())
@@ -382,9 +606,144 @@ func (p *ProviderBase) GetClusterStatus() string {
 	return types.ClusterStatusRunning
 }
 
+// ListNodes Read more on Kubernets Nodes. In client-go, NodeInterface includes all the APIs to deal with Nodes.
+func (p *ProviderBase) ListNodes() ([]v1.Node, error) {
+	nodes, err := p.Clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+
+	if err != nil {
+			return nil, err
+	}
+
+	return nodes.Items, nil
+}
+
+// // DescribeClusterNodes describe cluster nodes.
+// func (p *ProviderBase) DescribeClusterNodes() (instanceNodes []k3sv1alpha1.ClusterNode, err error) {
+// 	// list cluster nodes.
+// 	timeout := int64(5 * time.Second)
+// 	nodeList, err := p.Clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{TimeoutSeconds: &timeout})
+// 	if err != nil || nodeList == nil {
+// 		return nil, err
+// 	}
+// 	for _, node := range nodeList.Items {
+// 		var internalIP, hostName string
+// 		addressList := node.Status.Addresses
+// 		for _, address := range addressList {
+// 			switch address.Type {
+// 			case v1.NodeInternalIP:
+// 				internalIP = address.Address
+// 			case v1.NodeHostName:
+// 				hostName = address.Address
+// 			default:
+// 				continue
+// 			}
+// 		}
+// 		for index, n := range instanceNodes {
+// 			isCurrentInstance := false
+// 			for _, address := range n.InternalIP {
+// 				if address == internalIP {
+// 					isCurrentInstance = true
+// 					break
+// 				}
+// 			}
+// 			if !isCurrentInstance {
+// 				if n.InstanceID == node.Name {
+// 					isCurrentInstance = true
+// 				}
+// 			}
+// 			if isCurrentInstance {
+// 				n.HostName = hostName
+// 				n.Version = node.Status.NodeInfo.KubeletVersion
+// 				n.ContainerRuntimeVersion = node.Status.NodeInfo.ContainerRuntimeVersion
+// 				// get roles.
+// 				labels := node.Labels
+// 				roles := make([]string, 0)
+// 				for role := range labels {
+// 					if strings.HasPrefix(role, "node-role.kubernetes.io") {
+// 						roleArray := strings.Split(role, "/")
+// 						if len(roleArray) > 1 {
+// 							roles = append(roles, roleArray[1])
+// 						}
+// 					}
+// 				}
+// 				if len(roles) == 0 {
+// 					roles = append(roles, "<none>")
+// 				}
+// 				sort.Strings(roles)
+// 				n.Roles = strings.Join(roles, ",")
+// 				// get status.
+// 				// conditions := node.Status.Conditions
+// 				// for _, c := range conditions {
+// 				// 	if c.Type == v1.NodeReady {
+// 				// 		if c.Status == v1.ConditionTrue {
+// 				// 			n.Status = "Ready"
+// 				// 		} else {
+// 				// 			n.Status = "NotReady"
+// 				// 		}
+// 				// 		break
+// 				// 	}
+// 				// }
+// 				n.Status = k3sClient.GetStatus(&node)
+// 				instanceNodes[index] = n
+// 				break
+// 			}
+// 		}
+// 	}
+// 	return instanceNodes, nil
+// }
+
+// LoadNodeStatus 
+func (p *ProviderBase) LoadNodeStatus() {
+	masters := p.Cluster.Status.MasterNodes
+	for i, node := range masters {
+		if len(node.State.Status) == 0 {
+			masters[i].State.Status = types.ClusterStatusUnknown
+			// проверяем есть ли у нас подключение к API кубера
+			if p.Clientset == nil {
+				// masters[i].State.Status = types.StatusMissing
+				// проверяем что установили k3s server
+				if ok := p.CheckExitFile(types.MasterUninstallCommand, node); !ok {
+					masters[i].State.Status = types.StatusMissing
+				} else {
+					p.Log.Warningln("[LoadNodeStatus] TODO: [KCTL-11] добавить проверку состояния кластера")
+					kubeconfig, err := p.GetKubeconfig(node)
+					if err != nil {
+						p.Log.Errorf("[LoadNodeStatus] GetKubeconfig: %v", err.Error())
+					}
+					p.Config = kubeconfig
+					p.SetClientsetFromConfig()
+
+					clusterStatus := p.GetClusterStatus()
+					masters[i].State.Status = types.StatusMissing
+					p.Log.Infof("[LoadNodeStatus] Cluster STATUS: %s", clusterStatus)
+					// isExternal := true
+					// apiServerUrl, err := p.Cluster.GetAPIServerUrl(masters, &p.Cluster.Spec.Networking, isExternal)
+					// if err != nil {
+					// 	log.Fatal(err)
+					// }
+					// log.Debugf("apiServerUrl: %s", apiServerUrl)
+					// v, _ := yaml.Marshal(kubeconfig)
+					// p.Log.Debugf("========== kubeconfig ==========\n%s\n==========================\n", v)
+				}
+			}
+		} else if p.Clientset == nil {
+			kubeconfig, err := p.GetKubeconfig(node)
+			if err != nil {
+				p.Log.Errorf("[LoadNodeStatus] GetKubeconfig: %v", err.Error())
+			}
+			p.Config = kubeconfig
+			p.SetClientsetFromConfig()
+		}
+	}
+}
+
 // GetMasterNodes return master nodes
 func (p *ProviderBase) GetMasterNodes() (masters []*k3sv1alpha1.Node) {
-	return p.Cluster.Status.MasterNodes
+	masters = p.Cluster.Status.MasterNodes
+	for _, node := range masters{
+		p.Log.Warnf("master status: %v", node.State.Status)
+	}
+	return masters
 }
 
 // GetMasterNodes return workers nodes
@@ -506,9 +865,9 @@ func (p *ProviderBase) setDelete(node *k3sv1alpha1.Node) {
 
 // shutdown uninstall k3s TODO: shutdown node command
 func (p *ProviderBase) shutdown(node *k3sv1alpha1.Node) {
-	command := types.WorkerUninstallCommand
+	command := fmt.Sprintf("sh %s", types.WorkerUninstallCommand)
 	if node.Role == k3sv1alpha1.Role(types.ServerRole) {
-		command = types.MasterUninstallCommand
+		command = fmt.Sprintf("sh %s", types.MasterUninstallCommand)
 	}
 	_, _ = p.Execute(command, node, true)
 
@@ -519,6 +878,146 @@ func (p *ProviderBase) shutdown(node *k3sv1alpha1.Node) {
 	// p.Log.Debugf("[shutdown] stdOut: %v", stdOut)
 }
 
+// MakeInstallExec установка сервера
+func (p *ProviderBase) MakeInstallExec() (k3sIstallOptions k3sv1alpha1.K3sIstallOptions) {
+	extraArgs := []string{}
+	k3sIstallOptions = k3sv1alpha1.K3sIstallOptions{
+		K3sVersion: p.Cluster.Spec.KubernetesVersion,
+		K3sChannel: p.Cluster.Spec.K3sChannel,
+	}
+
+	if len(p.Cluster.Spec.Datastore.Provider) > 0 {
+		if p.Cluster.Spec.Datastore.Provider == k3sv1alpha1.DatastoreEtcd {
+			k3sIstallOptions.IsCluster = true
+		} else if datastore, err := p.Cluster.GetDatastore(); err != nil {
+			p.Log.Fatalln(err.Error())
+		} else {
+			extraArgs = append(extraArgs, fmt.Sprintf("--datastore-endpoint %s", datastore))
+			p.Log.Infof("datastore connection string: %s", datastore)
+		}
+	}
+
+	if p.Cluster.Spec.Options.DisableLoadbalancer {
+		extraArgs = append(extraArgs, "--no-deploy servicelb")
+	} else {
+		if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
+			// TODO: #3 добавить проверку на ip adress
+			p.Log.Debugln("LoadBalancer MetalLB: ", p.Cluster.Spec.LoadBalancer.MetalLb)
+			extraArgs = append(extraArgs, "--no-deploy servicelb")
+			k3sIstallOptions.LoadBalancer = types.MetalLb
+		} else if len(p.Cluster.Spec.LoadBalancer.KubeVip) > 0 {
+			// TODO: добавить проверку на ip adress
+			p.Log.Debugln("LoadBalancer kube-vip: ", p.Cluster.Spec.LoadBalancer.KubeVip)
+			extraArgs = append(extraArgs, "--no-deploy servicelb")
+			k3sIstallOptions.LoadBalancer = types.KubeVip
+		}
+	}
+
+	// if options.Options.DisableIngress || len(options.Ingress) > 0 {
+	// 	if ingress, isset := util.Find(types.IngressControllers, options.Ingress); isset {
+	// 		k3sIstallOptions.Ingress = ingress
+	// 		extraArgs = append(extraArgs, "--no-deploy traefik")
+	// 	} else {
+	// 		p.Log.Fatalf("Ingress Controllers %s not support :(", options.Ingress)
+	// 	}
+	// }
+	extraArgs = append(extraArgs, "--no-deploy traefik")
+
+	if len(p.Cluster.Spec.Networking.ServiceSubnet) > 0 {
+		p.Log.Debugln("ServiceSubnet: ", p.Cluster.Spec.Networking.ServiceSubnet)
+		extraArgs = append(extraArgs, fmt.Sprintf("--service-cidr %s", p.Cluster.Spec.Networking.ServiceSubnet))
+	}
+
+	if len(p.Cluster.Spec.Networking.PodSubnet) > 0 {
+		p.Log.Debugln("PodSubnet: ", p.Cluster.Spec.Networking.PodSubnet)
+		extraArgs = append(extraArgs, fmt.Sprintf("--cluster-cidr %s", p.Cluster.Spec.Networking.PodSubnet))
+	}
+
+	if len(p.Cluster.Spec.Networking.DNSDomain) > 0 {
+		p.Log.Debugln("DNSDomain: ", p.Cluster.Spec.Networking.DNSDomain)
+		extraArgs = append(extraArgs, fmt.Sprintf("--cluster-domain %s", p.Cluster.Spec.Networking.DNSDomain))
+	}
+
+	if len(p.Cluster.Spec.Networking.ClusterDns) > 0 {
+		p.Log.Debugln("ClusterDns: ", p.Cluster.Spec.Networking.ClusterDns)
+		extraArgs = append(extraArgs, fmt.Sprintf("--cluster-dns %s", p.Cluster.Spec.Networking.ClusterDns))
+	}
+
+	k3sIstallOptions.Backend = types.Vxlan
+	k3sIstallOptions.CNI = types.Flannel
+	if len(p.Cluster.Spec.Networking.CNI) > 0 {
+		if cni, isset := util.Find(types.CNIplugins, p.Cluster.Spec.Networking.CNI); isset {
+			k3sIstallOptions.CNI = cni
+		} else {
+			p.Log.Fatalf("CNI plugins %s not support :(", p.Cluster.Spec.Networking.CNI)
+		}
+	}
+	if len(p.Cluster.Spec.Networking.Backend) > 0 {
+		if k3sIstallOptions.CNI == types.Flannel {
+			if backend, isset := util.Find(types.FlannelBackends, p.Cluster.Spec.Networking.Backend); isset {
+				k3sIstallOptions.Backend = backend
+			} else {
+				p.Log.Fatalf("CNI plugins %s backend %s not support :(", p.Cluster.Spec.Networking.CNI, p.Cluster.Spec.Networking.Backend)
+			}
+		} else if k3sIstallOptions.CNI == types.Calico {
+			if backend, isset := util.Find(types.CalicoBackends, p.Cluster.Spec.Networking.Backend); isset {
+				k3sIstallOptions.Backend = backend
+			} else {
+				p.Log.Fatalf("CNI plugins %s backend %s not support :(", p.Cluster.Spec.Networking.CNI, p.Cluster.Spec.Networking.Backend)
+			}
+		} else if k3sIstallOptions.CNI == types.Cilium {
+			if backend, isset := util.Find(types.CiliumBackends, p.Cluster.Spec.Networking.Backend); isset {
+				k3sIstallOptions.Backend = backend
+			} else {
+				p.Log.Fatalf("CNI plugins %s backend %s not support :(", p.Cluster.Spec.Networking.CNI, p.Cluster.Spec.Networking.Backend)
+			}
+		}
+	}
+	if k3sIstallOptions.CNI == types.Flannel {
+		extraArgs = append(extraArgs, fmt.Sprintf("--flannel-backend=%s", k3sIstallOptions.Backend))
+	} else {
+		extraArgs = append(extraArgs, "--flannel-backend=none")
+	}
+
+	if p.Cluster.Spec.Options.SecretsEncryption {
+		extraArgs = append(extraArgs, "--secrets-encryption")
+	}
+
+	if p.Cluster.Spec.Options.SELinux {
+		extraArgs = append(extraArgs, "--selinux")
+	}
+
+	if p.Cluster.Spec.Options.Rootless {
+		extraArgs = append(extraArgs, "--rootless")
+	}
+
+	extraArgsCmdline := ""
+	for _, a := range extraArgs {
+		extraArgsCmdline += a + " "
+	}
+
+	for _, a := range p.Cluster.Spec.K3sOptions.ExtraServerArgs {
+		if a != "[]" {
+			extraArgsCmdline += a + " "
+		}
+	}
+
+	installExec := ""
+
+	if trimmed := strings.TrimSpace(extraArgsCmdline); len(trimmed) > 0 {
+		installExec += fmt.Sprintf(" %s", trimmed)
+	}
+
+	if len(k3sIstallOptions.LoadBalancer) == 0 {
+		k3sIstallOptions.LoadBalancer = types.ServiceLb
+	}
+
+	k3sIstallOptions.ExecString = installExec
+
+	// --tls-san developer.cluster --node-taint CriticalAddonsOnly=true:NoExecute
+	return k3sIstallOptions
+}
+
 // MakeAgentInstallExec compile agent install string
 func (p *ProviderBase) MakeAgentInstallExec(opts *k3sv1alpha1.K3sWorkerOptions) string {
 	// curl -sfL https://get.k3s.io | K3S_URL='https://<IP>6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='stable' sh -s - --node-taint key=value:NoExecute
@@ -526,6 +1025,65 @@ func (p *ProviderBase) MakeAgentInstallExec(opts *k3sv1alpha1.K3sWorkerOptions) 
 	return fmt.Sprintf(opts.JoinAgentCommand, opts.ApiServerAddres, opts.ApiServerPort, opts.Token, util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
 }
 
+// initAdditionalMaster add first master node
+func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.Node, opts *k3sv1alpha1.K3sIstallOptions) {
+	// TODO: перевести на K3S_AGENT_TOKEN_FILE
+	extraArgs := fmt.Sprintf("K3S_AGENT_TOKEN='%s'", p.Cluster.Spec.AgentToken)
+	execArgs := ""
+	
+	// TODO: перевести на переменнын окружения
+	// K3S_CLUSTER_INIT
+	// K3S_CLUSTER_RESET
+	if opts.IsCluster {
+		// extraArgs = fmt.Sprintf("%s K3S_CLUSTER_INIT=true", extraArgs)
+		execArgs += " --cluster-init"
+	}
+	
+	if len(tlsSAN) > 0 {
+		for _, san := range tlsSAN {
+			execArgs += fmt.Sprintf(" --tls-san %s", san)
+		}
+	}
+	
+	for _, ip := range node.Addresses {
+		if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.ExternalIP) {
+			execArgs = fmt.Sprintf(" %s --node-external-ip %s", execArgs, ip.Address)
+		} else if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.InternalIP) {
+			execArgs = fmt.Sprintf(" %s --node-ip %s", execArgs, ip.Address)
+		} 
+	}
+	command := fmt.Sprintf(types.InitMasterCommand, types.K3sGetScript, extraArgs, p.Cluster.Spec.ClusterToken, opts.ExecString, execArgs, util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
+	p.Log.Debugf("[initAdditionalMaster] RUN %s", command)
+
+	err := retry.Do(
+		func() error {
+			result, err := p.Execute(command, node, true)
+
+			if err == nil {
+			// 	defer func() {
+			// 		if err := resp.Body.Close(); err != nil {
+			// 			panic(err)
+			// 		}
+				if len(result) > 0 {
+					p.Log.Debugf("--- |%s| ---", strings.Trim(result, "\n"))
+					return nil
+				}
+			// 	}()
+			// 	body, err = ioutil.ReadAll(resp.Body)
+			}
+
+			return err
+		},
+		retry.Attempts(10), // количество попыток
+		retry.Delay(10 * time.Second), // задержка в секундах
+	)
+	if err != nil {
+		p.Log.Errorf(err.Error())	
+	}
+
+}
+
+// joinWorker join worker node to cluster
 func (p *ProviderBase) joinWorker(token string, node *k3sv1alpha1.Node) {
 	// command := types.WorkerUninstallCommand
 	apiServerAddres, err := p.Cluster.GetAPIServerAddress(node, &p.Cluster.Spec.Networking)
@@ -564,8 +1122,44 @@ func (p *ProviderBase) joinWorker(token string, node *k3sv1alpha1.Node) {
 
 // GetAgentToken возвращает токен агента
 func (p *ProviderBase) GetAgentToken(master *k3sv1alpha1.Node) (token string, err error) {
-	token, err = p.Execute(types.CatTokenCommand, master, false)
+	command := fmt.Sprintf("cat %s", types.FileClusterToken)
+	token, err = p.Execute(command, master, false)
 	return strings.Trim(token, "\n"), err
+}
+
+// CheckExitFile проверка на существование файла на сервере
+func (p *ProviderBase) CheckExitFile(file string, node *k3sv1alpha1.Node) (ok bool) {
+	command := fmt.Sprintf(types.TestExitFile, file)
+	err := retry.Do(
+		func() error {
+			result, err := p.Execute(command, node, false)
+
+			if err == nil {
+			// 	defer func() {
+			// 		if err := resp.Body.Close(); err != nil {
+			// 			panic(err)
+			// 		}
+				if len(result) > 0 {
+					p.Log.Debugf("--- file: %s |%s| ---", file, strings.Trim(result, "\n"))
+					ok = false
+					return nil
+				}
+				ok = true
+			// 	}()
+			// 	body, err = ioutil.ReadAll(resp.Body)
+			}
+
+			return err
+		},
+		retry.Attempts(10), // количество попыток
+		retry.Delay(10 * time.Second), // задержка в секундах
+	)
+	if err != nil {
+		p.Log.Errorf("---------- CheckExitFile ------------")
+		p.Log.Errorf(err.Error())	
+	}
+	
+	return ok
 }
 
 // CreateK3sCluster create K3S cluster.
@@ -622,6 +1216,17 @@ func (p *ProviderBase) CreateK3sCluster() (err error) {
 		return err
 	}
 
+	if p.Clientset != nil {
+		p.Log.Infoln("Save kubeconfig to file...")
+		opts := k3s.WriteKubeConfigOptions{
+			OverwriteExisting: true,
+			UpdateCurrentContext: p.Cluster.Spec.KubeconfigOptions.SwitchCurrentContext,
+		}
+		_, err := k3s.SaveKubeconfig(p.Config, opts)
+		if err != nil {
+			p.Log.Errorf(err.Error())
+		}
+	}
 	// // deploy custom manifests.
 	// if p.Manifests != "" {
 	// 	deployCmd, err := p.GetCustomManifests()
@@ -724,14 +1329,16 @@ func (p *ProviderBase) DeleteNode(nodeName string, allNodes bool) (cnt int) {
 				p.setDrain(node)
 			}
 			p.shutdown(node)
-				
-			err := p.SetClientset(p.Cluster.ObjectMeta.Name)
-			if err !=nil {
-				p.Log.Errorf(err.Error())
-			}
-			clusterStatus := p.GetClusterStatus()
-			p.Log.Infof("clusterStatus: %v", clusterStatus)
-			p.Log.Infof("Successfully delete Master node: %s", node.Name)
+			
+			p.Log.Warnln("TODO: delete kubeconfig context")
+			// err := p.SetClientset(p.Cluster.ObjectMeta.Name)
+			// if err !=nil {
+			// 	p.Log.Errorf(err.Error())
+			// }
+			// clusterStatus := p.GetClusterStatus()
+			// p.Log.Infof("clusterStatus: %v", clusterStatus)
+			// p.Log.Infof("Successfully delete Master node: %s", node.Name)
+			
 			cnt += 1
 			cntMaster -= 1
 		}
@@ -760,6 +1367,69 @@ func (p *ProviderBase) setGroupNodes() {
 	// 	log.Fatalln("Is not set server node :(")
 	// }
 	// return serverNodes, agentNodes, nil
+}
+
+func (p *ProviderBase) GetKubeconfig(master *k3sv1alpha1.Node) (*clientcmdapi.Config, error) {
+	// command := fmt.Sprintf("cat %s", types.FileClusterToken)
+	var kubeconfig string
+	var err error
+	err = retry.Do(
+		func() error {
+			kubeconfig, err = p.Execute(types.CatCfgCommand, master, false)
+			if err == nil {
+				if len(kubeconfig) > 0 {
+					// p.Log.Debugf("--- |%s| ---", strings.Trim(kubeconfig, "\n"))	
+					return nil
+				}
+			}
+			return err
+		},
+		retry.Attempts(10), // количество попыток
+		retry.Delay(10 * time.Second), // задержка в секундах
+	)
+	if err != nil {
+		// p.Log.Errorf(err.Error())
+		return nil, err
+	}
+	isExternal := false
+	if p.Cluster.Spec.KubeconfigOptions.ConnectType == "ExternalIP" {
+		isExternal = true
+	}
+	apiServerUrl, err := p.GetAPIServerUrl(master, 1, isExternal)
+	if err != nil {
+		p.Log.Fatalf("[GetKubeconfig] %v", err.Error())
+	}
+	// timeoutSec := 1
+	// counterPing := 2
+	// if err := util.PingTCP(apiServerUrl, timeoutSec, counterPing); err != nil {
+	// 	p.Log.Errorf(err.Error())
+	// 	p.Log.Fatalf("[GetKubeconfig] IS NOT Connect to master node :(")
+	// }
+
+	opts := k3s.WriteKubeConfigOptions{
+		OverwriteExisting: true,
+		UpdateCurrentContext: p.Cluster.Spec.KubeconfigOptions.SwitchCurrentContext,
+	}
+	// pathKubeConfig, err := k3s.SaveCfg(kubeconfig, apiServerUrl, p.Cluster.GetObjectMeta().GetName(), opts)
+	// newKubeconfig, err := k3s.LoadKubeconfig(kubeconfig, apiServerUrl, p.Cluster.GetObjectMeta().GetName(), opts)
+	// if err !=nil {
+	// 	p.Log.Errorln(err.Error())
+	// }
+	// k, e := clientcmd.NewClientConfigFromBytes([]byte(newKubeConfig))
+	// c, _ := yaml.Marshal(newKubeConfig.Clusters)
+	// p.Log.Infof("new kubeconfig: %v", c)
+	// p.Log.Infof("new kubeconfig: %v", newKubeConfig.Clusters)
+
+	// p.Log.Warnf("[GetKubeconfig] apiServerUrl: %s", apiServerUrl)
+
+	// for _, item := range masters {
+	// 	kubeconfig, err = ExecuteMaster(types.CatCfgCommand, &item, dryRun)
+	// 	// if err != nil {
+	// 	// 	log.Errorln(err)
+	// 	// }
+	// 	return kubeconfig, err
+	// }
+	return k3s.LoadKubeconfig(kubeconfig, apiServerUrl, p.Cluster.GetObjectMeta().GetName(), opts)
 }
 
 // initLogging set loging

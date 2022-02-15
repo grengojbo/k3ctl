@@ -95,6 +95,7 @@ func NewCmdNodeDelete() *cobra.Command {
 			deleteAllNode := false
 			cnt := c.DeleteNode(NodeName, deleteAllNode)
 			if err != nil {
+				log.Errorf("---------- cobra ------------")
 				log.Errorf(err.Error())
 			}
 

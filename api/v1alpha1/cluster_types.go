@@ -75,6 +75,7 @@ const (
 	SshPortDefault      int32  = 22
 	DatastoreMySql      string = "mysql"
 	DatastorePostgreSql string = "postgres"
+	DatastoreEtcd 			string = "etcd"
 )
 
 var PrivateHost = []string{InternalIP, InternalDNS}
@@ -240,6 +241,20 @@ type VolumeWithNodeFilters struct {
 	NodeFilters []string `mapstructure:"nodeFilters" yaml:"nodeFilters" json:"nodeFilters,omitempty"`
 }
 
+// ClusterNode struct for cluster node.
+type ClusterNode struct {
+	InstanceID              string   `json:"instance-id,omitempty" yaml:"instance-id,omitempty"`
+	InstanceStatus          string   `json:"instance-status,omitempty" yaml:"instance-statu,omitempty"`
+	ExternalIP              []string `json:"external-ip,omitempty" yaml:"external-ip,omitempty"`
+	InternalIP              []string `json:"internal-ip,omitempty" yaml:"internal-ip,omitempty"`
+	Roles                   string   `json:"roles,omitempty" yaml:"status,omitempty"`
+	Status                  string   `json:"status,omitempty" yaml:"status,omitempty"`
+	HostName                string   `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	ContainerRuntimeVersion string   `json:"containerRuntimeVersion,omitempty" yaml:"containerRuntimeVersion,omitempty"`
+	Version                 string   `json:"version,omitempty" yaml:"version,omitempty"`
+	Master                  bool     `json:"-" yaml:"master,omitempty"`
+}
+
 type ContrelPlanNodes struct {
 	ClusterName			string   `mapstructure:"clusterName" yaml:"clusterName" json:"clusterName,omitempty"`
 	ApiServerAddres	string   `mapstructure:"apiServerAddres" yaml:"apiServerAddres" json:"apiServerAddres,omitempty"`
@@ -342,8 +357,11 @@ type SimpleConfigOptionsK3s struct {
 
 // SimpleConfigOptionsKubeconfig describes the set of options referring to the kubeconfig during cluster creation.
 type SimpleConfigOptionsKubeconfig struct {
-	UpdateDefaultKubeconfig bool `mapstructure:"updateDefaultKubeconfig" yaml:"updateDefaultKubeconfig" json:"updateDefaultKubeconfig,omitempty"` // default: true
-	SwitchCurrentContext    bool `mapstructure:"switchCurrentContext" yaml:"switchCurrentContext" json:"switchCurrentContext,omitempty"`          //nolint:lll    // default: true
+	// kubeconfig connection from k3ctl to server ExternalIP | InternalIP 
+	ConnectType 						string `mapstructure:"connectType" yaml:"connectType" json:"connectType,omitempty"`
+	Patch 									string `mapstructure:"patch" yaml:"patch" json:"patch,omitempty"`
+	UpdateDefaultKubeconfig bool   `mapstructure:"updateDefaultKubeconfig" yaml:"updateDefaultKubeconfig" json:"updateDefaultKubeconfig,omitempty"` // default: true
+	SwitchCurrentContext    bool   `mapstructure:"switchCurrentContext" yaml:"switchCurrentContext" json:"switchCurrentContext,omitempty"`          //nolint:lll    // default: true
 }
 
 type Options struct {
@@ -351,7 +369,7 @@ type Options struct {
 	Wait                       bool          `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
 	Timeout                    time.Duration `mapstructure:"timeout" yaml:"timeout" json:"timeout,omitempty"`
 	DisableLoadbalancer        bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer" json:"disableLoadbalancer,omitempty"`
-	DisableIngress             bool          `mapstructure:"disableIngress" yaml:"disableIngress" json:"disableIngress,omitempty"`
+	// EnableIngress             bool          `mapstructure:"enableIngress" yaml:"enableIngress" json:"enableIngress,omitempty"`
 	DisableImageVolume         bool          `mapstructure:"disableImageVolume" yaml:"disableImageVolume" json:"disableImageVolume,omitempty"`
 	NoRollback                 bool          `mapstructure:"disableRollback" yaml:"disableRollback" json:"disableRollback,omitempty"`
 	PrepDisableHostIPInjection bool          `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection" json:"disableHostIPInjection,omitempty"`
@@ -409,8 +427,8 @@ type ClusterSpec struct {
 	Operator          bool                          `mapstructure:"operator" yaml:"operator" json:"operator,omitempty"`
 	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`                //nolint:lll    // default 1
 	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`                   //nolint:lll    // default 0
-	ClusterToken      string                        `mapstructure:"clusterToken" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
-	AgentToken        string                        `mapstructure:"agentToken" yaml:"agentToken" json:"agentToken,omitempty"`       // default: auto-generated
+	ClusterToken      string                        `mapstructure:"clusterToken" yaml:"clusterToken" json:"clusterToken,omitempty"`
+	AgentToken        string                        `mapstructure:"agentToken" yaml:"agentToken" json:"agentToken,omitempty"`
 	Bastions          []*BastionNode                `mapstructure:"bastions" yaml:"bastions" json:"bastions,omitempty"`
 	Nodes             []*Node                       `mapstructure:"nodes" yaml:"nodes" json:"nodes,omitempty"`
 	Labels            []LabelWithNodeFilters        `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
@@ -493,6 +511,38 @@ type ClusterList struct {
 	Items           []Cluster `json:"items"`
 }
 
+// type K3sExecOptions struct {
+// 	Datastore           string
+// 	ExtraArgs           []string
+// 	FlannelIPSec        bool
+// 	NoExtras            bool
+// 	LoadBalancer        *LoadBalancer
+// 	Networking          *Networking
+// 	Options 						*Options
+// 	K3sChannel          string
+// 	KubernetesVersion 	string
+// 	ClusterToken 				string
+// 	AgentToken 					string
+// 	Ingress             string
+// 	// DisableLoadbalancer bool
+// 	// DisableIngress      bool
+// 	// SELinux             bool
+// 	// Rootless            bool
+	
+// 	// SecretsEncryption   bool
+// }
+
+type K3sIstallOptions struct {
+	ExecString   string
+	LoadBalancer string
+	Ingress      string
+	CNI          string
+	Backend      string
+	K3sVersion   string
+	K3sChannel   string
+	IsCluster 	 bool
+	Node         *Node
+}
 type K3sWorkerOptions struct {
 	JoinAgentCommand  string `json:"joinAgentCommand,omitempty"`
 	ExecString   			string `json:"execString,omitempty"`
@@ -573,6 +623,7 @@ func (r *Cluster) GetTlsSan(node *Node, vpc *Networking) (tlsSAN []string) {
 }
 
 // GetAPIServerUrl url для подключения к API серверу
+// TODO: delete
 func (r *Cluster) GetAPIServerUrl(masters []ContrelPlanNodes, vpc *Networking, isExternal bool) (apiServerUrl string, err error) {
 	if isExternal {
 		for _, item := range vpc.APIServerAddresses {

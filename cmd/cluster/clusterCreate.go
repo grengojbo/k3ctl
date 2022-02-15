@@ -136,7 +136,7 @@ func NewCmdClusterCreate() *cobra.Command {
 				 log.Fatalln(err)
 			 }
  
-			 cfg, _ := yaml.Marshal(c.Cluster)
+			cfg, _ := yaml.Marshal(c.Cluster)
 
 			log.Debugf("========== Simple Config ==========\n%s\n==========================\n", cfg)
 
@@ -188,46 +188,35 @@ func NewCmdClusterCreate() *cobra.Command {
 				log.Fatalln("Is Not Nodes to install k3s cluster")
 			}
 
-			err = c.CreateK3sCluster()
+			// обновляем статус нод
+			c.LoadNodeStatus()
+
 			// servers, agents, err := util.GetGroupNodes(cfg.Spec.Nodes)
-			if err != nil {
+			if err = c.CreateK3sCluster(); err != nil {
 				log.Fatalln(err)
 			}
-			// log.Infoln("Creating initializing server node")
-			// k3sOpt := k3s.K3sExecOptions{
-			// 	// 	NoExtras:     k3sNoExtras,
-			// 	ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
-			// 	Ingress:             cfg.Spec.Addons.Ingress.Name,
-			// 	DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
-			// 	DisableIngress:      cfg.Spec.Options.DisableIngress,
-			// 	SecretsEncryption:   cfg.Spec.Options.SecretsEncryption,
-			// 	SELinux:             cfg.Spec.Options.SELinux,
-			// 	Rootless:            cfg.Spec.Options.Rootless,
-			// 	LoadBalancer:        &cfg.Spec.LoadBalancer,
-			// 	Networking:          &cfg.Spec.Networking,
+			
+			// nodes, err := c.ListNodes()
+			// if err != nil {
+			// 	log.Errorf(err.Error())
 			// }
+			// for _, node := range nodes {
+			// 	status := client.GetStatus(&node)
+			// 	log.Infof("node: %s (%s)", node.GetObjectMeta().GetName(), status)
+			// }
+			
+			// nodes, err := c.DescribeClusterNodes()
+			// if err != nil {
+			// 	log.Errorf(err.Error())
+			// }
+			// for _, node := range nodes {
+			// 	y, _ := yaml.Marshal(node)
+			// 	log.Debugf("========== Node Info ==========\n%s\n==========================\n", y)
+			// }
+			
+			log.Infoln("Creating initializing server node")
 			// masters := []conf.ContrelPlanNodes{}
 			// for _, node := range servers {
-			// 	if len(cfg.Spec.Datastore.Provider) > 0 {
-			// 		if datastore, err := cfg.GetDatastore(); err != nil {
-			// 			log.Fatalln(err.Error())
-			// 		} else {
-			// 			k3sOpt.Datastore = datastore
-			// 			log.Infof("datastore connection string: %s", datastore)
-			// 		}
-			// 	}
-
-			// 	if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
-			// 		log.Fatalln(err.Error())
-			// 	} else {
-
-			// 		cluster := false
-			// 		tlsSAN := cfg.GetTlsSan(node, &cfg.Spec.Networking)
-			// 		installk3sExec := k3s.MakeInstallExec(cluster, tlsSAN, k3sOpt)
-			// 		installk3sExec.K3sChannel = cfg.Spec.K3sChannel
-			// 		installk3sExec.K3sVersion = cfg.Spec.KubernetesVersion
-			// 		installk3sExec.Node = node
-
 			// 		if err := k3s.RunK3sCommand(bastion, &installk3sExec, dryRun); err != nil {
 			// 			log.Fatalln(err.Error())
 			// 		}

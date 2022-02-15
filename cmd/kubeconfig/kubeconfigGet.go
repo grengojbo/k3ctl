@@ -109,7 +109,6 @@ func NewCmdKubeconfigGet() *cobra.Command {
 						log.Fatalln(err.Error())
 					}
 
-					// TODO: добавить в cli всперва внешний URL
 					isExternal := true
 					apiServerUrl, err := cfg.GetAPIServerUrl(masters, &cfg.Spec.Networking, isExternal)
 					if err != nil {

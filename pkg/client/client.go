@@ -8,7 +8,6 @@ import (
 	"github.com/grengojbo/k3ctl/pkg/types"
 	v1 "k8s.io/api/core/v1"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -46,7 +45,7 @@ func (c *K8sClient) GetClusterStatus() string {
 }
 
 // IsReady To see if a Node is Ready
-func (c *K8sClient) IsReady(node *v1.Node) bool {
+func IsReady(node *v1.Node) bool {
 	var cond v1.NodeCondition
 	for _, n := range node.Status.Conditions {
 			if n.Type == v1.NodeReady {
@@ -58,25 +57,39 @@ func (c *K8sClient) IsReady(node *v1.Node) bool {
 	return cond.Status == v1.ConditionTrue
 }
 
-// ListNodes Read more on Kubernets Nodes. In client-go, NodeInterface includes all the APIs to deal with Nodes.
-func (c *K8sClient) ListNodes() ([]v1.Node, error) {
-	nodes, err := c.Clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-
-	if err != nil {
-			return nil, err
-	}
-
-	return nodes.Items, nil
-}
-
 // IsMaster To check if a Node is a master node, search if the label “node-role.kubernetes.io/master” is present.
-func (c *K8sClient) IsMaster(node *v1.Node) bool {
+func IsMaster(node *v1.Node) bool {
 	if _, ok := node.Labels["node-role.kubernetes.io/master"]; ok {
 			return true
 	}
-
 	return false
 }
+
+func GetStatus(node *v1.Node) (status string) {
+	conditions := node.Status.Conditions
+	for _, c := range conditions {
+		if c.Type == v1.NodeReady {
+			if c.Status == v1.ConditionTrue {
+				return types.StatusRunning
+			} else {
+				return types.ClusterStatusStopped
+			}
+		}
+	}
+	return types.StatusFailed
+}
+
+// ListNodes Read more on Kubernets Nodes. In client-go, NodeInterface includes all the APIs to deal with Nodes.
+// func ListNodes() ([]v1.Node, error) {
+// 	nodes, err := c.Clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+
+// 	if err != nil {
+// 			return nil, err
+// 	}
+
+// 	return nodes.Items, nil
+// }
+
 
 // Age Calculate the age of a Node from the CreationTimestamp.
 func (c *K8sClient) Age(node *v1.Node) uint {

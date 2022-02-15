@@ -25,7 +25,6 @@ import (
 	// "bytes"
 	// "context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -305,39 +304,30 @@ func KubeconfigWrite(kubeconfig *clientcmdapi.Config, path string) error {
 	return nil
 }
 
-// / SaveCfg save kube config file.
-func SaveCfg(cfg, ip, context string, opts WriteKubeConfigOptions) (pathKubeConfig string, err error) {
-	// replacer := strings.NewReplacer(
-	// 	"127.0.0.1", ip,
-	// 	"localhost", ip,
-	// 	"default", context,
-	// )
-	// path, err := KubeconfigGetDefaultPath()
+func LoadKubeconfig(cfg, ip, context string, opts WriteKubeConfigOptions) (kubeconfig *clientcmdapi.Config, err error) {
+	// tempFile := fmt.Sprintf("k3s_temp_%s.yaml", time.Now().Format("20060102_150405.000000"))
+	// // log.Errorf("tempPath: %v", tempPath)
+	
+	// temp, err := ioutil.TempFile(os.TempDir(), tempFile)
 	// if err != nil {
-	// 	return fmt.Errorf("failed to get default kubeconfig path: %w", err)
+	// 	return nil, fmt.Errorf("[cluster] generate kubecfg temp file error, msg: %s", err)
 	// }
-	tempFile := fmt.Sprintf("k3s_temp_%s.yaml", time.Now().Format("20060102_150405.000000"))
-	// log.Errorf("tempPath: %v", tempPath)
 	
-	temp, err := ioutil.TempFile(os.TempDir(), tempFile)
-	if err != nil {
-		return "", fmt.Errorf("[cluster] generate kubecfg temp file error, msg: %s", err)
-	}
+	// defer func() {
+	// 	_ = temp.Close()
+	// 	if err := os.Remove(temp.Name()); err != nil {
+	// 		log.Errorf("[cluster] remove kubecfg temp file error, msg: %s", err)
+	// 	}
+	// }()
+
+	// absPath, _ := filepath.Abs(temp.Name())
+	// if err = ioutil.WriteFile(absPath, []byte(cfg), 0600); err != nil {
+	// 	return nil, fmt.Errorf("[cluster] write content to kubecfg temp file error: %v", err)
+	// }
+	// log.Debugf("tempFile: %v", absPath)
+	// kubeconfig, err = clientcmd.LoadFromFile(absPath)
+	kubeconfig, err = clientcmd.Load([]byte(cfg))
 	
-	defer func() {
-		_ = temp.Close()
-		if err := os.Remove(temp.Name()); err != nil {
-			log.Errorf("[cluster] remove kubecfg temp file error, msg: %s", err)
-		}
-	}()
-
-	absPath, _ := filepath.Abs(temp.Name())
-	if err = ioutil.WriteFile(absPath, []byte(cfg), 0600); err != nil {
-		return "", fmt.Errorf("[cluster] write content to kubecfg temp file error: %v", err)
-	}
-	log.Debugf("tempFile: %v", absPath)
-	kubeconfig, err := clientcmd.LoadFromFile(absPath)
-
 	// update the server URL
 	kubeconfig.Clusters["default"].Server = ip
 
@@ -361,8 +351,89 @@ func SaveCfg(cfg, ip, context string, opts WriteKubeConfigOptions) (pathKubeConf
 	// set current-context to new context name
 	kubeconfig.CurrentContext = context
 
-	// log.Warnf("Cluster: %v", kubeconfig.Clusters["default"].Server)
-	// log.Debugf("Modified Kubeconfig: %+v", kubeconfig)
+	return kubeconfig, err
+}
+
+func SaveKubeconfig(kubeconfig *clientcmdapi.Config, opts WriteKubeConfigOptions) (pathKubeConfig string, err error) {
+
+	pathKubeConfig, existingKubeConfig, err := KubeconfigGetDefaultFile()
+	if err !=nil {
+		// log.Errorf("-------[ERROR] defaultPathKubeconfig: %v", err.Error())
+		existingKubeConfig = clientcmdapi.NewConfig()
+	}
+	// log.Warnf("------- defaultPathKubeconfig: %s", existingKubeConfig)
+	err = KubeconfigMerge(kubeconfig, existingKubeConfig, pathKubeConfig, opts)
+	// path, err := os.Stat(defaultPathKubeconfig)
+	// if err !=nil {
+	// 	log.Errorf("-------[ERROR] File exits: %v", err.Error())
+	// }
+	// log.Warnf("------- file: %s", path.Name())
+	return pathKubeConfig, err
+}
+
+// / SaveCfg save kube config file.
+func SaveCfg(cfg, ip, context string, opts WriteKubeConfigOptions) (pathKubeConfig string, err error) {
+	// // replacer := strings.NewReplacer(
+	// // 	"127.0.0.1", ip,
+	// // 	"localhost", ip,
+	// // 	"default", context,
+	// // )
+	// // path, err := KubeconfigGetDefaultPath()
+	// // if err != nil {
+	// // 	return fmt.Errorf("failed to get default kubeconfig path: %w", err)
+	// // }
+	// tempFile := fmt.Sprintf("k3s_temp_%s.yaml", time.Now().Format("20060102_150405.000000"))
+	// // log.Errorf("tempPath: %v", tempPath)
+	
+	// temp, err := ioutil.TempFile(os.TempDir(), tempFile)
+	// if err != nil {
+	// 	return "", fmt.Errorf("[cluster] generate kubecfg temp file error, msg: %s", err)
+	// }
+	
+	// defer func() {
+	// 	_ = temp.Close()
+	// 	if err := os.Remove(temp.Name()); err != nil {
+	// 		log.Errorf("[cluster] remove kubecfg temp file error, msg: %s", err)
+	// 	}
+	// }()
+
+	// absPath, _ := filepath.Abs(temp.Name())
+	// if err = ioutil.WriteFile(absPath, []byte(cfg), 0600); err != nil {
+	// 	return "", fmt.Errorf("[cluster] write content to kubecfg temp file error: %v", err)
+	// }
+	// log.Debugf("tempFile: %v", absPath)
+	// kubeconfig, err := clientcmd.LoadFromFile(absPath)
+
+	// // update the server URL
+	// kubeconfig.Clusters["default"].Server = ip
+
+	// // rename user from default to admin
+	// newAuthInfoName := fmt.Sprintf("admin@%s", context)
+	// kubeconfig.AuthInfos[newAuthInfoName] = kubeconfig.AuthInfos["default"]
+	// delete(kubeconfig.AuthInfos, "default")
+	
+	// // rename cluster from default to clustername
+	// kubeconfig.Clusters[context] = kubeconfig.Clusters["default"]
+	// delete(kubeconfig.Clusters, "default")
+
+	// // rename context from default to clustername
+	// kubeconfig.Contexts[context] = kubeconfig.Contexts["default"]
+	// delete(kubeconfig.Contexts, "default")
+
+	// // update context with new values for cluster and user
+	// kubeconfig.Contexts[context].AuthInfo = newAuthInfoName
+	// kubeconfig.Contexts[context].Cluster = context
+
+	// // set current-context to new context name
+	// kubeconfig.CurrentContext = context
+
+	// // log.Warnf("Cluster: %v", kubeconfig.Clusters["default"].Server)
+	// // log.Debugf("Modified Kubeconfig: %+v", kubeconfig)
+
+	kubeconfig, err := LoadKubeconfig(cfg, ip, context, opts)
+	if err !=nil {
+		return pathKubeConfig, err
+	}
 
 	pathKubeConfig, existingKubeConfig, err := KubeconfigGetDefaultFile()
 	if err !=nil {

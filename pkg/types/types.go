@@ -58,22 +58,26 @@ const DefaultRegistryImageTag = "2"
 // DefaultObjectNamePrefix defines the name prefix for every object created by k3d
 const DefaultObjectNamePrefix = "k3s"
 
-const K3sGetScript = "curl -sfL https://get.k3s.io"
+// const K3sGetScript = "curl -sfL https://get.k3s.io"
+const K3sGetScript = "https://get.k3s.io"
 
 var (
-	InitMasterCommand      = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --node-external-ip %s %s' %s sh -"
+	InitMasterCommand      = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server%s%s' %s sh -"
+	// InitMasterCommand      = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --node-external-ip %s %s' %s sh -"
 	JoinMasterCommand      = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
 	// curl -sfL https://get.k3s.io | K3S_URL='https://<IP>6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='stable' sh -s - --node-label node-role.kubernetes.io/master=true --node-taint key=value:NoExecute
 	JoinAgentCommand       = "curl -sfL https://get.k3s.io | K3S_URL='https://%s:%d' K3S_TOKEN='%s' %s sh -s -"
-	CatTokenCommand        = "cat /var/lib/rancher/k3s/server/node-token"
+	FileClusterToken 			 = "/var/lib/rancher/k3s/server/node-token"
+	// CatTokenCommand        = "cat /var/lib/rancher/k3s/server/node-token"
 	CatCfgCommand          = "cat /etc/rancher/k3s/k3s.yaml"
 	DockerCommand          = "if ! type docker; then curl -sSL %s | sh - %s; fi"
 	DeployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
-	MasterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
-	WorkerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
+	MasterUninstallCommand = "/usr/local/bin/k3s-uninstall.sh"
+	WorkerUninstallCommand = "/usr/local/bin/k3s-agent-uninstall.sh"
 	DrainCommand 					 = "kubectl drain %s --ignore-daemonsets --delete-local-data --grace-period=30 --timeout=120s"
 	DeleteNodeCommand 		 = "kubectl delete node %s"
 	SetWorkerLabel 				 = "kubectl label --overwrite node %s node-role.kubernetes.io/worker=true"
+	TestExitFile 	 				 = "test -f %s || echo noFile"
 )
 
 // ReadyLogMessageByRole defines the log messages we wait for until a server node is considered ready
