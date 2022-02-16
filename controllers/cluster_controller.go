@@ -554,6 +554,20 @@ func (p *ProviderBase) GetAPIServerUrl(master *k3sv1alpha1.Node, retry int, isEx
 	return "", fmt.Errorf("Is NOT set Api server URL")
 }
 
+// SetKubeconfig check is install k3s and load kubeconfig file, set Clientset
+func (p *ProviderBase) SetKubeconfig(node *k3sv1alpha1.Node) (bool) {
+	if ok := p.CheckExitFile(types.MasterUninstallCommand, node); ok {
+		kubeconfig, err := p.GetKubeconfig(node)
+		if err != nil {
+			p.Log.Errorf("[SetKubeconfig] GetKubeconfig: %v", err.Error())
+		} else {
+			p.SetClientsetFromConfig(kubeconfig)
+			return true
+		}
+	}
+	return false
+}
+
 // SetClientset setting Clientset for clusterName
 func (p *ProviderBase) SetClientset(clusterName string) (err error) {
 	
@@ -573,8 +587,8 @@ func (p *ProviderBase) SetClientset(clusterName string) (err error) {
 }
 
 // SetClientsetFromConfig create Clientset from clientcmdapi.Config
-func (p *ProviderBase) SetClientsetFromConfig() (err error) {
-	
+func (p *ProviderBase) SetClientsetFromConfig(kubeconfig *clientcmdapi.Config) (err error) {
+	p.Config = kubeconfig
 	// // use the current context in kubeconfig
 	// config, err := k3s.BuildKubeConfigFromFlags(clusterName)
 	// config, err := clientcmd.DefaultClientConfig.ClientConfig()
@@ -698,41 +712,22 @@ func (p *ProviderBase) LoadNodeStatus() {
 	for i, node := range masters {
 		if len(node.State.Status) == 0 {
 			masters[i].State.Status = types.ClusterStatusUnknown
-			// проверяем есть ли у нас подключение к API кубера
-			if p.Clientset == nil {
-				// masters[i].State.Status = types.StatusMissing
-				// проверяем что установили k3s server
-				if ok := p.CheckExitFile(types.MasterUninstallCommand, node); !ok {
-					masters[i].State.Status = types.StatusMissing
-				} else {
-					p.Log.Warningln("[LoadNodeStatus] TODO: [KCTL-11] добавить проверку состояния кластера")
-					kubeconfig, err := p.GetKubeconfig(node)
-					if err != nil {
-						p.Log.Errorf("[LoadNodeStatus] GetKubeconfig: %v", err.Error())
-					}
-					p.Config = kubeconfig
-					p.SetClientsetFromConfig()
-
-					clusterStatus := p.GetClusterStatus()
-					masters[i].State.Status = types.StatusMissing
-					p.Log.Infof("[LoadNodeStatus] Cluster STATUS: %s", clusterStatus)
-					// isExternal := true
-					// apiServerUrl, err := p.Cluster.GetAPIServerUrl(masters, &p.Cluster.Spec.Networking, isExternal)
-					// if err != nil {
-					// 	log.Fatal(err)
-					// }
-					// log.Debugf("apiServerUrl: %s", apiServerUrl)
-					// v, _ := yaml.Marshal(kubeconfig)
-					// p.Log.Debugf("========== kubeconfig ==========\n%s\n==========================\n", v)
-				}
+		}
+		
+		// проверяем есть ли у нас подключение к API кубера
+		if p.Clientset == nil {
+			if ok := p.SetKubeconfig(node); ok {
+				clusterStatus := p.GetClusterStatus()
+				masters[i].State.Status = types.StatusRunning
+				p.Log.Infof("[LoadNodeStatus] Cluster STATUS: %s", clusterStatus)
+			} else {
+				masters[i].State.Status = types.StatusMissing
 			}
-		} else if p.Clientset == nil {
-			kubeconfig, err := p.GetKubeconfig(node)
-			if err != nil {
-				p.Log.Errorf("[LoadNodeStatus] GetKubeconfig: %v", err.Error())
-			}
-			p.Config = kubeconfig
-			p.SetClientsetFromConfig()
+		} else {
+			// p.Log.Warnln("9 ) stop point ----------------")
+			clusterStatus := p.GetClusterStatus()
+			masters[i].State.Status = types.StatusRunning
+			p.Log.Infof("[LoadNodeStatus] Cluster STATUS: %s", clusterStatus)
 		}
 	}
 }
@@ -863,7 +858,7 @@ func (p *ProviderBase) setDelete(node *k3sv1alpha1.Node) {
 	}
 }
 
-// shutdown uninstall k3s TODO: shutdown node command
+// shutdown uninstall k3s TODO: [KCTL-12] shutdown node command
 func (p *ProviderBase) shutdown(node *k3sv1alpha1.Node) {
 	command := fmt.Sprintf("sh %s", types.WorkerUninstallCommand)
 	if node.Role == k3sv1alpha1.Role(types.ServerRole) {
@@ -1028,8 +1023,9 @@ func (p *ProviderBase) MakeAgentInstallExec(opts *k3sv1alpha1.K3sWorkerOptions) 
 // initAdditionalMaster add first master node
 func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.Node, opts *k3sv1alpha1.K3sIstallOptions) {
 	// TODO: перевести на K3S_AGENT_TOKEN_FILE
-	extraArgs := fmt.Sprintf("K3S_AGENT_TOKEN='%s'", p.Cluster.Spec.AgentToken)
-	execArgs := ""
+	// extraArgs := fmt.Sprintf("K3S_AGENT_TOKEN='%s'", p.Cluster.Spec.AgentToken)
+	extraArgs := ""
+	execArgs := " --disable-network-policy=true"
 	
 	// TODO: перевести на переменнын окружения
 	// K3S_CLUSTER_INIT
@@ -1045,13 +1041,13 @@ func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.N
 		}
 	}
 	
-	for _, ip := range node.Addresses {
-		if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.ExternalIP) {
-			execArgs = fmt.Sprintf(" %s --node-external-ip %s", execArgs, ip.Address)
-		} else if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.InternalIP) {
-			execArgs = fmt.Sprintf(" %s --node-ip %s", execArgs, ip.Address)
-		} 
-	}
+	// for _, ip := range node.Addresses {
+	// 	if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.ExternalIP) {
+	// 		execArgs = fmt.Sprintf(" %s --node-external-ip %s", execArgs, ip.Address)
+	// 	} else if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.InternalIP) {
+	// 		execArgs = fmt.Sprintf(" %s --node-ip %s", execArgs, ip.Address)
+	// 	} 
+	// }
 	command := fmt.Sprintf(types.InitMasterCommand, types.K3sGetScript, extraArgs, p.Cluster.Spec.ClusterToken, opts.ExecString, execArgs, util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
 	p.Log.Debugf("[initAdditionalMaster] RUN %s", command)
 
@@ -1151,8 +1147,8 @@ func (p *ProviderBase) CheckExitFile(file string, node *k3sv1alpha1.Node) (ok bo
 
 			return err
 		},
-		retry.Attempts(10), // количество попыток
-		retry.Delay(10 * time.Second), // задержка в секундах
+		retry.Attempts(2), // количество попыток
+		retry.Delay(2 * time.Second), // задержка в секундах
 	)
 	if err != nil {
 		p.Log.Errorf("---------- CheckExitFile ------------")
@@ -1330,7 +1326,7 @@ func (p *ProviderBase) DeleteNode(nodeName string, allNodes bool) (cnt int) {
 			}
 			p.shutdown(node)
 			
-			p.Log.Warnln("TODO: delete kubeconfig context")
+			p.Log.Warnln("TODO: [KCTL-13] delete kubeconfig context")
 			// err := p.SetClientset(p.Cluster.ObjectMeta.Name)
 			// if err !=nil {
 			// 	p.Log.Errorf(err.Error())
@@ -1384,8 +1380,8 @@ func (p *ProviderBase) GetKubeconfig(master *k3sv1alpha1.Node) (*clientcmdapi.Co
 			}
 			return err
 		},
-		retry.Attempts(10), // количество попыток
-		retry.Delay(10 * time.Second), // задержка в секундах
+		retry.Attempts(2), // количество попыток
+		retry.Delay(1 * time.Second), // задержка в секундах
 	)
 	if err != nil {
 		// p.Log.Errorf(err.Error())
