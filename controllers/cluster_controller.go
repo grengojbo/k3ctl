@@ -194,40 +194,8 @@ func (p *ProviderBase) SetDefaulSettings() {
 func (p *ProviderBase) InitK3sCluster() error {
 	p.Log.Infof("[%s] executing init k3s cluster logic...", p.Cluster.GetProvider())
 
-	// provider, err := providers.GetProvider(p.Cluster.GetProvider())
-	// if err != nil {
-	// 	return err
-	// }
-
-	// k3sScript := cluster.InstallScript
-	// k3sMirror := cluster.Mirror
-	// dockerMirror := cluster.DockerMirror
-
 	// if len(cluster.MasterNodes) <= 0 || len(cluster.MasterNodes[0].InternalIPAddress) <= 0 {
 	// 	return errors.New("[cluster] master node internal ip address can not be empty")
-	// }
-
-	// publicIP := cluster.IP
-	// if cluster.IP == "" {
-	// 	cluster.IP = cluster.MasterNodes[0].InternalIPAddress[0]
-	// 	publicIP = cluster.MasterNodes[0].PublicIPAddress[0]
-	// }
-	
-	// k3sOpt := k3sv1alpha1.K3sExecOptions{
-	// 	// 	NoExtras:     k3sNoExtras,
-	// 	ExtraArgs:           p.Cluster.Spec.K3sOptions.ExtraServerArgs,
-	// 	Ingress:             p.Cluster.Spec.Addons.Ingress.Name,
-	// 	// DisableLoadbalancer: p.Cluster.Spec.Options.DisableLoadbalancer,
-	// 	// DisableIngress:      p.Cluster.Spec.Options.DisableIngress,
-	// 	// SecretsEncryption:   p.Cluster.Spec.Options.SecretsEncryption,
-	// 	// SELinux:             p.Cluster.Spec.Options.SELinux,
-	// 	// Rootless:            p.Cluster.Spec.Options.Rootless,
-		
-	// 	Options: 						 &p.Cluster.Spec.Options,
-	// 	LoadBalancer:        &p.Cluster.Spec.LoadBalancer,
-	// 	Networking:          &p.Cluster.Spec.Networking,
-	// 	K3sChannel: 				 p.Cluster.Spec.K3sChannel,
-	// 	KubernetesVersion: 	 p.Cluster.Spec.KubernetesVersion,
 	// }
 
 	// isCluster := false
@@ -1023,8 +991,8 @@ func (p *ProviderBase) MakeAgentInstallExec(opts *k3sv1alpha1.K3sWorkerOptions) 
 // initAdditionalMaster add first master node
 func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.Node, opts *k3sv1alpha1.K3sIstallOptions) {
 	// TODO: перевести на K3S_AGENT_TOKEN_FILE
-	// extraArgs := fmt.Sprintf("K3S_AGENT_TOKEN='%s'", p.Cluster.Spec.AgentToken)
-	extraArgs := ""
+	extraArgs := fmt.Sprintf("K3S_AGENT_TOKEN='%s'", p.Cluster.Spec.AgentToken)
+	// extraArgs := ""
 	execArgs := " --disable-network-policy=true"
 	
 	// TODO: перевести на переменнын окружения
@@ -1041,13 +1009,15 @@ func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.N
 		}
 	}
 	
-	// for _, ip := range node.Addresses {
-	// 	if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.ExternalIP) {
-	// 		execArgs = fmt.Sprintf(" %s --node-external-ip %s", execArgs, ip.Address)
-	// 	} else if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.InternalIP) {
-	// 		execArgs = fmt.Sprintf(" %s --node-ip %s", execArgs, ip.Address)
-	// 	} 
-	// }
+	for _, ip := range node.Addresses {
+		if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.ExternalIP) {
+			execArgs = fmt.Sprintf(" %s --node-external-ip %s", execArgs, ip.Address)
+		} else if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.InternalIP) {
+			// TODO: [KCTL-14] проверить для dual stack advertise-address нужно для host-gw когда есть ExternalIP
+			execArgs = fmt.Sprintf(" %s --node-ip %s --advertise-address %s", execArgs, ip.Address, ip.Address)
+		} 
+	}
+
 	command := fmt.Sprintf(types.InitMasterCommand, types.K3sGetScript, extraArgs, p.Cluster.Spec.ClusterToken, opts.ExecString, execArgs, util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
 	p.Log.Debugf("[initAdditionalMaster] RUN %s", command)
 
@@ -1070,8 +1040,8 @@ func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.N
 
 			return err
 		},
-		retry.Attempts(10), // количество попыток
-		retry.Delay(10 * time.Second), // задержка в секундах
+		retry.Attempts(2), // количество попыток
+		retry.Delay(1 * time.Second), // задержка в секундах
 	)
 	if err != nil {
 		p.Log.Errorf(err.Error())	
@@ -1160,15 +1130,6 @@ func (p *ProviderBase) CheckExitFile(file string, node *k3sv1alpha1.Node) (ok bo
 
 // CreateK3sCluster create K3S cluster.
 func (p *ProviderBase) CreateK3sCluster() (err error) {
-	// logFile, err := common.GetLogFile(p.Name)
-	// if err != nil {
-	// 	return err
-	// }
-	// c := &types.Cluster{
-	// 	Metadata: p.Metadata,
-	// 	Options:  p.Options,
-	// 	Status:   p.Status,
-	// }
 	defer func() {
 		if err != nil {
 			p.Log.Errorf("[%s] failed to create cluster: %v", p.Cluster.GetName(), err)
@@ -1192,22 +1153,7 @@ func (p *ProviderBase) CreateK3sCluster() (err error) {
 		}
 	}()
 
-	// p.Logger = common.NewLogger(common.Debug, logFile)
-	// p.Logger.Infof("[%s] executing create logic...", p.GetProviderName())
-
-	// // set ssh default value.
-	// if p.SSHUser == "" {
-	// 	p.SSHUser = defaultUser
-	// }
-	// if p.SSHPassword == "" && p.SSHKeyPath == "" {
-	// 	p.SSHKeyPath = defaultSSHKeyPath
-	// }
-	// // assemble node status.
-	// if c, err = p.assembleNodeStatus(&p.SSH); err != nil {
-	// 	return err
-	// }
-	// c.SSH = p.SSH
-	// // initialize K3s cluster.
+	// initialize K3s cluster.
 	if err = p.InitK3sCluster(); err != nil {
 		return err
 	}
@@ -1325,8 +1271,7 @@ func (p *ProviderBase) DeleteNode(nodeName string, allNodes bool) (cnt int) {
 				p.setDrain(node)
 			}
 			p.shutdown(node)
-			
-			p.Log.Warnln("TODO: [KCTL-13] delete kubeconfig context")
+				
 			// err := p.SetClientset(p.Cluster.ObjectMeta.Name)
 			// if err !=nil {
 			// 	p.Log.Errorf(err.Error())
@@ -1340,6 +1285,13 @@ func (p *ProviderBase) DeleteNode(nodeName string, allNodes bool) (cnt int) {
 		}
 	}
 
+	if cntMaster == 0 {
+		context := p.Cluster.GetName()
+		p.Log.Infof("Remove context: %s", context)
+		if err := k3s.RemoveCfg(context); err !=nil {
+			p.Log.Error("[RemoveCfg] %v", err.Error())
+		}
+	}
 	return cnt
 }
 
