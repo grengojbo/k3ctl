@@ -95,31 +95,6 @@ var kubeconfig []byte
 // }
 
 
-// MakeInstallExec установка сервера
-func MakeInstallExec(cluster bool, tlsSAN []string, options K3sExecOptions) K3sIstallOptions {
-	extraArgs := []string{}
-	k3sIstallOptions := K3sIstallOptions{}
-
-	if len(options.Datastore) > 0 {
-		extraArgs = append(extraArgs, fmt.Sprintf("--datastore-endpoint %s", options.Datastore))
-	}
-
-	if options.DisableLoadbalancer {
-		extraArgs = append(extraArgs, "--no-deploy servicelb")
-	} else {
-		if len(options.LoadBalancer.MetalLb) > 0 {
-			// TODO: #3 добавить проверку на ip adress
-			log.Debugln("LoadBalancer MetalLB: ", options.LoadBalancer.MetalLb)
-			extraArgs = append(extraArgs, "--no-deploy servicelb")
-			k3sIstallOptions.LoadBalancer = types.MetalLb
-		} else if len(options.LoadBalancer.KubeVip) > 0 {
-			// TODO: добавить проверку на ip adress
-			log.Debugln("LoadBalancer kube-vip: ", options.LoadBalancer.KubeVip)
-			extraArgs = append(extraArgs, "--no-deploy servicelb")
-			k3sIstallOptions.LoadBalancer = types.KubeVip
-		}
-	}
-
 // RunK3sCommand Выполняем команды по SSH или локально
 // TODO: translate
 // func RunK3sCommand(bastion *k3sv1alpha1.BastionNode, installk3sExec *K3sIstallOptions, dryRun bool) error {
