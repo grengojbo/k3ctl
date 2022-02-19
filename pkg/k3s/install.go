@@ -52,7 +52,7 @@ func MakeAgentInstallExec(apiServerAddres string, token string, options K3sExecO
 	// curl -sfL https://get.k3s.io | K3S_URL='https://<IP>6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='stable' sh -s - --node-taint key=value:NoExecute
 	k3sIstallOptions := K3sIstallOptions{}
 
-	installExec := fmt.Sprintf("K3S_URL='https://%s:%d' K3S_TOKEN='%s'", apiServerAddres, options.Networking.APIServerPort, token)
+	installExec := fmt.Sprintf("K3S_TOKEN='%s' K3S_URL='https://%s:%d'", token, apiServerAddres, options.Networking.APIServerPort)
 	k3sIstallOptions.ExecString = installExec
 	return k3sIstallOptions
 }
@@ -224,20 +224,20 @@ func GetAgentToken(masters []k3sv1alpha1.ContrelPlanNodes, dryRun bool) (token s
 				log.Errorln(stdErr)
 				// log.Fatalln(err.Error())
 			} else {
-				return stdOut, err
+				return strings.TrimRight(stdOut, "\r\n"), err
 			}
 			// log.Warnln(stdOut)
 			// RunExampleCommand2()
 		}
 	}
-	return token, err
+	return "", err
 }
 
 // RunK3sCommand Выполняем команды по SSH или локально
 // TODO: translate
 func RunK3sCommand(bastion *k3sv1alpha1.BastionNode, installk3sExec *K3sIstallOptions, dryRun bool) error {
 	installStr := util.CreateVersionStr(installk3sExec.K3sVersion, installk3sExec.K3sChannel)
-	installK3scommand := fmt.Sprintf("%s | %s %s sh -\n", types.K3sGetScript, installk3sExec.ExecString, installStr)
+	installK3scommand := fmt.Sprintf("%s | %s %s sh -s -\n", types.K3sGetScript, installk3sExec.ExecString, installStr)
 
 	if len(installk3sExec.K3sChannel) == 0 && len(installk3sExec.K3sVersion) == 0 {
 		return errors.New("Set kubernetesVersion or channel (Release channel: stable, latest, or i.e. v1.19)")
@@ -253,7 +253,7 @@ func RunK3sCommand(bastion *k3sv1alpha1.BastionNode, installk3sExec *K3sIstallOp
 			log.Infoln("Ingress Controllers: default k3s Traefik")
 		}
 	}
-	log.Warnf("Bastion %s host: %s (ssh port: %d key: %s)", bastion.Name, bastion.Address, bastion.SshPort, bastion.SSHAuthorizedKey)
+	log.Infof("Bastion %s host: %s (ssh port: %d key: %s)", bastion.Name, bastion.Address, bastion.SshPort, bastion.SSHAuthorizedKey)
 	log.Debugln("--------------------------------------------")
 
 	// sudoPrefix := ""
