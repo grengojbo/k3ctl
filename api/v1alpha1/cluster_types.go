@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"sync"
 
 	"github.com/docker/go-connections/nat"
 
@@ -28,6 +29,8 @@ import (
 
 	// go get sigs.k8s.io/cluster-api
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/syncmap"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -462,10 +465,19 @@ type ClusterSpec struct {
 	NTP *NTP `json:"ntp,omitempty"`
 }
 
+type providerProcess struct {
+	ContextName string
+	Event       string
+	Fn          func(interface{})
+}
+
 // ClusterStatus defines the observed state of Cluster
 type ClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Status      string `json:"status,omitempty"`
+  MasterNodes []Node `json:"master-nodes,omitempty"`
+  WorkerNodes []Node `json:"worker-nodes,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -477,7 +489,36 @@ type Cluster struct {
 
 	Spec   ClusterSpec   `json:"spec,omitempty"`
 	Status ClusterStatus `json:"status,omitempty"`
+	M              *sync.Map
+	Logger         *logrus.Logger
+	Callbacks      map[string]*providerProcess
 }
+
+// NewBaseProvider new base provider.
+func NewBaseProvider() *Cluster {
+	return &Cluster{
+		// Metadata: types.Metadata{
+		// 	UI:            ui,
+		// 	K3sVersion:    k3sVersion,
+		// 	K3sChannel:    k3sChannel,
+		// 	InstallScript: k3sInstallScript,
+		// 	Cluster:       embedEtcd,
+		// 	Master:        master,
+		// 	Worker:        worker,
+		// 	ClusterCidr:   defaultCidr,
+		// 	DockerScript:  dockerInstallScript,
+		// },
+		Status: ClusterStatus{
+			MasterNodes: make([]Node, 0),
+			WorkerNodes: make([]Node, 0),
+		},
+		// SSH: types.SSH{
+		// 	SSHPort: "22",
+		// },
+		M: new(syncmap.Map),
+	}
+}
+
 
 // +kubebuilder:object:root=true
 

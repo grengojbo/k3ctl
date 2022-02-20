@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 	homedir "github.com/mitchellh/go-homedir"
 	// log "github.com/sirupsen/logrus"
 )
@@ -64,6 +65,17 @@ func ItemExists(arrayType interface{}, item interface{}) bool {
 	return false
 }
 
+// IsExistedNodes check that the node already exists.
+func IsExistedNodes(nodes []k3sv1alpha1.Node, instance string) (int, bool) {
+	// for index, n := range nodes {
+	// 	if n.InstanceID == instance {
+	// 		return index, true
+	// 	}
+	// }
+
+	return -1, false
+}
+
 func GetNodeRole(val string) string {
 	serverRoles := []string{"master", "server"}
 	// myRoles := "master"
@@ -87,3 +99,29 @@ func ExpandPath(path string) string {
 	res, _ := homedir.Expand(path)
 	return res
 }
+
+// // CreateKeyPair create ssh key pair if key path not given.
+// func CreateKeyPair(ssh *types.SSH, providerName, name, keypair string) ([]byte, error) {
+// 	var keyPath string
+// 	if ssh.SSHKeyPath == "" && keypair == "" {
+// 		logrus.Infof("[%s] generate default key-pair", providerName)
+// 		if err := utils.GenerateSSHKey(common.GetDefaultSSHKeyPath(name, providerName)); err != nil {
+// 			return nil, err
+// 		}
+// 		keyPath = common.GetDefaultSSHKeyPath(name, providerName)
+// 	} else {
+// 		keyPath = ssh.SSHKeyPath
+// 		if keypair != "" {
+// 			logrus.Infof("[%s] use existing key pair %s", providerName, keypair)
+// 			return nil, nil
+// 		}
+// 	}
+
+// 	ssh.SSHKeyPath = keyPath
+// 	publicKey, err := ioutil.ReadFile(keyPath + ".pub")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return publicKey, nil
+// }
