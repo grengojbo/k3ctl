@@ -43,6 +43,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/grengojbo/pulumi-modules/interfaces"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -60,11 +61,13 @@ type ProviderBase struct {
 	CmdFlags	 	types.CmdFlags
 	Cluster    	*k3sv1alpha1.Cluster
 	Clientset  	*kubernetes.Clientset
+	Kubeconfig  string
 	Config 			*clientcmdapi.Config
 	SSH 				*easyssh.MakeConfig
 	M          	*sync.Map
 	Log        	*logrus.Logger
 	Callbacks   map[string]*providerProcess
+	Plugins  interfaces.EnabledPlugins
 }
 
 type providerProcess struct {
@@ -98,6 +101,8 @@ func NewClusterFromConfig(configViper *viper.Viper, cmdFlags types.CmdFlags) (pr
 		// SSH: &oper.SSH{},
 		M: new(syncmap.Map),
 	}
+
+	providerBase.Plugins.Kubernetes = true
 
 	providerBase.initLogging(&cmdFlags)
 	err = providerBase.FromViperSimple(configViper)
@@ -574,7 +579,11 @@ func (p *ProviderBase) SetClientsetFromConfig(kubeconfig *clientcmdapi.Config) (
 		return err
 	}
 	p.Clientset=clientset
-
+	k, err := clientcmd.Write(*p.Config)
+	if err !=nil {
+		return err
+	}
+	p.Kubeconfig = string(k)
 	return err
 }
 
@@ -1317,6 +1326,7 @@ func (p *ProviderBase) setGroupNodes() {
 	// return serverNodes, agentNodes, nil
 }
 
+// GetKubeconfig
 func (p *ProviderBase) GetKubeconfig(master *k3sv1alpha1.Node) (*clientcmdapi.Config, error) {
 	// command := fmt.Sprintf("cat %s", types.FileClusterToken)
 	var kubeconfig string
@@ -1347,36 +1357,12 @@ func (p *ProviderBase) GetKubeconfig(master *k3sv1alpha1.Node) (*clientcmdapi.Co
 	if err != nil {
 		p.Log.Fatalf("[GetKubeconfig] %v", err.Error())
 	}
-	// timeoutSec := 1
-	// counterPing := 2
-	// if err := util.PingTCP(apiServerUrl, timeoutSec, counterPing); err != nil {
-	// 	p.Log.Errorf(err.Error())
-	// 	p.Log.Fatalf("[GetKubeconfig] IS NOT Connect to master node :(")
-	// }
 
 	opts := k3s.WriteKubeConfigOptions{
 		OverwriteExisting: true,
 		UpdateCurrentContext: p.Cluster.Spec.KubeconfigOptions.SwitchCurrentContext,
 	}
-	// pathKubeConfig, err := k3s.SaveCfg(kubeconfig, apiServerUrl, p.Cluster.GetObjectMeta().GetName(), opts)
-	// newKubeconfig, err := k3s.LoadKubeconfig(kubeconfig, apiServerUrl, p.Cluster.GetObjectMeta().GetName(), opts)
-	// if err !=nil {
-	// 	p.Log.Errorln(err.Error())
-	// }
-	// k, e := clientcmd.NewClientConfigFromBytes([]byte(newKubeConfig))
-	// c, _ := yaml.Marshal(newKubeConfig.Clusters)
-	// p.Log.Infof("new kubeconfig: %v", c)
-	// p.Log.Infof("new kubeconfig: %v", newKubeConfig.Clusters)
-
-	// p.Log.Warnf("[GetKubeconfig] apiServerUrl: %s", apiServerUrl)
-
-	// for _, item := range masters {
-	// 	kubeconfig, err = ExecuteMaster(types.CatCfgCommand, &item, dryRun)
-	// 	// if err != nil {
-	// 	// 	log.Errorln(err)
-	// 	// }
-	// 	return kubeconfig, err
-	// }
+	
 	return k3s.LoadKubeconfig(kubeconfig, apiServerUrl, p.Cluster.GetObjectMeta().GetName(), opts)
 }
 
