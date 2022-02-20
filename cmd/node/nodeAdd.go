@@ -28,13 +28,15 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
 	// "github.com/spf13/viper"
 
+	conf "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/config"
+	k3s "github.com/grengojbo/k3ctl/pkg/k3s"
 	"github.com/grengojbo/k3ctl/pkg/types"
 	"github.com/grengojbo/k3ctl/pkg/util"
-	k3s "github.com/grengojbo/k3ctl/pkg/k3s"
-	conf "github.com/grengojbo/k3ctl/api/v1alpha1"
+
 	// dockerunits "github.com/docker/go-units"
 	// cliutil "github.com/rancher/k3d/v5/cmd/util"
 	// k3dc "github.com/rancher/k3d/v5/pkg/client"
@@ -168,7 +170,7 @@ func NewCmdNodeAdd() *cobra.Command {
 	// if err := cmd.RegisterFlagCompletionFunc("role", util.ValidArgsNodeRoles); err != nil {
 	// 	l.Log().Fatalln("Failed to register flag completion for '--role'", err)
 	// }
-	cmd.Flags().StringP("cluster", "c", types.DefaultClusterName, "Cluster URL or k3d cluster name to connect to.")
+	cmd.Flags().StringP("cluster", "c", types.DefaultClusterName, "Cluster URL or k3s cluster name to connect to.")
 	// if err := cmd.RegisterFlagCompletionFunc("cluster", util.ValidArgsAvailableClusters); err != nil {
 	// 	log.Fatalln("Failed to register flag completion for '--cluster'", err)
 	// }

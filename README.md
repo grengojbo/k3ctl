@@ -94,4 +94,6 @@ kubectl label nodes --all node-role.kubernetes.io/MyRole=true
  4601  ./k3ctl cluster create noname --dry-run
  4602  ./k3ctl cluster create demo --dry-run
  4603  ./k3ctl cluster create demo -h
+
+ ./k3ctl node --dry-run --verbose add k3s-worker3 -c sample
 ```

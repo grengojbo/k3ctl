@@ -49,6 +49,11 @@ func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 
 		return cfg, err
 	}
+	cfg.TypeMeta.APIVersion = config.GetString("apiversion")
+	cfg.TypeMeta.Kind = config.GetString("kind")
+	
+	cfg.ObjectMeta.Name = config.GetString("metadata.name")
+	
 	if cfg.Spec.Networking.APIServerPort == 0 {
 		cfg.Spec.Networking.APIServerPort = 6443
 	}
