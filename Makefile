@@ -17,6 +17,22 @@ GO_MD2MAN ?= go-md2man
 
 all: manager
 
+major:  ## Set major version
+	@#git tag -a v0.0.1 -m 'version v0.0.1' && git push --tags
+	@git tag $$(svu major)
+	@git push --tags
+	@#goreleaser --rm-dist
+
+minor:  ##  Set minor version
+	@git tag $$(svu minor)
+	@git push --tags
+	@#goreleaser --rm-dist
+
+patch:  ##  Set patch version
+	@git tag $$(svu patch)
+	@git push --tags
+	@#goreleaser --rm-dist
+
 # Run tests
 test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
