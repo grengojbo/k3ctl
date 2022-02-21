@@ -1,0 +1,30 @@
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | nindent 2 }}
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+  {{- if .Values.certManager.internal.email }}
+    email: "{{ .Values.certManager.internal.email }}"
+  {{- end }}
+    privateKeySecretRef:
+      name: cert-manager-letsencrypt-private-key
+    solvers:
+    - http01:
+        ingress:
+          podTemplate:
+            spec:
+              serviceAccountName: acme-solver-deckhouse-sa
+              tolerations:
+                - key: "node-role.kubernetes.io/master"
+                  operator: "Exists"
+                  effect: "NoSchedule"
+                - key: "dedicated.deckhouse.io"
+                  operator: "Equal"
+                  value: "system"
+                - key: "dedicated.deckhouse.io"
+                  operator: "Equal"
+                  value: "cert-manager"

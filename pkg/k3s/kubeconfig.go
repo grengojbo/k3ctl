@@ -25,6 +25,7 @@ import (
 	// "bytes"
 	// "context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -303,6 +304,21 @@ func KubeconfigWrite(kubeconfig *clientcmdapi.Config, path string) error {
 	log.Debugf("Wrote kubeconfig to '%s'", path)
 
 	return nil
+}
+
+// KubeconfigTmpWrite write kubeconfig to tmp file
+func KubeconfigTmpWrite(kubeconfig *clientcmdapi.Config) (path string, err error) {
+	// path = fmt.Sprintf("%s.k3s_%s", path, time.Now().Format("20060102_150405.000000"))
+	tmpPath, err := ioutil.TempFile("", "k3s_*.yaml")
+	if err != nil {
+    log.Fatal(err)
+	}
+	path = tmpPath.Name()
+	if err := clientcmd.WriteToFile(*kubeconfig, path); err != nil {
+		return path, fmt.Errorf("failed to write merged kubeconfig to temporary file '%s': %w", path, err)
+	}
+	// log.Debugf("Wrote kubeconfig tmp to '%s'", path)
+	return path, nil
 }
 
 func LoadKubeconfig(cfg, ip, context string, opts WriteKubeConfigOptions) (kubeconfig *clientcmdapi.Config, err error) {

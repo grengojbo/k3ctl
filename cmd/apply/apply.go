@@ -22,6 +22,9 @@ THE SOFTWARE.
 package app
 
 import (
+	"os"
+
+	"github.com/grengojbo/k3ctl/pkg/k3s"
 	"github.com/grengojbo/k3ctl/pkg/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -30,6 +33,7 @@ import (
 
 	"github.com/grengojbo/k3ctl/controllers"
 	"github.com/grengojbo/k3ctl/pkg/config"
+	"github.com/grengojbo/k3ctl/pkg/module"
 	"github.com/grengojbo/pulumi-modules/automation"
 )
 
@@ -84,7 +88,18 @@ func NewCmdApply() *cobra.Command {
 			automation.EnsurePlugins(&c.Plugins)
 			// обновляем статус нод
 			c.LoadNodeStatus()
-			// log.Warnf("kubeconfig:\n%v", c.Kubeconfig)
+
+			kubeConfigPath, err := k3s.KubeconfigTmpWrite(c.Config)
+			defer os.RemoveAll(kubeConfigPath)
+			if err != nil {
+				log.Errorf(err.Error())
+			}
+			// log.Warnf("kubeconfig path:\n%v", kubeConfigPath)
+			// os.RemoveAll(k)
+
+			if err := module.MakeInstallCertManager(kubeConfigPath); err != nil {
+				log.Errorf(err.Error())
+			}
 		},
 	}
 
