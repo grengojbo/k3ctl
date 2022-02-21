@@ -59,7 +59,6 @@ func GenerateRandomString(n int) string {
 	return sb.String()
 }
 
-
 // // RandomToken generate random token.
 func RandomToken(size int) (string, error) {
 	token := make([]byte, size)

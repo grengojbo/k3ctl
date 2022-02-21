@@ -111,11 +111,11 @@ func NewCmdClusterCreate() *cobra.Command {
 		// Args:  cobra.RangeArgs(0, 1), // exactly one cluster name can be set (default: k3d.DefaultClusterName)
 		Args: cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			
+
 			cmdFlags.DryRun = viper.GetBool("dry-run")
 			cmdFlags.DebugLogging = viper.GetBool("verbose")
 			cmdFlags.TraceLogging = viper.GetBool("trace")
-			
+
 			clusterName = args[0]
 			// NodeName = args[0]
 			// --cluster
@@ -131,11 +131,11 @@ func NewCmdClusterCreate() *cobra.Command {
 			/*************************
 			 * Compute Configuration *
 			 *************************/
-			 c, err := controllers.NewClusterFromConfig(cfgViper, cmdFlags)
-			 if err != nil {
-				 log.Fatalln(err)
-			 }
- 
+			c, err := controllers.NewClusterFromConfig(cfgViper, cmdFlags)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
 			cfg, _ := yaml.Marshal(c.Cluster)
 
 			log.Debugf("========== Simple Config ==========\n%s\n==========================\n", cfg)
@@ -195,7 +195,7 @@ func NewCmdClusterCreate() *cobra.Command {
 			if err = c.CreateK3sCluster(); err != nil {
 				log.Fatalln(err)
 			}
-			
+
 			// nodes, err := c.ListNodes()
 			// if err != nil {
 			// 	log.Errorf(err.Error())
@@ -204,7 +204,7 @@ func NewCmdClusterCreate() *cobra.Command {
 			// 	status := client.GetStatus(&node)
 			// 	log.Infof("node: %s (%s)", node.GetObjectMeta().GetName(), status)
 			// }
-			
+
 			// nodes, err := c.DescribeClusterNodes()
 			// if err != nil {
 			// 	log.Errorf(err.Error())
@@ -213,7 +213,7 @@ func NewCmdClusterCreate() *cobra.Command {
 			// 	y, _ := yaml.Marshal(node)
 			// 	log.Debugf("========== Node Info ==========\n%s\n==========================\n", y)
 			// }
-			
+
 			log.Infoln("Creating initializing server node")
 			// masters := []conf.ContrelPlanNodes{}
 			// for _, node := range servers {

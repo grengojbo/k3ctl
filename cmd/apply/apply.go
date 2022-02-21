@@ -72,33 +72,41 @@ func NewCmdApply() *cobra.Command {
 			/*************************
 			 * Compute Configuration *
 			 *************************/
-			 c, err := controllers.NewClusterFromConfig(cfgViper, cmdFlags)
-			 if err != nil {
-				 log.Fatalln(err)
-			 }
- 
-			 cfg, _ := yaml.Marshal(c.Cluster)
-			 log.Tracef("Simple Config:\n%s", cfg)
+			c, err := controllers.NewClusterFromConfig(cfgViper, cmdFlags)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			cfg, _ := yaml.Marshal(c.Cluster)
+			log.Tracef("Simple Config:\n%s", cfg)
 
 			if len(c.Cluster.Spec.Nodes) == 0 {
 				log.Fatalln("Is Not Nodes to install k3s cluster")
 			}
 
-			// download pulumi plugins
-			automation.EnsurePlugins(&c.Plugins)
+			isPulumi := false
+			if isPulumi {
+				// download pulumi plugins
+				automation.EnsurePlugins(&c.Plugins)
+			}
 			// обновляем статус нод
 			c.LoadNodeStatus()
 
-			kubeConfigPath, err := k3s.KubeconfigTmpWrite(c.Config)
-			defer os.RemoveAll(kubeConfigPath)
-			if err != nil {
-				log.Errorf(err.Error())
-			}
-			// log.Warnf("kubeconfig path:\n%v", kubeConfigPath)
-			// os.RemoveAll(k)
+			c.SetAddons()
 
-			if err := module.MakeInstallCertManager(kubeConfigPath); err != nil {
-				log.Errorf(err.Error())
+			isModuleRun := false
+			if isModuleRun {
+				kubeConfigPath, err := k3s.KubeconfigTmpWrite(c.Config)
+				defer os.RemoveAll(kubeConfigPath)
+				if err != nil {
+					log.Errorf(err.Error())
+				}
+				// log.Warnf("kubeconfig path:\n%v", kubeConfigPath)
+				// os.RemoveAll(k)
+
+				if err := module.MakeInstallCertManager(kubeConfigPath); err != nil {
+					log.Errorf(err.Error())
+				}
 			}
 		},
 	}

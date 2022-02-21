@@ -52,12 +52,12 @@ func NewCmdKubeconfigMerge() *cobra.Command {
 
 	// create new command
 	cmd := &cobra.Command{
-		Use:               "merge [CLUSTER [CLUSTER [...]] | --all]",
-		Aliases:           []string{"write"},
-		Long:              `Write/Merge kubeconfig(s) from cluster(s) into new or existing kubeconfig/file.`,
-		Short:             "Write/Merge kubeconfig(s) from cluster(s) into new or existing kubeconfig/file.",
+		Use:     "merge [CLUSTER [CLUSTER [...]] | --all]",
+		Aliases: []string{"write"},
+		Long:    `Write/Merge kubeconfig(s) from cluster(s) into new or existing kubeconfig/file.`,
+		Short:   "Write/Merge kubeconfig(s) from cluster(s) into new or existing kubeconfig/file.",
 		// ValidArgsFunction: util.ValidArgsAvailableClusters,
-		Args:              cobra.MinimumNArgs(0),
+		Args: cobra.MinimumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			// var clusters []*k3d.Cluster
 			// var err error

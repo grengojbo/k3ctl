@@ -75,19 +75,18 @@ func NewCmdNodeAdd() *cobra.Command {
 			/*************************
 			 * Compute Configuration *
 			 *************************/
-			 c, err := controllers.NewClusterFromConfig(CfgViper, cmdFlags)
-			 if err != nil {
-				 log.Fatalln(err)
-			 }
- 
-			 cfg, _ := yaml.Marshal(c.Cluster)
-			 log.Tracef("Simple Config:\n%s", cfg)
+			c, err := controllers.NewClusterFromConfig(CfgViper, cmdFlags)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			cfg, _ := yaml.Marshal(c.Cluster)
+			log.Tracef("Simple Config:\n%s", cfg)
 
 			if len(c.Cluster.Spec.Nodes) == 0 {
 				log.Fatalln("Is Not Nodes to install k3s cluster")
 			}
 
-			
 			if ok := c.AddNode(NodeName); ok {
 				isAddNode = true
 			}

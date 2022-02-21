@@ -238,7 +238,7 @@ type WriteKubeConfigOptions struct {
 // func KubeconfigMerge(srcKubeConfig string) (newKubeConfig *clientcmdapi.Config) {
 // 	log.Infof("%v", clientcmd.RecommendedConfigPathEnvVar)
 // 	newKubeConfig = clientcmdapi.NewConfig()
-	
+
 // 	// k := clientcmd.NewDefaultClientConfigLoadingRules()
 // 	// newKubeConfig = clientcmdapi.NewCmdKubeconfig()
 // 	return nil
@@ -311,7 +311,7 @@ func KubeconfigTmpWrite(kubeconfig *clientcmdapi.Config) (path string, err error
 	// path = fmt.Sprintf("%s.k3s_%s", path, time.Now().Format("20060102_150405.000000"))
 	tmpPath, err := ioutil.TempFile("", "k3s_*.yaml")
 	if err != nil {
-    log.Fatal(err)
+		log.Fatal(err)
 	}
 	path = tmpPath.Name()
 	if err := clientcmd.WriteToFile(*kubeconfig, path); err != nil {
@@ -324,12 +324,12 @@ func KubeconfigTmpWrite(kubeconfig *clientcmdapi.Config) (path string, err error
 func LoadKubeconfig(cfg, ip, context string, opts WriteKubeConfigOptions) (kubeconfig *clientcmdapi.Config, err error) {
 	// tempFile := fmt.Sprintf("k3s_temp_%s.yaml", time.Now().Format("20060102_150405.000000"))
 	// // log.Errorf("tempPath: %v", tempPath)
-	
+
 	// temp, err := ioutil.TempFile(os.TempDir(), tempFile)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("[cluster] generate kubecfg temp file error, msg: %s", err)
 	// }
-	
+
 	// defer func() {
 	// 	_ = temp.Close()
 	// 	if err := os.Remove(temp.Name()); err != nil {
@@ -344,7 +344,7 @@ func LoadKubeconfig(cfg, ip, context string, opts WriteKubeConfigOptions) (kubec
 	// log.Debugf("tempFile: %v", absPath)
 	// kubeconfig, err = clientcmd.LoadFromFile(absPath)
 	kubeconfig, err = clientcmd.Load([]byte(cfg))
-	
+
 	// update the server URL
 	kubeconfig.Clusters["default"].Server = ip
 
@@ -352,7 +352,7 @@ func LoadKubeconfig(cfg, ip, context string, opts WriteKubeConfigOptions) (kubec
 	newAuthInfoName := fmt.Sprintf("admin@%s", context)
 	kubeconfig.AuthInfos[newAuthInfoName] = kubeconfig.AuthInfos["default"]
 	delete(kubeconfig.AuthInfos, "default")
-	
+
 	// rename cluster from default to clustername
 	kubeconfig.Clusters[context] = kubeconfig.Clusters["default"]
 	delete(kubeconfig.Clusters, "default")
@@ -374,7 +374,7 @@ func LoadKubeconfig(cfg, ip, context string, opts WriteKubeConfigOptions) (kubec
 func SaveKubeconfig(kubeconfig *clientcmdapi.Config, opts WriteKubeConfigOptions) (pathKubeConfig string, err error) {
 
 	pathKubeConfig, existingKubeConfig, err := KubeconfigGetDefaultFile()
-	if err !=nil {
+	if err != nil {
 		// log.Errorf("-------[ERROR] defaultPathKubeconfig: %v", err.Error())
 		existingKubeConfig = clientcmdapi.NewConfig()
 	}
@@ -391,7 +391,7 @@ func SaveKubeconfig(kubeconfig *clientcmdapi.Config, opts WriteKubeConfigOptions
 // RemoveCfg removes kubectl config file.
 func RemoveCfg(context string) (err error) {
 	pathKubeConfig, existingKubeConfig, err := KubeconfigGetDefaultFile()
-	if err !=nil {
+	if err != nil {
 		// log.Errorf("-------[ERROR] defaultPathKubeconfig: %v", err.Error())
 		existingKubeConfig = clientcmdapi.NewConfig()
 	}
@@ -402,7 +402,7 @@ func RemoveCfg(context string) (err error) {
 	delete(existingKubeConfig.Contexts, context)
 	delete(existingKubeConfig.Clusters, context)
 	delete(existingKubeConfig.AuthInfos, context)
-	
+
 	// the auth info entry associated with the context needs to be deleted.
 	for key := range existingKubeConfig.AuthInfos {
 		if strings.Contains(key, fmt.Sprintf("@%s", context)) {
@@ -422,12 +422,12 @@ func RemoveCfg(context string) (err error) {
 // / SaveCfg save kube config file.
 func SaveCfg(cfg, ip, context string, opts WriteKubeConfigOptions) (pathKubeConfig string, err error) {
 	kubeconfig, err := LoadKubeconfig(cfg, ip, context, opts)
-	if err !=nil {
+	if err != nil {
 		return pathKubeConfig, err
 	}
 
 	pathKubeConfig, existingKubeConfig, err := KubeconfigGetDefaultFile()
-	if err !=nil {
+	if err != nil {
 		existingKubeConfig = clientcmdapi.NewConfig()
 	}
 	err = KubeconfigMerge(kubeconfig, existingKubeConfig, pathKubeConfig, opts)
@@ -451,7 +451,7 @@ func SwitchContext(ctx, kubeconfig string) (err error) {
 func BuildKubeConfigFromFlags(context string) (*rest.Config, error) {
 	var err error
 	var path string
-	
+
 	pathKubeConfig := viper.GetString("kubeconfig")
 	if len(pathKubeConfig) > 0 {
 		path, _ = filepath.Abs(util.ExpandPath(pathKubeConfig))
@@ -462,17 +462,17 @@ func BuildKubeConfigFromFlags(context string) (*rest.Config, error) {
 		}
 	}
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-					&clientcmd.ClientConfigLoadingRules{ExplicitPath: path},
-					&clientcmd.ConfigOverrides{
-									CurrentContext: context,
-					}).ClientConfig()
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: path},
+		&clientcmd.ConfigOverrides{
+			CurrentContext: context,
+		}).ClientConfig()
 }
 
 // KubeconfigGetDefaultFile loads the default KubeConfig file
 func KubeconfigGetDefaultFile() (string, *clientcmdapi.Config, error) {
 	var err error
 	var path string
-	
+
 	pathKubeConfig := viper.GetString("kubeconfig")
 	if len(pathKubeConfig) > 0 {
 		path, _ = filepath.Abs(util.ExpandPath(pathKubeConfig))

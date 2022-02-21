@@ -24,7 +24,7 @@ import (
 // "github.com/grengojbo/k3ctl/pkg/types"
 
 // ExecuteMaster TODO: delete
-func ExecuteMaster(runCommand string, node *k3sv1alpha1.ContrelPlanNodes, dryRun bool) (result string, err error)  {
+func ExecuteMaster(runCommand string, node *k3sv1alpha1.ContrelPlanNodes, dryRun bool) (result string, err error) {
 	if node.Bastion.Name == "local" {
 		log.Infoln("Run command in localhost........")
 		// stdOut, stdErr, err := RunLocalCommand(installK3scommand, true, dryRun)

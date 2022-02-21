@@ -56,7 +56,7 @@ func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 	cfg.ObjectMeta.Name = config.GetString("metadata.name")
 
 	// if !cfg.Spec.KubeconfigOptions.SwitchCurrentContext {
-		// cfg.Spec.KubeconfigOptions.SwitchCurrentContext = true
+	// cfg.Spec.KubeconfigOptions.SwitchCurrentContext = true
 	// }
 
 	if cfg.Spec.Networking.APIServerPort == 0 {

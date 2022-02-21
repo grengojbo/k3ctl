@@ -42,7 +42,7 @@ func NewCmdKubeconfig() *cobra.Command {
 		Use:   "kubeconfig",
 		Short: "Manage kubeconfig(s)",
 		Long:  `Manage kubeconfig(s)`,
-		
+
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := cmd.Help(); err != nil {
 				log.Errorln("Couldn't get help text")

@@ -54,8 +54,6 @@ var kubeconfig []byte
 // 	return k3sIstallOptions
 // }
 
-
-
 // GetAgentToken TODO: delete подключаемся к мастеру и получает токен для подключения агента
 // func GetAgentToken(masters []k3sv1alpha1.ContrelPlanNodes, dryRun bool) (token string, err error) {
 // 	if len(masters) == 0 {
@@ -93,7 +91,6 @@ var kubeconfig []byte
 // 	}
 // 	return token, err
 // }
-
 
 // RunK3sCommand Выполняем команды по SSH или локально
 // TODO: translate
@@ -139,14 +136,61 @@ var kubeconfig []byte
 // 			log.Fatalln(err.Error())
 // 		}
 // 	}
-// 
+//
 // 	// RunExampleCommand()
 // 	// RunExampleCommand2()
 // 	return nil
 // }
 
 // RunLocalCommand выполнение комманд на локальном хосте TODO: tranclate
-func RunLocalCommand(myCommand string, saveKubeconfig bool, dryRun bool) (stdOut []byte, stdErr []byte, err error) {
+func RunLocalCommand(myCommand string, sudo bool, dryRun bool) (stdOut []byte, stdErr []byte, err error) {
+
+	sudoPrefix := ""
+	if sudo {
+		uid := execute.ExecTask{
+			Command:     "echo",
+			Args:        []string{"${UID}"},
+			Shell:       true,
+			StreamStdio: false, // если true то выводит вконсоль и в Stdout
+		}
+		resUid, err := uid.Execute()
+		if err != nil {
+			return stdOut, stdErr, err
+		}
+
+		if val, err := oper.ParseInt64Output(resUid.Stdout); err != nil {
+			log.Fatalln(err.Error())
+		} else if val != 0 {
+			sudoPrefix = "sudo "
+			// log.Debugf("Result: %v sudoPrefix: %s", val, sudoPrefix)
+		}
+	}
+
+	command := fmt.Sprintf("%s%s", sudoPrefix, myCommand)
+	operator := operator.ExecOperator{}
+	if dryRun {
+		log.Infof("DRY-RUN %s", command)
+	} else {
+		log.Debugf("Executing: %s\n", command)
+
+		res, err := operator.ExecuteStdio(command, false)
+		// res, err := operator.Execute("pwd")
+		if err != nil {
+			return stdOut, stdErr, err
+		}
+
+		if len(res.StdErr) > 0 {
+			stdErr = res.StdErr
+		}
+		if len(res.StdOut) > 0 {
+			stdOut = res.StdOut
+		}
+	}
+
+	return stdOut, stdErr, nil
+}
+
+func RunLocalCommandOld(myCommand string, saveKubeconfig bool, dryRun bool) (stdOut []byte, stdErr []byte, err error) {
 
 	sudoPrefix := ""
 	uid := execute.ExecTask{

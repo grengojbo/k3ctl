@@ -13,23 +13,24 @@ import (
 )
 
 type K8sClient struct {
-	Config *rest.Config
+	Config    *rest.Config
 	Clientset *kubernetes.Clientset
 }
+
 // NewClient return new cobernetes clent for clusterName config
 func NewClient(clusterName string) (client K8sClient, err error) {
-	
+
 	// use the current context in kubeconfig
 	config, err := k3s.BuildKubeConfigFromFlags(clusterName)
 	if err != nil {
-			return client, err
+		return client, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
-	if err !=nil {
+	if err != nil {
 		return client, err
 	}
-	client.Clientset=clientset
+	client.Clientset = clientset
 
 	return client, err
 }
@@ -48,10 +49,10 @@ func (c *K8sClient) GetClusterStatus() string {
 func IsReady(node *v1.Node) bool {
 	var cond v1.NodeCondition
 	for _, n := range node.Status.Conditions {
-			if n.Type == v1.NodeReady {
-					cond = n
-					break
-			}
+		if n.Type == v1.NodeReady {
+			cond = n
+			break
+		}
 	}
 
 	return cond.Status == v1.ConditionTrue
@@ -60,7 +61,7 @@ func IsReady(node *v1.Node) bool {
 // IsMaster To check if a Node is a master node, search if the label “node-role.kubernetes.io/master” is present.
 func IsMaster(node *v1.Node) bool {
 	if _, ok := node.Labels["node-role.kubernetes.io/master"]; ok {
-			return true
+		return true
 	}
 	return false
 }
@@ -89,7 +90,6 @@ func GetStatus(node *v1.Node) (status string) {
 
 // 	return nodes.Items, nil
 // }
-
 
 // Age Calculate the age of a Node from the CreationTimestamp.
 func (c *K8sClient) Age(node *v1.Node) uint {

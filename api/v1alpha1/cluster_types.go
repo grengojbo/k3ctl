@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	// go get sigs.k8s.io/cluster-api
+
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 )
 
@@ -75,7 +76,7 @@ const (
 	SshPortDefault      int32  = 22
 	DatastoreMySql      string = "mysql"
 	DatastorePostgreSql string = "postgres"
-	DatastoreEtcd 			string = "etcd"
+	DatastoreEtcd       string = "etcd"
 )
 
 var PrivateHost = []string{InternalIP, InternalDNS}
@@ -201,26 +202,73 @@ type Networking struct {
 // ######### END
 
 type Registry struct {
-	Use    []string `mapstructure:"use" yaml:"use" json:"use,omitempty"`
-	Create bool     `mapstructure:"create" yaml:"create" json:"create,omitempty"`
-	Config string   `mapstructure:"config" yaml:"config" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
+	Name      string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string   `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Type      string   `mapstructure:"type" yaml:"type" json:"type,omitempty"` // helm, manifest, orchestration
+	Use       []string `mapstructure:"use" yaml:"use" json:"use,omitempty"`
+	Create    bool     `mapstructure:"create" yaml:"create" json:"create,omitempty"`
+	Config    string   `mapstructure:"config" yaml:"config" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
+}
+
+type PulumiModule struct {
+	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+}
+
+type ExternalDns struct {
+	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+}
+
+type MetalLB struct {
+	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 }
 
 type CertManager struct {
-	Name    string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Enabled bool     `mapstructure:"enabled" yaml:"enabled" json:"enabled,omitempty"`
-	Values  []string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 }
 
 type Ingress struct {
-	Name   string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Values []string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	HostMode  bool              `mapstructure:"hostMode" yaml:"hostMode" json:"hostMode,omitempty"`
+	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+}
+
+type AddonOptions struct {
+	UpdateStrategy string `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
+	// helmAddons []string `mapstructure:"helmAddons" yaml:"helmAddons" json:"helmAddons,omitempty"`
 }
 
 type Addons struct {
-	Ingress     Ingress     `mapstructure:"ingress" yaml:"ingress" json:"ingress,omitempty"`
-	CertManager CertManager `mapstructure:"certManager" yaml:"certManager,omitempty" json:"certManager,omitempty"`
-	Registries  Registry    `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
+	Ingress      Ingress      `mapstructure:"ingress" yaml:"ingress" json:"ingress,omitempty"`
+	CertManager  CertManager  `mapstructure:"certManager" yaml:"certManager,omitempty" json:"certManager,omitempty"`
+	MetalLB      MetalLB      `mapstructure:"metallb" yaml:"metallb,omitempty" json:"metallb,omitempty"`
+	ExternalDns  ExternalDns  `mapstructure:"externalDns" yaml:"externalDns,omitempty" json:"externalDns,omitempty"`
+	PulumiModule PulumiModule `mapstructure:"pulumi" yaml:"pulumi,omitempty" json:"pulumi,omitempty"`
+	Registries   Registry     `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
+	Options      AddonOptions `mapstructure:"options" yaml:"options" json:"options,omitempty"`
 }
 
 // Role defines a k3s node role
@@ -256,10 +304,10 @@ type ClusterNode struct {
 }
 
 type ContrelPlanNodes struct {
-	ClusterName			string   `mapstructure:"clusterName" yaml:"clusterName" json:"clusterName,omitempty"`
-	ApiServerAddres	string   `mapstructure:"apiServerAddres" yaml:"apiServerAddres" json:"apiServerAddres,omitempty"`
-	Bastion 				*BastionNode `mapstructure:"bastion" yaml:"bastion" json:"bastion"`
-	Node    				*Node        `mapstructure:"node" yaml:"node" json:"node"`
+	ClusterName     string       `mapstructure:"clusterName" yaml:"clusterName" json:"clusterName,omitempty"`
+	ApiServerAddres string       `mapstructure:"apiServerAddres" yaml:"apiServerAddres" json:"apiServerAddres,omitempty"`
+	Bastion         *BastionNode `mapstructure:"bastion" yaml:"bastion" json:"bastion"`
+	Node            *Node        `mapstructure:"node" yaml:"node" json:"node"`
 }
 type BastionNode struct {
 	// Name The bastion Name
@@ -357,22 +405,22 @@ type SimpleConfigOptionsK3s struct {
 
 // SimpleConfigOptionsKubeconfig describes the set of options referring to the kubeconfig during cluster creation.
 type SimpleConfigOptionsKubeconfig struct {
-	// kubeconfig connection from k3ctl to server ExternalIP | InternalIP 
-	ConnectType 						string `mapstructure:"connectType" yaml:"connectType" json:"connectType,omitempty"`
-	Patch 									string `mapstructure:"patch" yaml:"patch" json:"patch,omitempty"`
+	// kubeconfig connection from k3ctl to server ExternalIP | InternalIP
+	ConnectType             string `mapstructure:"connectType" yaml:"connectType" json:"connectType,omitempty"`
+	Patch                   string `mapstructure:"patch" yaml:"patch" json:"patch,omitempty"`
 	UpdateDefaultKubeconfig bool   `mapstructure:"updateDefaultKubeconfig" yaml:"updateDefaultKubeconfig" json:"updateDefaultKubeconfig,omitempty"` // default: true
 	SwitchCurrentContext    bool   `mapstructure:"switchCurrentContext" yaml:"switchCurrentContext" json:"switchCurrentContext,omitempty"`          //nolint:lll    // default: true
 }
 
 type Options struct {
-	Protected                  bool          `mapstructure:"protected" yaml:"protected" json:"protected,omitempty"`
-	Wait                       bool          `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
-	Timeout                    time.Duration `mapstructure:"timeout" yaml:"timeout" json:"timeout,omitempty"`
-	DisableLoadbalancer        bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer" json:"disableLoadbalancer,omitempty"`
+	Protected           bool          `mapstructure:"protected" yaml:"protected" json:"protected,omitempty"`
+	Wait                bool          `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
+	Timeout             time.Duration `mapstructure:"timeout" yaml:"timeout" json:"timeout,omitempty"`
+	DisableLoadbalancer bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer" json:"disableLoadbalancer,omitempty"`
 	// EnableIngress             bool          `mapstructure:"enableIngress" yaml:"enableIngress" json:"enableIngress,omitempty"`
-	DisableImageVolume         bool          `mapstructure:"disableImageVolume" yaml:"disableImageVolume" json:"disableImageVolume,omitempty"`
-	NoRollback                 bool          `mapstructure:"disableRollback" yaml:"disableRollback" json:"disableRollback,omitempty"`
-	PrepDisableHostIPInjection bool          `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection" json:"disableHostIPInjection,omitempty"`
+	DisableImageVolume         bool `mapstructure:"disableImageVolume" yaml:"disableImageVolume" json:"disableImageVolume,omitempty"`
+	NoRollback                 bool `mapstructure:"disableRollback" yaml:"disableRollback" json:"disableRollback,omitempty"`
+	PrepDisableHostIPInjection bool `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection" json:"disableHostIPInjection,omitempty"`
 	// SELinux To leverage SELinux, specify the --selinux flag when starting K3s servers and agents.
 	// https://rancher.com/docs/k3s/latest/en/advanced/
 	// +optional
@@ -423,10 +471,10 @@ type ClusterSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Region            string                        `mapstructure:"region" yaml:"region" json:"region,omitempty"`
-	Provider        	string      									`mapstructure:"provider" json:"provider" yaml:"provider"`
+	Provider          string                        `mapstructure:"provider" json:"provider" yaml:"provider"`
 	Operator          bool                          `mapstructure:"operator" yaml:"operator" json:"operator,omitempty"`
-	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`                //nolint:lll    // default 1
-	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`                   //nolint:lll    // default 0
+	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"` //nolint:lll    // default 1
+	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`    //nolint:lll    // default 0
 	ClusterToken      string                        `mapstructure:"clusterToken" yaml:"clusterToken" json:"clusterToken,omitempty"`
 	AgentToken        string                        `mapstructure:"agentToken" yaml:"agentToken" json:"agentToken,omitempty"`
 	Bastions          []*BastionNode                `mapstructure:"bastions" yaml:"bastions" json:"bastions,omitempty"`
@@ -486,7 +534,7 @@ type ClusterSpec struct {
 type ClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Status      string `json:"status,omitempty"`
+	Status      string  `json:"status,omitempty"`
 	MasterNodes []*Node `json:"masters,omitempty"`
 	WorkerNodes []*Node `json:"workers,omitempty"`
 }
@@ -528,7 +576,7 @@ type ClusterList struct {
 // 	// DisableIngress      bool
 // 	// SELinux             bool
 // 	// Rootless            bool
-	
+
 // 	// SecretsEncryption   bool
 // }
 
@@ -540,17 +588,45 @@ type K3sIstallOptions struct {
 	Backend      string
 	K3sVersion   string
 	K3sChannel   string
-	IsCluster 	 bool
+	IsCluster    bool
 	Node         *Node
 }
 type K3sWorkerOptions struct {
-	JoinAgentCommand  string `json:"joinAgentCommand,omitempty"`
-	ExecString   			string `json:"execString,omitempty"`
-	ApiServerAddres 	string `json:"apiServerAddres,omitempty"`
-	ApiServerPort 		int32 `json:"apiServerPort,omitempty"`
-	Token 						string `json:"token,omitempty"`
-	K3sVersion 			  string `json:"k3sVersion,omitempty"`
-	K3sChannel 			  string `json:"k3sChannel,omitempty"`
+	JoinAgentCommand string `json:"joinAgentCommand,omitempty"`
+	ExecString       string `json:"execString,omitempty"`
+	ApiServerAddres  string `json:"apiServerAddres,omitempty"`
+	ApiServerPort    int32  `json:"apiServerPort,omitempty"`
+	Token            string `json:"token,omitempty"`
+	K3sVersion       string `json:"k3sVersion,omitempty"`
+	K3sChannel       string `json:"k3sChannel,omitempty"`
+}
+
+type HelmInterfaces struct {
+	Name       string `yaml:"name" json:"name"`
+	Namespace  string `yaml:"namespace" json:"namespace"`
+	Revision   int    `yaml:"revision" json:"revision"`
+	Updated    string `yaml:"updated" json:"updated"`
+	Status     string `yaml:"status" json:"status"`
+	Chart      string `yaml:"chart" json:"chart"`
+	AppVersion string `yaml:"app_version" json:"app_version"`
+}
+
+type HelmRelease struct {
+	Wait           bool             `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
+	UpdateStrategy string           `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
+	Releases       []HelmInterfaces `mapstructure:"releases" yaml:"releases" json:"releases,omitempty"`
+}
+
+// GetHelmRelease return installed release
+func GetHelmRelease(name string, releases []HelmInterfaces) (ok bool, result HelmInterfaces) {
+	for _, item := range releases {
+		// log.Debugf("Release: %s VERSION: %s STATUS: %s", item.Name, item.AppVersion, item.Status)
+		// log.Warnf("%s == %s", item.Name, name)
+		if item.Name == name {
+			return true, item
+		}
+	}
+	return false, result
 }
 
 func (r *Cluster) GetProvider() string {
@@ -633,7 +709,7 @@ func (r *Cluster) GetAPIServerUrl(masters []ContrelPlanNodes, vpc *Networking, i
 				return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
 			}
 		}
-	} 
+	}
 	for _, item := range vpc.APIServerAddresses {
 		if string(item.Type) == InternalDNS {
 			return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil

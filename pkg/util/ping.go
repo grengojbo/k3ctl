@@ -10,13 +10,13 @@ import (
 )
 
 type PingArgs struct {
-	Host string
-	Port int
-	Protocol string
+	Host         string
+	Port         int
+	Protocol     string
 	ShowResponse bool
-	Timeout int
-	Counter int
-	Retry int
+	Timeout      int
+	Counter      int
+	Retry        int
 }
 
 func PingRetry(args *PingArgs) (err error) {
@@ -45,7 +45,7 @@ func runPing(args *PingArgs) (err error) {
 	var protocol ping.Protocol
 	var timeoutDuration time.Duration
 	var intervalDuration time.Duration
-	
+
 	httpMethod := "HEAD"
 	switch args.Protocol {
 	case "tcp":
@@ -74,7 +74,7 @@ func runPing(args *PingArgs) (err error) {
 		// Proxy:    proxy,
 		Protocol: protocol,
 	}
-	
+
 	pinger.SetTarget(&target)
 	pingerDone := pinger.Start()
 	pinger.Start()
@@ -82,10 +82,10 @@ func runPing(args *PingArgs) (err error) {
 	select {
 	case <-pingerDone:
 		break
-	// case <-sigs:
-	// 	break
+		// case <-sigs:
+		// 	break
 	}
-		
+
 	result := pinger.Result()
 	if result.SuccessCounter > 1 {
 		return nil
@@ -112,19 +112,19 @@ func PingTCP(host string, timeout int, counter int) (err error) {
 	// 		cmd.Usage()
 	// 		return
 	// 	}
-		// schema = ping.TCP.String()
+	// schema = ping.TCP.String()
 	// } else {
-		// var matched bool
-		errMess := fmt.Errorf("[Ping] not a valid uri: %v", host)
-		schema, host, port, matched := ping.CheckURI(host)
-		if !matched {
-			// fmt.Println("not a valid uri")
-			return errMess
-		}
+	// var matched bool
+	errMess := fmt.Errorf("[Ping] not a valid uri: %v", host)
+	schema, host, port, matched := ping.CheckURI(host)
+	if !matched {
+		// fmt.Println("not a valid uri")
+		return errMess
+	}
 	// }
-		timeoutDuration = time.Duration(timeout) * time.Second
+	timeoutDuration = time.Duration(timeout) * time.Second
 	// if res, err := strconv.Atoi(timeout); err == nil {
-		// timeoutDuration = time.Duration(res) * time.Microsecond
+	// timeoutDuration = time.Duration(res) * time.Microsecond
 	// } else {
 	// 	timeoutDuration, err = time.ParseDuration(timeout)
 	// 	if err != nil {
@@ -135,7 +135,7 @@ func PingTCP(host string, timeout int, counter int) (err error) {
 	// }
 
 	// if res, err := strconv.Atoi(interval); err == nil {
-		intervalDuration = time.Duration(timeout*2) * time.Second
+	intervalDuration = time.Duration(timeout*2) * time.Second
 	// } else {
 	// 	intervalDuration, err = time.ParseDuration(interval)
 	// 	if err != nil {
@@ -143,7 +143,7 @@ func PingTCP(host string, timeout int, counter int) (err error) {
 	// 	}
 	// }
 	// if httpMode {
-		protocol = ping.TCP
+	protocol = ping.TCP
 	// // } else {
 	// 	protocol, err = ping.NewProtocol(schema)
 	// 	if err != nil {
@@ -166,38 +166,38 @@ func PingTCP(host string, timeout int, counter int) (err error) {
 	}
 
 	var pinger ping.Pinger
-		switch protocol {
-		case ping.TCP:
-			pinger = ping.NewTCPing()
-		case ping.HTTP, ping.HTTPS:
-			// var httpMethod string
-			// switch {
-			// case httpHead:
-			// 	httpMethod = "HEAD"
-			// case httpPost:
-			// 	httpMethod = "POST"
-			// default:
-			// 	httpMethod = "GET"
-			// }
-			httpMethod := "HEAD"
-			pinger = ping.NewHTTPing(httpMethod)
-		default:
-			// fmt.Printf("schema: %s not support\n", schema)
-			// cmd.Usage()
-			return fmt.Errorf("[Ping] schema: %s not support", schema)
-		}
-		
-		pinger.SetTarget(&target)
-		pingerDone := pinger.Start()
-		pinger.Start()
-		// TODO: сделать свою реализацию чтобы неотображать результат пинга
-		select {
-		case <-pingerDone:
-			break
+	switch protocol {
+	case ping.TCP:
+		pinger = ping.NewTCPing()
+	case ping.HTTP, ping.HTTPS:
+		// var httpMethod string
+		// switch {
+		// case httpHead:
+		// 	httpMethod = "HEAD"
+		// case httpPost:
+		// 	httpMethod = "POST"
+		// default:
+		// 	httpMethod = "GET"
+		// }
+		httpMethod := "HEAD"
+		pinger = ping.NewHTTPing(httpMethod)
+	default:
+		// fmt.Printf("schema: %s not support\n", schema)
+		// cmd.Usage()
+		return fmt.Errorf("[Ping] schema: %s not support", schema)
+	}
+
+	pinger.SetTarget(&target)
+	pingerDone := pinger.Start()
+	pinger.Start()
+	// TODO: сделать свою реализацию чтобы неотображать результат пинга
+	select {
+	case <-pingerDone:
+		break
 		// case <-sigs:
 		// 	break
-		}
-		
+	}
+
 	result := pinger.Result()
 	if result.SuccessCounter > 1 {
 		return nil

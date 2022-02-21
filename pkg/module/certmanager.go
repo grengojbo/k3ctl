@@ -16,20 +16,20 @@ func MakeInstallCertManager(kubeConfigPath string) (err error) {
 	overrides["installCRDs"] = "true"
 
 	certmanagerOptions := types.DefaultInstallOptions().
-			WithNamespace(namespace).
-			WithHelmRepo("jetstack/cert-manager").
-			WithHelmURL("https://charts.jetstack.io").
-			WithOverrides(overrides).
-			WithWait(wait).
-			WithHelmUpdateRepo(updateRepo).
-			WithKubeconfigPath(kubeConfigPath)
+		WithNamespace(namespace).
+		WithHelmRepo("jetstack/cert-manager").
+		WithHelmURL("https://charts.jetstack.io").
+		WithOverrides(overrides).
+		WithWait(wait).
+		WithHelmUpdateRepo(updateRepo).
+		WithKubeconfigPath(kubeConfigPath)
 
-		_, err = apps.MakeInstallChart(certmanagerOptions)
-		if err != nil {
-			return err
-		}
+	_, err = apps.MakeInstallChart(certmanagerOptions)
+	if err != nil {
+		return err
+	}
 
-		log.Infof(certManagerInstallMsg)
+	log.Infof(certManagerInstallMsg)
 	return err
 }
 
