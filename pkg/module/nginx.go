@@ -91,7 +91,9 @@ kubectl get svc ingress-nginx-controller
 # Find out more at:
 # https://github.com/kubernetes/ingress-nginx/tree/master/charts/ingress-nginx`
 
-const nginxIngressInstallMsg = `=======================================================================
-= ingress-nginx has been installed.                                   =
-=======================================================================` +
-	"\n\n" + NginxIngressInfoMsg + "\n\n"
+const nginxIngressInstallMsg = "ingress-nginx has been installed."
+
+// const nginxIngressInstallMsg = `=======================================================================
+// = ingress-nginx has been installed.                                   =
+// =======================================================================` +
+// 	"\n\n" + NginxIngressInfoMsg + "\n\n"
