@@ -60,6 +60,11 @@ func MakeInstallNginx(kubeConfigPath string, dryRun bool, ingress *k3sv1alpha1.I
 			overrides["controller.kind"] = "DaemonSet"
 		}
 
+		// customFlags, _ := command.Flags().GetStringArray("set")
+
+		// if err := mergeFlags(overrides, customFlags); err != nil {
+		// 	return err
+		// }
 		nginxOptions := types.DefaultInstallOptions().
 			WithNamespace(ingress.Namespace).
 			WithHelmRepo(t.NginxHelmRepo).

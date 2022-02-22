@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	log "github.com/sirupsen/logrus"
 
 	// log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -798,6 +799,7 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 		bastion.Address = node.Addresses[0].Address
 		bastion.Name = string(node.Addresses[0].Type)
 		bastion.User = node.User
+		log.Warnf("[GetBastion] bastion: %v", bastion)
 		return bastion, nil
 	}
 
@@ -809,10 +811,11 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 			if len(node.SSHAuthorizedKey) == 0 {
 				node.SSHAuthorizedKey = SshKeyDefault
 			}
+		log.Warnf("[GetBastion] node: %v", node)
 			return node, nil
 		}
 	}
-	return bastion, errors.New(fmt.Sprintf("Is not bastion %s host.", name))
+	return bastion, fmt.Errorf("Is not bastion %s host.", name)
 }
 
 func Find(slice []string, val string) (string, bool) {

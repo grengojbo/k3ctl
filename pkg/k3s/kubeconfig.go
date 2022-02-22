@@ -321,29 +321,18 @@ func KubeconfigTmpWrite(kubeconfig *clientcmdapi.Config) (path string, err error
 	return path, nil
 }
 
+// LoadKubeconfig
 func LoadKubeconfig(cfg, ip, context string, opts WriteKubeConfigOptions) (kubeconfig *clientcmdapi.Config, err error) {
-	// tempFile := fmt.Sprintf("k3s_temp_%s.yaml", time.Now().Format("20060102_150405.000000"))
-	// // log.Errorf("tempPath: %v", tempPath)
-
-	// temp, err := ioutil.TempFile(os.TempDir(), tempFile)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("[cluster] generate kubecfg temp file error, msg: %s", err)
-	// }
-
-	// defer func() {
-	// 	_ = temp.Close()
-	// 	if err := os.Remove(temp.Name()); err != nil {
-	// 		log.Errorf("[cluster] remove kubecfg temp file error, msg: %s", err)
-	// 	}
-	// }()
-
-	// absPath, _ := filepath.Abs(temp.Name())
-	// if err = ioutil.WriteFile(absPath, []byte(cfg), 0600); err != nil {
-	// 	return nil, fmt.Errorf("[cluster] write content to kubecfg temp file error: %v", err)
-	// }
-	// log.Debugf("tempFile: %v", absPath)
+	// log.Debugf("cfg: %v", cfg)
+	if len(cfg) == 0 {
+		return nil, fmt.Errorf("[LoadKubeconfig] %s", "Is not kubeconfig")
+	}
 	// kubeconfig, err = clientcmd.LoadFromFile(absPath)
 	kubeconfig, err = clientcmd.Load([]byte(cfg))
+	if err != nil {
+		// log.Errorf("[LoadKubeconfig] %v", err.Error())
+		return nil, err
+	}
 
 	// update the server URL
 	kubeconfig.Clusters["default"].Server = ip

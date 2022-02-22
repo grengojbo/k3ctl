@@ -587,7 +587,9 @@ func (p *ProviderBase) SetClientsetFromConfig(kubeconfig *clientcmdapi.Config) (
 	// 	ClusterDefaults: clientcmdapi.Cluster{Server: master},
 	// }).ClientConfig()
 	clientConfig, err := clientcmd.NewDefaultClientConfig(*p.Config, &clientcmd.ConfigOverrides{}).ClientConfig()
-
+	if err != nil {
+		return err
+	}
 	clientset, err := kubernetes.NewForConfig(clientConfig)
 	if err != nil {
 		return err
@@ -745,6 +747,7 @@ func (p *ProviderBase) Execute(command string, node *k3sv1alpha1.Node, stream bo
 	} else {
 		p.Log.Debugf("master node: %s bastion: %s", node.Name, bastion.Address)
 	}
+	p.Log.Debugf("bastion:\n%v\n--------------------", bastion)
 
 	res, err := yaml.Marshal(node)
 	if err != nil {
@@ -1377,6 +1380,7 @@ func (p *ProviderBase) GetKubeconfig(master *k3sv1alpha1.Node) (*clientcmdapi.Co
 		UpdateCurrentContext: p.Cluster.Spec.KubeconfigOptions.SwitchCurrentContext,
 	}
 
+	// p.Log.Warnf("apiServerUrl: %v", apiServerUrl)
 	return k3s.LoadKubeconfig(kubeconfig, apiServerUrl, p.Cluster.GetObjectMeta().GetName(), opts)
 }
 
@@ -1457,6 +1461,7 @@ func (p *ProviderBase) NewSSH(bastion *k3sv1alpha1.BastionNode) {
 		// UseInsecureCipher: true,
 	}
 	p.SSH.Server = bastion.Address
+	// p.SSH.Proxy.Server 
 	if len(bastion.SSHAuthorizedKey) > 0 {
 		p.SSH.KeyPath = util.ExpandPath(bastion.SSHAuthorizedKey)
 		p.Log.Debugf("sshKeyPath: %s", p.SSH.KeyPath)
