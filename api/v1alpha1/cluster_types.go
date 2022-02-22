@@ -333,7 +333,13 @@ type BastionNode struct {
 	RemoteSudo string `mapstructure:"remoteSudo,omitempty" yaml:"remoteSudo,omitempty" json:"remoteSudo,omitempty"`
 	// RemoteAddress адрес хоста за бастионом
 	// TODO: translate
-	RemoteAddress string
+	// +optional
+	RemoteAddress string `mapstructure:"remoteAddress,omitempty" yaml:"remoteAddress,omitempty" json:"remoteAddress,omitempty"`
+	// +optional
+	RemoteUser string `mapstructure:"remoteUser,omitempty" yaml:"remoteUser,omitempty" json:"remoteUser,omitempty"`
+	// +optional
+	RemotePort int32 `mapstructure:"remotePort,omitempty" yaml:"remotePort,omitempty" json:"remotePort,omitempty"`
+
 }
 
 // Node describes a k3d node
@@ -803,16 +809,22 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 		return bastion, nil
 	}
 
-	for _, node := range r.Spec.Bastions {
+	
+	for _, item := range r.Spec.Bastions {
 		if name == node.Name {
-			if node.SshPort == 0 {
-				node.SshPort = SshPortDefault
+			if item.SshPort == 0 {
+				item.SshPort = SshPortDefault
 			}
-			if len(node.SSHAuthorizedKey) == 0 {
-				node.SSHAuthorizedKey = SshKeyDefault
+			if len(item.SSHAuthorizedKey) == 0 {
+				item.SSHAuthorizedKey = SshKeyDefault
 			}
-		log.Warnf("[GetBastion] node: %v", node)
-			return node, nil
+			remoteAddress, ok := r.GetNodeAddress(node, "internal")
+			if ok {
+				item.RemoteAddress = remoteAddress
+				item.RemoteUser = node.User
+				item.RemotePort = SshPortDefault
+			}
+			return item, nil
 		}
 	}
 	return bastion, fmt.Errorf("Is not bastion %s host.", name)

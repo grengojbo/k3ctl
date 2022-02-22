@@ -771,6 +771,7 @@ func (p *ProviderBase) Execute(command string, node *k3sv1alpha1.Node, stream bo
 		if node.User != "root" {
 			command = fmt.Sprintf("sudo %s", command)
 		}
+
 		p.NewSSH(bastion)
 		if stream {
 			p.sshStream(command, false)
@@ -1460,10 +1461,26 @@ func (p *ProviderBase) NewSSH(bastion *k3sv1alpha1.BastionNode) {
 		// Those algorithms are insecure and may allow plaintext data to be recovered by an attacker.
 		// UseInsecureCipher: true,
 	}
-	p.SSH.Server = bastion.Address
-	// p.SSH.Proxy.Server 
+	
+	if len(bastion.RemoteAddress) > 0 && bastion.Address != bastion.RemoteAddress {
+		p.SSH.Server = bastion.RemoteAddress
+		if len(bastion.RemoteUser) > 0 {
+			p.SSH.User = bastion.RemoteUser
+		}
+		if bastion.RemotePort > 0 {
+			p.SSH.Port =fmt.Sprintf("%d", bastion.RemotePort)	
+		}
+
+		p.SSH.Proxy.Server = bastion.Address
+		p.SSH.Proxy.User = bastion.User
+		p.SSH.Proxy.Port = fmt.Sprintf("%d", bastion.SshPort)
+	} else {
+		p.SSH.Server = bastion.Address
+	}
+
 	if len(bastion.SSHAuthorizedKey) > 0 {
 		p.SSH.KeyPath = util.ExpandPath(bastion.SSHAuthorizedKey)
+		p.SSH.Proxy.KeyPath = p.SSH.KeyPath
 		p.Log.Debugf("sshKeyPath: %s", p.SSH.KeyPath)
 	}
 	p.Log.Tracef("ssh -i %s %s@%s:%s", p.SSH.KeyPath, p.SSH.User, p.SSH.Server, p.SSH.Port)
