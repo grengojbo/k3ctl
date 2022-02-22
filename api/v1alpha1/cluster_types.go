@@ -339,7 +339,6 @@ type BastionNode struct {
 	RemoteUser string `mapstructure:"remoteUser,omitempty" yaml:"remoteUser,omitempty" json:"remoteUser,omitempty"`
 	// +optional
 	RemotePort int32 `mapstructure:"remotePort,omitempty" yaml:"remotePort,omitempty" json:"remotePort,omitempty"`
-
 }
 
 // Node describes a k3d node
@@ -406,6 +405,7 @@ type NodeState struct {
 
 // K3sOptions k3s options for generate config
 type SimpleConfigOptionsK3s struct {
+	ExtraInstallArgs []string `mapstructure:"extraInstallArgs" yaml:"extraInstallArgs"`
 	ExtraServerArgs []string `mapstructure:"extraServerArgs" yaml:"extraServerArgs"`
 	ExtraAgentArgs  []string `mapstructure:"extraAgentArgs" yaml:"extraAgentArgs"`
 }
@@ -453,7 +453,7 @@ type Datastore struct {
 	// Provider Database name ("mysql", "postgres", "etcd")
 	Provider string `mapstructure:"provider" yaml:"provider" json:"provider,omitempty"`
 	Username string `mapstructure:"username" yaml:"username" json:"username,omitempty"`
-	Password string `mapstructure:"password" yaml:"password" json:"password,omitempty"`
+	Password string `mapstructure:"DB_PASSWORD"`
 	Host     string `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
 	// Port DataBase port
 	// +optional
@@ -608,6 +608,16 @@ type K3sWorkerOptions struct {
 	K3sChannel       string `json:"k3sChannel,omitempty"`
 }
 
+type EnvConfig struct {
+	DBPassword          string `mapstructure:"DB_PASSWORD"`
+	HcloudToken         string `mapstructure:"HCLOUD_TOKEN"`
+	AwsAccessKeyId      string `mapstructure:"AWS_ACCESS_KEY_ID"`
+	AwsSecretAccessKey  string `mapstructure:"AWS_SECRET_ACCESS_KEY"`
+	AzureClientId       string `mapstructure:"ARM_CLIENT_ID"`
+	AzureClientSecret   string `mapstructure:"ARM_CLIENT_SECRET"`
+	AzureTenantId       string `mapstructure:"ARM_TENANT_ID"`
+	AzureSubscriptionId string `mapstructure:"ARM_SUBSCRIPTION_ID"`
+}
 type HelmInterfaces struct {
 	Name       string `yaml:"name" json:"name"`
 	Namespace  string `yaml:"namespace" json:"namespace"`
@@ -652,7 +662,7 @@ func (r *Cluster) GetUser(name string) User {
 }
 
 // GetDatastore connection string
-func (r *Cluster) GetDatastore() (string, error) {
+func (r *Cluster) GetDatastore(dbPassword string) (string, error) {
 	conUrl := ""
 	if len(r.Spec.Datastore.Provider) == 0 {
 		return "", errors.New("Is not set datastore.provider")
@@ -663,8 +673,8 @@ func (r *Cluster) GetDatastore() (string, error) {
 	if len(r.Spec.Datastore.Host) == 0 {
 		return "", errors.New("Is not set datastore.host")
 	}
-	if len(r.Spec.Datastore.Password) == 0 {
-		return "", errors.New("Is not set datastore.password")
+	if len(dbPassword) == 0 {
+		return "", errors.New("Is not set DB_PASSWORD")
 	}
 	if len(r.Spec.Datastore.Username) == 0 {
 		return "", errors.New("Is not set datastore.username")
@@ -677,13 +687,13 @@ func (r *Cluster) GetDatastore() (string, error) {
 		// K3S_DATASTORE_CERTFILE='/path/to/client.crt' \
 		// K3S_DATASTORE_KEYFILE='/path/to/client.key' \
 		// k3s server
-		conUrl = fmt.Sprintf("mysql://%s:%s@tcp(%s:%d)/%s", r.Spec.Datastore.Username, r.Spec.Datastore.Password, r.Spec.Datastore.Host, r.Spec.Datastore.Port, r.Spec.Datastore.Name)
+		conUrl = fmt.Sprintf("mysql://%s:%s@tcp(%s:%d)/%s", r.Spec.Datastore.Username, dbPassword, r.Spec.Datastore.Host, r.Spec.Datastore.Port, r.Spec.Datastore.Name)
 	} else if r.Spec.Datastore.Provider == DatastorePostgreSql {
 		if r.Spec.Datastore.Port == 0 {
 			r.Spec.Datastore.Port = 5432
 		}
 		// K3S_DATASTORE_ENDPOINT='postgres://username:password@hostname:5432/k3s' k3s server
-		conUrl = fmt.Sprintf("postgres://%s:%s@%s:%d/%s", r.Spec.Datastore.Username, r.Spec.Datastore.Password, r.Spec.Datastore.Host, r.Spec.Datastore.Port, r.Spec.Datastore.Name)
+		conUrl = fmt.Sprintf("postgres://%s:%s@%s:%d/%s", r.Spec.Datastore.Username, dbPassword, r.Spec.Datastore.Host, r.Spec.Datastore.Port, r.Spec.Datastore.Name)
 	} else {
 		return "", errors.New(fmt.Sprintf("Is not suport Datastore provider %s.", r.Spec.Datastore.Provider))
 	}
@@ -780,6 +790,7 @@ func (r *Cluster) GetAPIServerAddress(node *Node, vpc *Networking) (apiServerAdd
 // GetBastion search and return bastion host
 // для работы через baston смотреть README
 func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err error) {
+	log.Debugf("[GetBastion] 1) name: %s node: %s", name, node.Name)
 	bastion = &BastionNode{
 		SshPort:          SshPortDefault,
 		SSHAuthorizedKey: SshKeyDefault,
@@ -787,10 +798,11 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 	if name == "localhost" || name == "127.0.0.1" || name == "local" {
 		bastion.Name = "local"
 		bastion.Address = "127.0.0.1"
+		log.Debugf("[GetBastion] 2) connect address: %s", bastion.Address)
 		return bastion, nil
 	}
 	if len(node.Addresses) == 0 {
-		return bastion, errors.New(fmt.Sprintf("Is not set addresses in node %s", node.Name))
+		return bastion, fmt.Errorf("Is not set addresses in node %s", node.Name)
 	}
 
 	if len(name) == 0 || name == InternalIP || name == InternalDNS || name == ExternalDNS || name == ExternalIP {
@@ -798,32 +810,33 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 			if name == string(addr.Type) {
 				bastion.Address = addr.Address
 				bastion.Name = string(addr.Type)
-				bastion.RemoteAddress = addr.Address
+				// bastion.RemoteAddress = addr.Address
+				log.Warnf("[GetBastion] 3) connect address: %s, remote address: %s", bastion.Address, bastion.RemoteAddress)
 				return bastion, nil
 			}
 		}
 		bastion.Address = node.Addresses[0].Address
 		bastion.Name = string(node.Addresses[0].Type)
 		bastion.User = node.User
-		log.Warnf("[GetBastion] bastion: %v", bastion)
+		log.Warnf("[GetBastion] 4) connect address: %s, remote address: %s", bastion.Address, bastion.RemoteAddress)
 		return bastion, nil
 	}
 
-	
 	for _, item := range r.Spec.Bastions {
-		if name == node.Name {
-			if item.SshPort == 0 {
-				item.SshPort = SshPortDefault
-			}
-			if len(item.SSHAuthorizedKey) == 0 {
-				item.SSHAuthorizedKey = SshKeyDefault
-			}
+		if item.SshPort == 0 {
+			item.SshPort = SshPortDefault
+		}
+		if len(item.SSHAuthorizedKey) == 0 {
+			item.SSHAuthorizedKey = SshKeyDefault
+		}
+		if name != node.Name {
 			remoteAddress, ok := r.GetNodeAddress(node, "internal")
 			if ok {
 				item.RemoteAddress = remoteAddress
 				item.RemoteUser = node.User
 				item.RemotePort = SshPortDefault
 			}
+			log.Warnf("[GetBastion] 5) connect address: %s, remote address: %s", item.Address, item.RemoteAddress)
 			return item, nil
 		}
 	}

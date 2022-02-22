@@ -142,8 +142,9 @@ func NewCmdClusterCreate() *cobra.Command {
 
 			log.Infof("cni: %s (backend: %s)", c.Cluster.Spec.Networking.CNI, c.Cluster.Spec.Networking.Backend)
 			log.Infof("secretsEncryption: %v", c.Cluster.Spec.Options.SecretsEncryption)
-			log.Infof("datastore: %s", c.Cluster.Spec.Datastore.Provider)
-
+			if len(c.Cluster.Spec.Datastore.Provider) > 0 {
+				log.Infof("datastore: %s", c.Cluster.Spec.Datastore.Provider)
+			}
 			// c, err = applyCLIOverrides(c)
 			// if err != nil {
 			// 	log.Fatalf("Failed to apply CLI overrides: %+v", err)

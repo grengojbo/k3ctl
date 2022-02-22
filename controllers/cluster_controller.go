@@ -72,6 +72,7 @@ type ProviderBase struct {
 	Callbacks   map[string]*providerProcess
 	Plugins     interfaces.EnabledPlugins
 	HelmRelease k3sv1alpha1.HelmRelease
+	ENV         k3sv1alpha1.EnvConfig
 }
 
 type providerProcess struct {
@@ -110,9 +111,9 @@ func NewClusterFromConfig(configViper *viper.Viper, cmdFlags types.CmdFlags) (pr
 
 	providerBase.initLogging(&cmdFlags)
 	err = providerBase.FromViperSimple(configViper)
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
+
+	// загрузка переменных окружения
+	providerBase.LoadEnv()
 
 	// добавляем в статус списое master, worker нод
 	providerBase.setGroupNodes()
@@ -879,11 +880,11 @@ func (p *ProviderBase) MakeInstallExec() (k3sIstallOptions k3sv1alpha1.K3sIstall
 	if len(p.Cluster.Spec.Datastore.Provider) > 0 {
 		if p.Cluster.Spec.Datastore.Provider == k3sv1alpha1.DatastoreEtcd {
 			k3sIstallOptions.IsCluster = true
-		} else if datastore, err := p.Cluster.GetDatastore(); err != nil {
+		} else if datastore, err := p.Cluster.GetDatastore(p.ENV.DBPassword); err != nil {
 			p.Log.Fatalln(err.Error())
 		} else {
 			extraArgs = append(extraArgs, fmt.Sprintf("--datastore-endpoint %s", datastore))
-			p.Log.Infof("datastore connection string: %s", datastore)
+			// p.Log.Infof("datastore connection string: %s", datastore)
 		}
 	}
 
@@ -1461,14 +1462,14 @@ func (p *ProviderBase) NewSSH(bastion *k3sv1alpha1.BastionNode) {
 		// Those algorithms are insecure and may allow plaintext data to be recovered by an attacker.
 		// UseInsecureCipher: true,
 	}
-	
+
 	if len(bastion.RemoteAddress) > 0 && bastion.Address != bastion.RemoteAddress {
 		p.SSH.Server = bastion.RemoteAddress
 		if len(bastion.RemoteUser) > 0 {
 			p.SSH.User = bastion.RemoteUser
 		}
 		if bastion.RemotePort > 0 {
-			p.SSH.Port =fmt.Sprintf("%d", bastion.RemotePort)	
+			p.SSH.Port = fmt.Sprintf("%d", bastion.RemotePort)
 		}
 
 		p.SSH.Proxy.Server = bastion.Address
@@ -1597,6 +1598,40 @@ func (p *ProviderBase) SetAddons() {
 	} else {
 		p.Log.Errorf("Is not support Ingress: %s", p.Cluster.Spec.Addons.Ingress.Name)
 	}
+}
+
+func (p *ProviderBase) LoadEnv() {
+	var appViper = viper.New()
+	e := k3sv1alpha1.EnvConfig{}
+	if envPath := util.GetEnvDir(p.Cluster.GetName()); len(envPath) > 0 {
+		p.Log.Infof("load environments from %s", envPath)
+		// appViper.AddConfigPath(envDir)
+		// appViper.SetConfigName(".env")
+		// appViper.SetConfigType("env")
+		appViper.SetConfigFile(envPath)
+		appViper.AutomaticEnv()
+		appViper.BindEnv("DB_PASSWORD")
+		appViper.BindEnv("HCLOUD_TOKEN")
+		appViper.BindEnv("AWS_ACCESS_KEY_ID")
+		appViper.BindEnv("AWS_SECRET_ACCESS_KEY")
+		appViper.BindEnv("ARM_CLIENT_ID")
+		appViper.BindEnv("ARM_CLIENT_SECRET")
+		appViper.BindEnv("ARM_TENANT_ID")
+		appViper.BindEnv("ARM_SUBSCRIPTION_ID")
+
+		err := appViper.ReadInConfig()
+		if err != nil {
+			p.Log.Errorf(err.Error())
+		} else {
+			if err := appViper.Unmarshal(&e); err != nil {
+				p.Log.Errorf(err.Error())
+			} else {
+				p.ENV = e
+			}
+		}
+	}
+	// p.Log.Warnf("DB_PASSWORD: %v", e.DBPassword)
+	// p.Log.Warnf("HCLOUD_TOKEN: %v", e.HcloudToken)
 }
 
 // +kubebuilder:rbac:groups=k3s.bbox.kiev.ua,resources=clusters,verbs=get;list;watch;create;update;patch;delete

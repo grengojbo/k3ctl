@@ -70,6 +70,27 @@ func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 // var ppViper = viper.New()
 // var dryRun bool
 
+// func LoadEnv(clusterName string) (envConfig k3sv1alpha1.EnvConfig) {
+// 	var appViper = viper.New()
+// 	if envDir := util.GetEnvDir(clusterName); len(envDir) > 0 {
+// 		log.Infof("load environments from dir %s", envDir)
+// 		appViper.AddConfigPath(envDir)
+// 		appViper.SetConfigType("env")
+// 		viper.AutomaticEnv()
+
+// 		err := appViper.ReadInConfig()
+// 		if err != nil {
+// 			log.Errorf(err.Error())
+// 		} else {
+// 			err = appViper.Unmarshal(&envConfig)
+
+// 			log.Warnf("DB_PASSWORD: %v", envConfig.DBPassword)
+
+// 		}
+// 	}
+// 	return envConfig
+// }
+
 func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper) (configFile string) {
 
 	// dryRun = viper.GetBool("dry-run")
@@ -82,7 +103,7 @@ func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper)
 
 	cfgViper.SetConfigType("yaml")
 
-	configFile = util.GerConfigFileName(clusterName)
+	configFile = util.GetConfigFileName(clusterName)
 	cfgViper.SetConfigFile(configFile)
 	// log.Tracef("Schema: %+v", conf.JSONSchema)
 
