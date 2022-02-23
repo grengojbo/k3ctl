@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -61,18 +62,21 @@ type ProviderBase struct {
 	// types.Metadata `json:",inline"`
 	// types.Status   `json:"status"`
 	// types.SSH      `json:",inline"`
-	CmdFlags    types.CmdFlags
-	Cluster     *k3sv1alpha1.Cluster
-	Clientset   *kubernetes.Clientset
-	Kubeconfig  string
-	Config      *clientcmdapi.Config
-	SSH         *easyssh.MakeConfig
-	M           *sync.Map
-	Log         *logrus.Logger
-	Callbacks   map[string]*providerProcess
-	Plugins     interfaces.EnabledPlugins
-	HelmRelease k3sv1alpha1.HelmRelease
-	ENV         k3sv1alpha1.EnvConfig
+	APIServerAddresses string
+	CmdFlags           types.CmdFlags
+	Cluster            *k3sv1alpha1.Cluster
+	Clientset          *kubernetes.Clientset
+	Kubeconfig         string
+	Config             *clientcmdapi.Config
+	SSH                *easyssh.MakeConfig
+	M                  *sync.Map
+	Log                *logrus.Logger
+	Callbacks          map[string]*providerProcess
+	Plugins            interfaces.EnabledPlugins
+	HelmRelease        k3sv1alpha1.HelmRelease
+	ENV                k3sv1alpha1.EnvConfig
+	EnvServer          k3sv1alpha1.EnvServer
+	EnvViper           *viper.Viper
 }
 
 type providerProcess struct {
@@ -232,7 +236,6 @@ func (p *ProviderBase) InitK3sCluster() error {
 
 	masters := p.GetMasterNodes()
 	firstMaster := true
-	k3sEnv := []string{}
 
 	for i, node := range masters {
 		if node.State.Status == types.StatusMissing {
@@ -252,28 +255,31 @@ func (p *ProviderBase) InitK3sCluster() error {
 
 		p.LoadNodeStatus()
 
-		if len(k3sEnv) == 0 {
-			if ok := p.CheckExitFile(types.FileEnvServer, node); ok {
-				v, err := p.GetK3sEnv(node)
-				if err != nil {
-					k3sEnv = []string{}
-				} else {
-					k3sEnv = v
-				}
+		if p.EnvViper == nil {
+			envViper, err := p.LoadEnvServer(node)
+			if err != nil {
+				p.Log.Fatalf("[InitK3sCluster] InitK3sCluster: %v", err.Error())
+			}
+			p.EnvViper = envViper
+			if err := p.SetEnvServer(envViper); err != nil {
+				p.Log.Fatalf("[InitK3sCluster] InitK3sCluster: %v", err.Error())
 			}
 		}
-
 	}
+
+	// p.Log.Errorf("K3S_AGENT_TOKEN=%s", p.EnvViper.GetString("K3S_AGENT_TOKEN"))
+	// p.Log.Errorf("K3S_AGENT_TOKEN=%s", p.EnvServer.K3sAgentToken)
 
 	workers := p.GetWorkerNodes()
-	for _, node := range workers {
-		p.Log.Infof("[TODO] Install worker node: %s", node.Name)
-		// _ = p.AddNode(k3sEnv, node)
-		p.joinWorker(k3sEnv, node)
+	for i, node := range workers {
+		if node.State.Status == types.StatusMissing {
+			masters[i].State.Status = types.StatusCreating
+			p.Log.Infof("Install worker node: %s", node.Name)
+			p.joinWorker(node)
+		}
 
+		p.LoadNodeStatus()
 	}
-
-	// p.LoadNodeStatus()
 
 	// // append tls-sans to k3s install script:
 	// // 1. appends from --tls-sans flags.
@@ -746,6 +752,19 @@ func (p *ProviderBase) LoadNodeStatus() {
 			masters[i].State.Status = types.StatusRunning
 			p.Log.Infof("[LoadNodeStatus] Cluster STATUS: %s", clusterStatus)
 		}
+
+		if len(p.APIServerAddresses) == 0 && masters[i].State.Status == types.StatusRunning {
+			isExternal := false
+			if p.Cluster.Spec.KubeconfigOptions.ConnectType == "ExternalIP" {
+				isExternal = true
+			}
+			apiServerUrl, err := p.GetAPIServerUrl(node, 1, isExternal)
+			if err != nil {
+				p.Log.Errorf("[LoadNodeStatus] %v", err.Error())
+			} else {
+				p.APIServerAddresses = apiServerUrl
+			}
+		}
 	}
 }
 
@@ -1036,7 +1055,7 @@ func (p *ProviderBase) MakeInstallExec() (k3sIstallOptions k3sv1alpha1.K3sIstall
 func (p *ProviderBase) MakeAgentInstallExec(opts *k3sv1alpha1.K3sWorkerOptions) string {
 	// curl -sfL https://get.k3s.io | K3S_URL='https://<IP>6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='stable' sh -s - --node-taint key=value:NoExecute
 	// p.Log.Debugf("K3sVersion=%v K3sChannel=%v, %v", opts.K3sVersion, opts.K3sChannel, util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
-	return fmt.Sprintf(opts.JoinAgentCommand, opts.ApiServerAddres, opts.ApiServerPort, opts.Token, util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
+	return fmt.Sprintf(opts.JoinAgentCommand, opts.ApiServerAddres, opts.Token, util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
 }
 
 // initAdditionalMaster add first master node
@@ -1101,42 +1120,40 @@ func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.N
 }
 
 // joinWorker join worker node to cluster
-func (p *ProviderBase) joinWorker(k3sEnv []string, node *k3sv1alpha1.Node) {
-	// command := types.WorkerUninstallCommand
-	apiServerAddres, err := p.Cluster.GetAPIServerAddress(node, &p.Cluster.Spec.Networking)
-	p.Log.Debugf("apiServerAddresses: %s", apiServerAddres)
-	if err != nil {
-		p.Log.Fatal(err)
+func (p *ProviderBase) joinWorker(node *k3sv1alpha1.Node) {
+	p.Log.Debugf("apiServerAddresses: %s", p.APIServerAddresses)
+
+	// TODO: add lavels to node
+	cnt := p.Cluster.GetNodeLabels(node)
+	p.Log.Warnf("TODO: add lavels to node =-> cnt: %d", cnt)
+
+	token := ""
+	// TODO: [ERROR]  Defaulted k3s exec command to 'agent' because K3S_URL is defined, but K3S_TOKEN, K3S_TOKEN_FILE or K3S_CLUSTER_SECRET is not defined.
+	// if len(p.EnvServer.K3sAgentToken) > 0 {
+	// 	token = fmt.Sprintf("K3S_AGENT_TOKEN='%s'", p.EnvServer.K3sAgentToken)
+	// } else if len(p.EnvServer.K3sToken) > 0 {
+	if len(p.EnvServer.K3sToken) > 0 {
+		token = fmt.Sprintf("K3S_TOKEN='%s'", p.EnvServer.K3sToken)
 	}
 
-	// K3S_AGENT_TOKEN=
-
-	// // TODO: add lavels to node
-	// cnt := p.Cluster.GetNodeLabels(node)
-	// p.Log.Warnf("TODO: add lavels to node =-> cnt: %d", cnt)
-
-	// opts := &k3sv1alpha1.K3sWorkerOptions{
-	// 	JoinAgentCommand: types.JoinAgentCommand,
-	// 	ApiServerAddres:  apiServerAddres,
-	// 	ApiServerPort:    p.Cluster.Spec.Networking.APIServerPort,
-	// 	// Token:            token,
-	// 	K3sVersion:       p.Cluster.Spec.KubernetesVersion,
-	// 	K3sChannel:       p.Cluster.Spec.K3sChannel,
-	// }
-	// command := p.MakeAgentInstallExec(opts)
-	// // p.Log.Debugf("Exec command: %s", command)
-	// // installk3sAgentExec := p.Cluster.MakeAgentInstallExec(opts)
-	// // 			installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
-	// // 			installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion
-	// // 			installk3sAgentExec.Node = node
+	opts := &k3sv1alpha1.K3sWorkerOptions{
+		JoinAgentCommand: types.JoinAgentCommand,
+		ApiServerAddres:  p.APIServerAddresses,
+		ApiServerPort:    p.Cluster.Spec.Networking.APIServerPort,
+		Token:            token,
+		K3sVersion:       p.Cluster.Spec.KubernetesVersion,
+		K3sChannel:       p.Cluster.Spec.K3sChannel,
+	}
+	command := p.MakeAgentInstallExec(opts)
+	p.Log.Debugf("Exec command: %s", command)
 
 	// // _, _ = p.Execute(command, node, true)
 	// // stdOut, err := p.Execute(command, node, true)
 	// // if err != nil {
 	// // 	p.Log.Errorf(err.Error())
 	// // }
-	// _, _ = p.Execute(command, node, true)
-	// // p.Log.Debugf("[joinWorker] stdOut: %v", stdOut)
+	_, _ = p.Execute(command, node, true)
+	// p.Log.Debugf("[joinWorker] stdOut: %v", stdOut)
 }
 
 // GetAgentToken возвращает токен агента
@@ -1147,11 +1164,11 @@ func (p *ProviderBase) GetAgentToken(master *k3sv1alpha1.Node) (token string, er
 }
 
 // GetK3sEnv
-func (p *ProviderBase) GetK3sEnv(master *k3sv1alpha1.Node) (vals []string, err error) {
+func (p *ProviderBase) GetK3sEnv(master *k3sv1alpha1.Node) (envValues string, err error) {
 	command := fmt.Sprintf("cat %s", types.FileEnvServer)
-	envFile, err := p.Execute(command, master, false)
-	e := strings.Split(envFile, "\n")
-	return e, err
+	envValues, err = p.Execute(command, master, false)
+	// e := strings.Split(envFile, "\n")
+	return envValues, err
 }
 
 // CheckExitFile проверка на существование файла на сервере
@@ -1620,7 +1637,7 @@ func (p *ProviderBase) SetAddons() {
 
 	// Install MetalLB in L2 (ARP) mode
 	if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
-
+		p.Log.Warnln("TODO: add support MetalLb...")
 	}
 
 	// Install HELM Release
@@ -1633,35 +1650,73 @@ func (p *ProviderBase) SetAddons() {
 	}
 }
 
+// SetEnvServer
+func (p *ProviderBase) SetEnvServer(envViper *viper.Viper) (err error) {
+	err = envViper.Unmarshal(&p.EnvServer)
+	return err
+}
+
+// LoadEnvServer load k3s server env file
+func (p *ProviderBase) LoadEnvServer(node *k3sv1alpha1.Node) (envViper *viper.Viper, err error) {
+	// if p.ServerENV == nil {
+	envViper = viper.New()
+	if ok := p.CheckExitFile(types.FileEnvServer, node); ok {
+		v, err := p.GetK3sEnv(node)
+		if err != nil {
+			return envViper, err
+		} else {
+			tmpPath, err := ioutil.TempFile("", "k3s_*.env")
+			defer os.RemoveAll(tmpPath.Name())
+			if err != nil {
+				return envViper, err
+			}
+			if err := ioutil.WriteFile(tmpPath.Name(), []byte(v), 0600); err != nil {
+				return envViper, err
+			}
+			envViper.AutomaticEnv()
+			envViper.SetConfigFile(tmpPath.Name())
+			if err = envViper.ReadInConfig(); err != nil {
+				return envViper, err
+			}
+			// p.Log.Warnf("LoadEnvServer file: %s | K3S_AGENT_TOKEN=%v", tmpPath.Name(), envViper.GetString("K3S_AGENT_TOKEN"))
+		}
+	}
+	// }
+	return envViper, nil
+}
+
 // LoadEnv load .env file
 func (p *ProviderBase) LoadEnv() {
 	var appViper = viper.New()
+
+	appViper.AutomaticEnv()
+	appViper.BindEnv("DB_PASSWORD")
+	appViper.BindEnv("HCLOUD_TOKEN")
+	appViper.BindEnv("AWS_ACCESS_KEY_ID")
+	appViper.BindEnv("AWS_SECRET_ACCESS_KEY")
+	appViper.BindEnv("ARM_CLIENT_ID")
+	appViper.BindEnv("ARM_CLIENT_SECRET")
+	appViper.BindEnv("ARM_TENANT_ID")
+	appViper.BindEnv("ARM_SUBSCRIPTION_ID")
+
 	e := k3sv1alpha1.EnvConfig{}
 	if envPath := util.GetEnvDir(p.Cluster.GetName()); len(envPath) > 0 {
 		p.Log.Infof("load environments from %s", envPath)
 
 		appViper.SetConfigFile(envPath)
-		appViper.AutomaticEnv()
-		appViper.BindEnv("DB_PASSWORD")
-		appViper.BindEnv("HCLOUD_TOKEN")
-		appViper.BindEnv("AWS_ACCESS_KEY_ID")
-		appViper.BindEnv("AWS_SECRET_ACCESS_KEY")
-		appViper.BindEnv("ARM_CLIENT_ID")
-		appViper.BindEnv("ARM_CLIENT_SECRET")
-		appViper.BindEnv("ARM_TENANT_ID")
-		appViper.BindEnv("ARM_SUBSCRIPTION_ID")
 
 		err := appViper.ReadInConfig()
 		if err != nil {
 			p.Log.Errorf(err.Error())
-		} else {
-			if err := appViper.Unmarshal(&e); err != nil {
-				p.Log.Errorf(err.Error())
-			} else {
-				p.ENV = e
-			}
 		}
 	}
+
+	if err := appViper.Unmarshal(&e); err != nil {
+		p.Log.Errorf(err.Error())
+	} else {
+		p.ENV = e
+	}
+
 	// p.Log.Warnf("DB_PASSWORD: %v", e.DBPassword)
 	// p.Log.Warnf("HCLOUD_TOKEN: %v", e.HcloudToken)
 }

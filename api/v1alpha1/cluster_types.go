@@ -607,6 +607,29 @@ type K3sWorkerOptions struct {
 	K3sChannel       string `json:"k3sChannel,omitempty"`
 }
 
+type EnvServer struct {
+	K3sDatastoreEndpoint string `mapstructure:"K3S_DATASTORE_ENDPOINT"`
+	K3sDatastoreXafile   string `mapstructure:"K3S_DATASTORE_CAFILE"`
+	K3sDatastoreCertfile string `mapstructure:"K3S_DATASTORE_CERTFILE"`
+	K3sDatastoreKeyfile  string `mapstructure:"K3S_DATASTORE_KEYFILE"`
+	AwsAccessKeyId       string `mapstructure:"AWS_ACCESS_KEY_ID"`
+	AwsSecretAccessKey   string `mapstructure:"AWS_SECRET_ACCESS_KEY"`
+	K3sToken             string `mapstructure:"K3S_TOKEN"`
+	K3sTokenFile         string `mapstructure:"K3S_TOKEN_FILE"`
+	K3sKubeconfigOutput  string `mapstructure:"K3S_KUBECONFIG_OUTPUT"`
+	K3sKubeconfigMode    string `mapstructure:"K3S_KUBECONFIG_MODE"`
+	K3sNodeName          string `mapstructure:"K3S_NODE_NAME"`
+	K3sSelinux           string `mapstructure:"K3S_SELINUX"`
+	K3sLbServerPort      string `mapstructure:"K3S_LB_SERVER_PORT"`
+	K3sResolvConf        string `mapstructure:"K3S_RESOLV_CONF"`
+	K3sAgentToken        string `mapstructure:"K3S_AGENT_TOKEN"`
+	K3sAgentTokenFile    string `mapstructure:"K3S_AGENT_TOKEN_FILE"`
+	K3sUrl               string `mapstructure:"K3S_URL"`
+	K3sClusterInit       string `mapstructure:"K3S_CLUSTER_INIT"`
+	K3sClusterReset      string `mapstructure:"K3S_CLUSTER_RESET"`
+	K3sClusterSecret     string `mapstructure:"K3S_CLUSTER_SECRET"`
+}
+
 type EnvConfig struct {
 	DBPassword          string `mapstructure:"DB_PASSWORD"`
 	HcloudToken         string `mapstructure:"HCLOUD_TOKEN"`

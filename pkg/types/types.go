@@ -66,7 +66,7 @@ var (
 	// InitMasterCommand      = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --node-external-ip %s %s' %s sh -"
 	JoinMasterCommand = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
 	// curl -sfL https://get.k3s.io | K3S_URL='https://<IP>6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='stable' sh -s - --node-label node-role.kubernetes.io/master=true --node-taint key=value:NoExecute
-	JoinAgentCommand = "curl -sfL https://get.k3s.io | K3S_URL='https://%s:%d' K3S_TOKEN='%s' %s sh -s -"
+	JoinAgentCommand = "curl -sfL https://get.k3s.io | K3S_URL='%s' %s %s sh -s -"
 	FileClusterToken = "/var/lib/rancher/k3s/server/node-token"
 	FileEnvServer    = "/etc/systemd/system/k3s.service.env"
 	// CatTokenCommand        = "cat /var/lib/rancher/k3s/server/node-token"

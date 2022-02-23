@@ -35,7 +35,7 @@ func MapSubexpNames(names, matches []string) map[string]string {
 }
 
 func GetEnvValue(val string, k3sEnv []string) (res string) {
-for _, v := range k3sEnv {
+	for _, v := range k3sEnv {
 		if len(v) > 0 {
 			// p.Log.Warnf("---------------- %s ----------------", v)
 			if ok := strings.HasPrefix(v, val); ok {
