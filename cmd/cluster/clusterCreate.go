@@ -59,47 +59,6 @@ Every cluster will consist of one or more containers:
 	- (optionally) 1 (or more) agent node containers (k3s)
 `
 
-// func initConfig(args []string) {
-
-// 	dryRun = viper.GetBool("dry-run")
-// 	// Viper for pre-processed config options
-// 	ppViper.SetEnvPrefix("K3S")
-
-// 	// viper for the general config (file, env and non pre-processed flags)
-// 	cfgViper.SetEnvPrefix("K3S")
-// 	cfgViper.AutomaticEnv()
-
-// 	cfgViper.SetConfigType("yaml")
-
-// 	configFile = util.GerConfigFileName(args[0])
-// 	cfgViper.SetConfigFile(configFile)
-// 	// log.Tracef("Schema: %+v", conf.JSONSchema)
-
-// 	// if err := config.ValidateSchemaFile(configFile, []byte(conf.JSONSchema)); err != nil {
-// 	// 	log.Fatalf("Schema Validation failed for config file %s: %+v", configFile, err)
-// 	// }
-
-// 	// try to read config into memory (viper map structure)
-// 	if err := cfgViper.ReadInConfig(); err != nil {
-// 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-// 			log.Fatalf("Config file %s not found: %+v", configFile, err)
-// 		}
-// 		// config file found but some other error happened
-// 		log.Fatalf("Failed to read config file %s: %+v", configFile, err)
-// 	}
-
-// 	log.Infof("Using config file %s", cfgViper.ConfigFileUsed())
-// 	// }
-
-// 	if log.GetLevel() >= log.DebugLevel {
-// 		c, _ := yaml.Marshal(cfgViper.AllSettings())
-// 		log.Debugf("Configuration:\n%s", c)
-
-// 		c, _ = yaml.Marshal(ppViper.AllSettings())
-// 		log.Debugf("Additional CLI Configuration:\n%s", c)
-// 	}
-// }
-
 // NewCmdClusterCreate returns a new cobra command
 func NewCmdClusterCreate() *cobra.Command {
 
@@ -145,6 +104,8 @@ func NewCmdClusterCreate() *cobra.Command {
 			if len(c.Cluster.Spec.Datastore.Provider) > 0 {
 				log.Infof("datastore: %s", c.Cluster.Spec.Datastore.Provider)
 			}
+			log.Infof("secretsEncryption: %v", c.Cluster.Spec.Options.SecretsEncryption)
+
 			// c, err = applyCLIOverrides(c)
 			// if err != nil {
 			// 	log.Fatalf("Failed to apply CLI overrides: %+v", err)

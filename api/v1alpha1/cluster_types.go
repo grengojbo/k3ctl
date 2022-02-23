@@ -405,7 +405,6 @@ type NodeState struct {
 
 // K3sOptions k3s options for generate config
 type SimpleConfigOptionsK3s struct {
-	ExtraInstallArgs []string `mapstructure:"extraInstallArgs" yaml:"extraInstallArgs"`
 	ExtraServerArgs []string `mapstructure:"extraServerArgs" yaml:"extraServerArgs"`
 	ExtraAgentArgs  []string `mapstructure:"extraAgentArgs" yaml:"extraAgentArgs"`
 }

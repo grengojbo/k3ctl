@@ -13,3 +13,9 @@ const NginxHelmURL = "https://kubernetes.github.io/ingress-nginx"
 const NginxDefaultName = "ingress-nginx"
 const NginxDefaultNamespace = "ingress-nginx"
 const NginxGetSvcCommand = "kubectl get svc ingress-nginx-controller -n ingress-nginx"
+
+const (
+	MetalLBVersion           = "v0.12.1"
+	MetalLBNamespaceManifest = "https://raw.githubusercontent.com/metallb/metallb/%s/manifests/namespace.yaml"
+	MetalLBManifest          = "https://raw.githubusercontent.com/metallb/metallb/%s/manifests/metallb.yaml"
+)

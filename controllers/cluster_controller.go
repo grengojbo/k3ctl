@@ -232,6 +232,8 @@ func (p *ProviderBase) InitK3sCluster() error {
 
 	masters := p.GetMasterNodes()
 	firstMaster := true
+	k3sEnv := []string{}
+
 	for i, node := range masters {
 		if node.State.Status == types.StatusMissing {
 			if firstMaster {
@@ -241,16 +243,37 @@ func (p *ProviderBase) InitK3sCluster() error {
 
 				tlsSAN := p.Cluster.GetTlsSan(node, &p.Cluster.Spec.Networking)
 				p.initAdditionalMaster(tlsSAN, node, &installk3sExec)
-				p.LoadNodeStatus()
 				firstMaster = false
 			}
 		} else {
 			firstMaster = false
 			p.Log.Warningln("[InitK3sCluster] TODO: присоединение master node к первому мастеру")
 		}
+
+		p.LoadNodeStatus()
+
+		if len(k3sEnv) == 0 {
+			if ok := p.CheckExitFile(types.FileEnvServer, node); ok {
+				v, err := p.GetK3sEnv(node)
+				if err != nil {
+					k3sEnv = []string{}
+				} else {
+					k3sEnv = v
+				}
+			}
+		}
+
 	}
 
-	p.LoadNodeStatus()
+	workers := p.GetWorkerNodes()
+	for _, node := range workers {
+		p.Log.Infof("[TODO] Install worker node: %s", node.Name)
+		// _ = p.AddNode(k3sEnv, node)
+		p.joinWorker(k3sEnv, node)
+
+	}
+
+	// p.LoadNodeStatus()
 
 	// // append tls-sans to k3s install script:
 	// // 1. appends from --tls-sans flags.
@@ -748,7 +771,7 @@ func (p *ProviderBase) Execute(command string, node *k3sv1alpha1.Node, stream bo
 	} else {
 		p.Log.Debugf("master node: %s bastion: %s", node.Name, bastion.Address)
 	}
-	p.Log.Debugf("bastion:\n%v\n--------------------", bastion)
+	// p.Log.Debugf("bastion:\n%v\n--------------------", bastion)
 
 	res, err := yaml.Marshal(node)
 	if err != nil {
@@ -893,12 +916,12 @@ func (p *ProviderBase) MakeInstallExec() (k3sIstallOptions k3sv1alpha1.K3sIstall
 	} else {
 		if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
 			// TODO: #3 добавить проверку на ip adress
-			p.Log.Debugln("LoadBalancer MetalLB: ", p.Cluster.Spec.LoadBalancer.MetalLb)
+			p.Log.Infof("LoadBalancer MetalLB: %v", p.Cluster.Spec.LoadBalancer.MetalLb)
 			extraArgs = append(extraArgs, "--no-deploy servicelb")
 			k3sIstallOptions.LoadBalancer = types.MetalLb
 		} else if len(p.Cluster.Spec.LoadBalancer.KubeVip) > 0 {
 			// TODO: добавить проверку на ip adress
-			p.Log.Debugln("LoadBalancer kube-vip: ", p.Cluster.Spec.LoadBalancer.KubeVip)
+			p.Log.Infof("LoadBalancer kube-vip: %v", p.Cluster.Spec.LoadBalancer.KubeVip)
 			extraArgs = append(extraArgs, "--no-deploy servicelb")
 			k3sIstallOptions.LoadBalancer = types.KubeVip
 		}
@@ -1078,7 +1101,7 @@ func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.N
 }
 
 // joinWorker join worker node to cluster
-func (p *ProviderBase) joinWorker(token string, node *k3sv1alpha1.Node) {
+func (p *ProviderBase) joinWorker(k3sEnv []string, node *k3sv1alpha1.Node) {
 	// command := types.WorkerUninstallCommand
 	apiServerAddres, err := p.Cluster.GetAPIServerAddress(node, &p.Cluster.Spec.Networking)
 	p.Log.Debugf("apiServerAddresses: %s", apiServerAddres)
@@ -1086,32 +1109,34 @@ func (p *ProviderBase) joinWorker(token string, node *k3sv1alpha1.Node) {
 		p.Log.Fatal(err)
 	}
 
-	// TODO: add lavels to node
-	cnt := p.Cluster.GetNodeLabels(node)
-	p.Log.Warnf("TODO: add lavels to node =-> cnt: %d", cnt)
+	// K3S_AGENT_TOKEN=
 
-	opts := &k3sv1alpha1.K3sWorkerOptions{
-		JoinAgentCommand: types.JoinAgentCommand,
-		ApiServerAddres:  apiServerAddres,
-		ApiServerPort:    p.Cluster.Spec.Networking.APIServerPort,
-		Token:            token,
-		K3sVersion:       p.Cluster.Spec.KubernetesVersion,
-		K3sChannel:       p.Cluster.Spec.K3sChannel,
-	}
-	command := p.MakeAgentInstallExec(opts)
-	// p.Log.Debugf("Exec command: %s", command)
-	// installk3sAgentExec := p.Cluster.MakeAgentInstallExec(opts)
-	// 			installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
-	// 			installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion
-	// 			installk3sAgentExec.Node = node
+	// // TODO: add lavels to node
+	// cnt := p.Cluster.GetNodeLabels(node)
+	// p.Log.Warnf("TODO: add lavels to node =-> cnt: %d", cnt)
 
-	// _, _ = p.Execute(command, node, true)
-	// stdOut, err := p.Execute(command, node, true)
-	// if err != nil {
-	// 	p.Log.Errorf(err.Error())
+	// opts := &k3sv1alpha1.K3sWorkerOptions{
+	// 	JoinAgentCommand: types.JoinAgentCommand,
+	// 	ApiServerAddres:  apiServerAddres,
+	// 	ApiServerPort:    p.Cluster.Spec.Networking.APIServerPort,
+	// 	// Token:            token,
+	// 	K3sVersion:       p.Cluster.Spec.KubernetesVersion,
+	// 	K3sChannel:       p.Cluster.Spec.K3sChannel,
 	// }
-	_, _ = p.Execute(command, node, true)
-	// p.Log.Debugf("[joinWorker] stdOut: %v", stdOut)
+	// command := p.MakeAgentInstallExec(opts)
+	// // p.Log.Debugf("Exec command: %s", command)
+	// // installk3sAgentExec := p.Cluster.MakeAgentInstallExec(opts)
+	// // 			installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
+	// // 			installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion
+	// // 			installk3sAgentExec.Node = node
+
+	// // _, _ = p.Execute(command, node, true)
+	// // stdOut, err := p.Execute(command, node, true)
+	// // if err != nil {
+	// // 	p.Log.Errorf(err.Error())
+	// // }
+	// _, _ = p.Execute(command, node, true)
+	// // p.Log.Debugf("[joinWorker] stdOut: %v", stdOut)
 }
 
 // GetAgentToken возвращает токен агента
@@ -1119,6 +1144,14 @@ func (p *ProviderBase) GetAgentToken(master *k3sv1alpha1.Node) (token string, er
 	command := fmt.Sprintf("cat %s", types.FileClusterToken)
 	token, err = p.Execute(command, master, false)
 	return strings.Trim(token, "\n"), err
+}
+
+// GetK3sEnv
+func (p *ProviderBase) GetK3sEnv(master *k3sv1alpha1.Node) (vals []string, err error) {
+	command := fmt.Sprintf("cat %s", types.FileEnvServer)
+	envFile, err := p.Execute(command, master, false)
+	e := strings.Split(envFile, "\n")
+	return e, err
 }
 
 // CheckExitFile проверка на существование файла на сервере
@@ -1214,31 +1247,27 @@ func (p *ProviderBase) CreateK3sCluster() (err error) {
 
 // DeleteNode delete node from cluster
 func (p *ProviderBase) AddNode(nodeName string) (ok bool) {
-	var err error
-	var token string
+	// var err error
+	// var token string
 
-	for _, master := range p.GetMasterNodes() {
-		p.Log.Warnf("master node: %s", master.Name)
-		token, err = p.GetAgentToken(master)
-		if err != nil {
-			p.Log.Errorf(err.Error())
-		} else {
-			// p.Log.Debugf("[AddNode] K3S_TOKEN=%s", token)
-			break
-		}
-	}
+	// for _, master := range p.GetMasterNodes() {
+	// 	p.Log.Warnf("master node: %s", master.Name)
+	// 	token, err = p.GetAgentToken(master)
+	// 	if err != nil {
+	// 		p.Log.Errorf(err.Error())
+	// 	} else {
+	// 		// p.Log.Debugf("[AddNode] K3S_TOKEN=%s", token)
+	// 		break
+	// 	}
+	// }
 
-	for _, node := range p.GetWorkerNodes() {
-		if node.Name == nodeName {
-			if node.Role == k3sv1alpha1.Role(types.ServerRole) {
-				p.Log.Infof("[AddNode] TODO: Add Master node: %s", node.Name)
-			} else {
-				p.Log.Infof("[AddNode] Add Worker node: %s", node.Name)
-				p.joinWorker(token, node)
-				ok = true
-			}
-		}
-	}
+	// 		if node.Role == k3sv1alpha1.Role(types.ServerRole) {
+	// 			p.Log.Infof("[AddNode] TODO: Add Master node: %s", node.Name)
+	// 		} else {
+	// 			p.Log.Infof("[AddNode] Add Worker node: %s", node.Name)
+	// 			p.joinWorker(token, node)
+	// 			ok = true
+	// }
 
 	return ok
 }
@@ -1570,12 +1599,10 @@ func (p *ProviderBase) sshStream(command string, isPrint bool) {
 // SetAddons
 func (p *ProviderBase) SetAddons() {
 	kubeConfigPath, err := k3s.KubeconfigTmpWrite(p.Config)
+	if err != nil {
+		p.Log.Errorf("[KubeconfigTmpWrite] %s\n%v", err.Error())
+	}
 	defer os.RemoveAll(kubeConfigPath)
-
-	// argsNginx := &k3sv1alpha1.Ingress{
-	// 	Name: types.NginxDefaultName,
-	// 	Namespace: types.NginxDefaultNamespace,
-	// }
 
 	// helm list
 	command := fmt.Sprintf(types.HelmListCommand, kubeConfigPath)
@@ -1591,6 +1618,12 @@ func (p *ProviderBase) SetAddons() {
 	// 	}
 	// }
 
+	// Install MetalLB in L2 (ARP) mode
+	if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
+
+	}
+
+	// Install HELM Release
 	if p.Cluster.Spec.Addons.Ingress.Name == types.NginxDefaultName {
 		if err := module.MakeInstallNginx(kubeConfigPath, p.CmdFlags.DryRun, &p.Cluster.Spec.Addons.Ingress, &p.HelmRelease); err != nil {
 			p.Log.Errorf(err.Error())
@@ -1600,14 +1633,13 @@ func (p *ProviderBase) SetAddons() {
 	}
 }
 
+// LoadEnv load .env file
 func (p *ProviderBase) LoadEnv() {
 	var appViper = viper.New()
 	e := k3sv1alpha1.EnvConfig{}
 	if envPath := util.GetEnvDir(p.Cluster.GetName()); len(envPath) > 0 {
 		p.Log.Infof("load environments from %s", envPath)
-		// appViper.AddConfigPath(envDir)
-		// appViper.SetConfigName(".env")
-		// appViper.SetConfigType("env")
+
 		appViper.SetConfigFile(envPath)
 		appViper.AutomaticEnv()
 		appViper.BindEnv("DB_PASSWORD")

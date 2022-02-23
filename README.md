@@ -1,5 +1,27 @@
-# k3ctl
-management k3s kubernetes clusters
+# k3ctl management k3s kubernetes clusters
+
+```bash
+export AWS_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
+export AWS_SECRET_ACCESS_KEY=<YOUR_SECRET_ACCESS_KEY>
+```
+
+
+```bash
+export ARM_CLIENT_ID="WWWWWWWW-WWWW-WWWW-WWWW-WWWWWWWWWWWW" && \
+export ARM_CLIENT_SECRET="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" && \
+export ARM_TENANT_ID="YYYYYYYY-YYYY-YYYY-YYYY-YYYYYYYYYYYY" && \
+export ARM_SUBSCRIPTION_ID="ZZZZZZZZ-ZZZZ-ZZZZ-ZZZZ-ZZZZZZZZZZZZ"
+```
+
+```bash
+export HCLOUD_TOKEN=XXXXXXXXXXXXXX
+```
+
+или .env
+
+```bash
+DB_PASSWORD=XXX
+```
 
 Example create cluster
 

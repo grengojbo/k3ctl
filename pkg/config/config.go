@@ -65,36 +65,9 @@ func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 	return cfg, nil
 }
 
-// var configFile string
-// var cfgViper = viper.New()
-// var ppViper = viper.New()
-// var dryRun bool
-
-// func LoadEnv(clusterName string) (envConfig k3sv1alpha1.EnvConfig) {
-// 	var appViper = viper.New()
-// 	if envDir := util.GetEnvDir(clusterName); len(envDir) > 0 {
-// 		log.Infof("load environments from dir %s", envDir)
-// 		appViper.AddConfigPath(envDir)
-// 		appViper.SetConfigType("env")
-// 		viper.AutomaticEnv()
-
-// 		err := appViper.ReadInConfig()
-// 		if err != nil {
-// 			log.Errorf(err.Error())
-// 		} else {
-// 			err = appViper.Unmarshal(&envConfig)
-
-// 			log.Warnf("DB_PASSWORD: %v", envConfig.DBPassword)
-
-// 		}
-// 	}
-// 	return envConfig
-// }
-
+// InitConfig
 func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper) (configFile string) {
 
-	// dryRun = viper.GetBool("dry-run")
-	// Viper for pre-processed config options
 	ppViper.SetEnvPrefix("K3S")
 
 	// viper for the general config (file, env and non pre-processed flags)
@@ -136,30 +109,3 @@ func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper)
 	}
 	return configFile
 }
-
-// func FromViper(config *viper.Viper) (conf.Config, error) {
-
-// 	var cfg conf.Config
-
-// 	// determine config kind
-// 	switch strings.ToLower(config.GetString("kind")) {
-// 	case "simple":
-// 		cfg = conf.SimpleConfig{}
-// 	case "cluster":
-// 		cfg = conf.ClusterConfig{}
-// 	case "clusterlist":
-// 		cfg = conf.ClusterListConfig{}
-// 	case "":
-// 		return nil, fmt.Errorf("Missing `kind` in config file")
-// 	default:
-// 		return nil, fmt.Errorf("Unknown `kind` '%s' in config file", config.GetString("kind"))
-// 	}
-
-// 	if err := config.Unmarshal(&cfg); err != nil {
-// 		log.Errorln("Failed to unmarshal File config")
-
-// 		return nil, err
-// 	}
-
-// 	return cfg, nil
-// }

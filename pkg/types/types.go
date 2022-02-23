@@ -68,6 +68,7 @@ var (
 	// curl -sfL https://get.k3s.io | K3S_URL='https://<IP>6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='stable' sh -s - --node-label node-role.kubernetes.io/master=true --node-taint key=value:NoExecute
 	JoinAgentCommand = "curl -sfL https://get.k3s.io | K3S_URL='https://%s:%d' K3S_TOKEN='%s' %s sh -s -"
 	FileClusterToken = "/var/lib/rancher/k3s/server/node-token"
+	FileEnvServer    = "/etc/systemd/system/k3s.service.env"
 	// CatTokenCommand        = "cat /var/lib/rancher/k3s/server/node-token"
 	CatCfgCommand          = "cat /etc/rancher/k3s/k3s.yaml"
 	DockerCommand          = "if ! type docker; then curl -sSL %s | sh - %s; fi"

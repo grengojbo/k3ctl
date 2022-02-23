@@ -71,7 +71,7 @@ func NewCmdNodeAdd() *cobra.Command {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			isAddNode := false
+			// isAddNode := false
 			/*************************
 			 * Compute Configuration *
 			 *************************/
@@ -87,14 +87,14 @@ func NewCmdNodeAdd() *cobra.Command {
 				log.Fatalln("Is Not Nodes to install k3s cluster")
 			}
 
-			if ok := c.AddNode(NodeName); ok {
-				isAddNode = true
-			}
-			if !isAddNode {
-				log.Errorf("Is NOT set node: %v", NodeName)
-			} else {
-				log.Infof("Successfully added %s node(s)!", NodeName)
-			}
+			// if ok := c.AddNode(NodeName); ok {
+			// 	isAddNode = true
+			// }
+			// if !isAddNode {
+			// 	log.Errorf("Is NOT set node: %v", NodeName)
+			// } else {
+			// 	log.Infof("Successfully added %s node(s)!", NodeName)
+			// }
 		},
 	}
 

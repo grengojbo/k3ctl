@@ -22,6 +22,8 @@ THE SOFTWARE.
 
 package util
 
+import "strings"
+
 // MapSubexpNames maps regex capturing group names to corresponding matches
 func MapSubexpNames(names, matches []string) map[string]string {
 	//names, matches = names[1:], matches[1:]
@@ -30,4 +32,16 @@ func MapSubexpNames(names, matches []string) map[string]string {
 		nameMatchMap[names[index]] = matches[index]
 	}
 	return nameMatchMap
+}
+
+func GetEnvValue(val string, k3sEnv []string) (res string) {
+for _, v := range k3sEnv {
+		if len(v) > 0 {
+			// p.Log.Warnf("---------------- %s ----------------", v)
+			if ok := strings.HasPrefix(v, val); ok {
+				return v
+			}
+		}
+	}
+	return ""
 }
