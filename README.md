@@ -79,6 +79,16 @@ kubectl get nodes -o wide
 ./k3ctl kubeconfig get sample --kubeconfig-switch-context=false
 ```
 
+## Monitoring
+
+TODO: добавить скрипт
+
+```bash
+kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+helm repo add netdata https://netdata.github.io/helmchart/
+helm repo update
+helm upgrade -i --wait -f ./variables/cloud/netdata.yaml -n monitoring netdata netdata/netdata
+```
 
 ```bash
 kubectl label nodes --all node-role.kubernetes.io/MyRole=true
