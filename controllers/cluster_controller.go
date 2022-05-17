@@ -1629,25 +1629,35 @@ func (p *ProviderBase) SetAddons() {
 	}
 
 	json.Unmarshal(stdOut, &p.HelmRelease.Releases)
-	// if len(p.HelmRelease.Releases) > 0 {
-	// 	for _, item := range p.HelmRelease.Releases {
-	// 		p.Log.Debugf("Release: %s VERSION: %s STATUS: %s", item.Name, item.AppVersion, item.Status)
-	// 	}
-	// }
+	if len(p.HelmRelease.Releases) > 0 {
+		for _, item := range p.HelmRelease.Releases {
+			p.Log.Debugf("Release: %s VERSION: %s STATUS: %s", item.Name, item.AppVersion, item.Status)
+		}
+	}
 
+	isRun := true
+	if isRun {
 	// Install MetalLB in L2 (ARP) mode
 	if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
 		p.Log.Warnln("TODO: add support MetalLb...")
 	}
 
 	// Install HELM Release
+	if err := module.MakeInstallCertManager(kubeConfigPath, p.CmdFlags.DryRun, &p.Cluster.Spec.Addons.CertManager, &p.HelmRelease); err != nil {
+		p.Log.Errorf(err.Error())
+	}
+
 	if p.Cluster.Spec.Addons.Ingress.Name == types.NginxDefaultName {
+		p.Log.Infoln("Install Nginx HELM chart...")
 		if err := module.MakeInstallNginx(kubeConfigPath, p.CmdFlags.DryRun, &p.Cluster.Spec.Addons.Ingress, &p.HelmRelease); err != nil {
 			p.Log.Errorf(err.Error())
 		}
 	} else {
 		p.Log.Errorf("Is not support Ingress: %s", p.Cluster.Spec.Addons.Ingress.Name)
 	}
+
+	}
+
 }
 
 // SetEnvServer

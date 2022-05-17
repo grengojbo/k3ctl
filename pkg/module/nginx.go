@@ -25,7 +25,7 @@ func MakeInstallNginx(kubeConfigPath string, dryRun bool, ingress *k3sv1alpha1.I
 		ingress.Namespace = t.NginxDefaultNamespace
 	}
 
-	// log.Debugf("ingress: hostMode: %v updateSt %s", ingress.HostMode, args.UpdateStrategy)
+	log.Debugf("ingress: hostMode: %v updateSt %s", ingress.HostMode, args.UpdateStrategy)
 	if args.UpdateStrategy != "none" {
 		installed = true
 	} else {
@@ -58,6 +58,16 @@ func MakeInstallNginx(kubeConfigPath string, dryRun bool, ingress *k3sv1alpha1.I
 			overrides["controller.service.type"] = "NodePort"
 			overrides["dnsPolicy"] = "ClusterFirstWithHostNet"
 			overrides["controller.kind"] = "DaemonSet"
+		} else {
+			// overrides["controller.service.externalTrafficPolicy"] = "Cluster"
+			overrides["controller.service.externalTrafficPolicy"] = "Local"
+			overrides["controller.config.use-proxy-protocol"] = "false"
+			overrides["defaultBackend.enabled"] = "true"
+			// TODO: добавить пользовательский defalt backend
+			// overrides["defaultBackend.image.registry"] = "k8s.gcr.io"
+			// overrides["defaultBackend.image.image"] = "defaultbackend-amd64"
+			// overrides["defaultBackend.image.tag"] = "1.5"
+
 		}
 
 		// customFlags, _ := command.Flags().GetStringArray("set")
@@ -75,7 +85,6 @@ func MakeInstallNginx(kubeConfigPath string, dryRun bool, ingress *k3sv1alpha1.I
 			WithKubeconfigPath(kubeConfigPath)
 
 		_, err = apps.MakeInstallChart(nginxOptions)
-
 		if err != nil {
 			return err
 		}
