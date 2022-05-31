@@ -35,6 +35,7 @@ import (
 	// conf "github.com/grengojbo/api/v1alpha1"
 )
 
+// TODO: удалить перенес в контроллен
 func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 
 	var cfg k3sv1alpha1.Cluster
@@ -51,24 +52,22 @@ func FromViperSimple(config *viper.Viper) (k3sv1alpha1.Cluster, error) {
 	}
 	cfg.TypeMeta.APIVersion = config.GetString("apiversion")
 	cfg.TypeMeta.Kind = config.GetString("kind")
-	
+
 	cfg.ObjectMeta.Name = config.GetString("metadata.name")
-	
+
+	// if !cfg.Spec.KubeconfigOptions.SwitchCurrentContext {
+	// cfg.Spec.KubeconfigOptions.SwitchCurrentContext = true
+	// }
+
 	if cfg.Spec.Networking.APIServerPort == 0 {
 		cfg.Spec.Networking.APIServerPort = 6443
 	}
 	return cfg, nil
 }
 
-// var configFile string
-// var cfgViper = viper.New()
-// var ppViper = viper.New()
-// var dryRun bool
-
+// InitConfig
 func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper) (configFile string) {
 
-	// dryRun = viper.GetBool("dry-run")
-	// Viper for pre-processed config options
 	ppViper.SetEnvPrefix("K3S")
 
 	// viper for the general config (file, env and non pre-processed flags)
@@ -77,7 +76,7 @@ func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper)
 
 	cfgViper.SetConfigType("yaml")
 
-	configFile = util.GerConfigFileName(clusterName)
+	configFile = util.GetConfigFileName(clusterName)
 	cfgViper.SetConfigFile(configFile)
 	// log.Tracef("Schema: %+v", conf.JSONSchema)
 
@@ -97,6 +96,10 @@ func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper)
 	log.Infof("Using config file %s", cfgViper.ConfigFileUsed())
 	// }
 
+	// TODO: Default Configs
+	cfgViper.SetDefault("spec.kubeconfig.updateDefaultKubeconfig", true)
+	cfgViper.SetDefault("spec.kubeconfig.switchCurrentContext", true)
+
 	if log.GetLevel() >= log.DebugLevel {
 		c, _ := yaml.Marshal(cfgViper.AllSettings())
 		log.Debugf("Configuration:\n%s", c)
@@ -106,30 +109,3 @@ func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper)
 	}
 	return configFile
 }
-
-// func FromViper(config *viper.Viper) (conf.Config, error) {
-
-// 	var cfg conf.Config
-
-// 	// determine config kind
-// 	switch strings.ToLower(config.GetString("kind")) {
-// 	case "simple":
-// 		cfg = conf.SimpleConfig{}
-// 	case "cluster":
-// 		cfg = conf.ClusterConfig{}
-// 	case "clusterlist":
-// 		cfg = conf.ClusterListConfig{}
-// 	case "":
-// 		return nil, fmt.Errorf("Missing `kind` in config file")
-// 	default:
-// 		return nil, fmt.Errorf("Unknown `kind` '%s' in config file", config.GetString("kind"))
-// 	}
-
-// 	if err := config.Unmarshal(&cfg); err != nil {
-// 		log.Errorln("Failed to unmarshal File config")
-
-// 		return nil, err
-// 	}
-
-// 	return cfg, nil
-// }

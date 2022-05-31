@@ -25,13 +25,20 @@ import (
 	"fmt"
 	// "os"
 
-	// "github.com/rancher/k3d/v5/cmd/util"
 	// "github.com/rancher/k3d/v5/pkg/client"
-	log "github.com/sirupsen/logrus"
 	// "github.com/rancher/k3d/v5/pkg/runtimes"
 	// k3d "github.com/rancher/k3d/v5/pkg/types"
+	conf "github.com/grengojbo/k3ctl/api/v1alpha1"
+	"github.com/grengojbo/k3ctl/pkg/config"
+	k3s "github.com/grengojbo/k3ctl/pkg/k3s"
+	"github.com/grengojbo/k3ctl/pkg/util"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+// var kubeconfig string
+// var kubeconfig []byte
 
 type getKubeconfigFlags struct {
 	all bool
@@ -50,10 +57,10 @@ func NewCmdKubeconfigGet() *cobra.Command {
 
 	// create new command
 	cmd := &cobra.Command{
-		Use:               "get [CLUSTER [CLUSTER [...]] | --all]",
-		Short:             "Print kubeconfig(s) from cluster(s).",
-		Long:              `Print kubeconfig(s) from cluster(s).`,
-		Aliases:           []string{"print", "show"},
+		Use:     "get [CLUSTER [CLUSTER [...]] | --all]",
+		Short:   "Print kubeconfig(s) from cluster(s).",
+		Long:    `Print kubeconfig(s) from cluster(s).`,
+		Aliases: []string{"print", "show"},
 		// ValidArgsFunction: util.ValidArgsAvailableClusters,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if (len(args) < 1 && !getKubeconfigFlags.all) || (len(args) > 0 && getKubeconfigFlags.all) {
@@ -61,26 +68,88 @@ func NewCmdKubeconfigGet() *cobra.Command {
 			}
 			return nil
 		},
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			DryRun = viper.GetBool("dry-run")
+			return nil
+		},
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Warnln("TODO: load kubeconfig from cluster")
 			// var clusters []*k3d.Cluster
 			// var err error
 
 			// // generate list of clusters
-			// if getKubeconfigFlags.all {
-			// 	clusters, err = client.ClusterList(cmd.Context(), runtimes.SelectedRuntime)
-			// 	if err != nil {
-			// 		l.Log().Fatalln(err)
-			// 	}
-			// } else {
-			// 	for _, clusterName := range args {
-			// 		retrievedCluster, err := client.ClusterGet(cmd.Context(), runtimes.SelectedRuntime, &k3d.Cluster{Name: clusterName})
-			// 		if err != nil {
-			// 			l.Log().Fatalln(err)
-			// 		}
-			// 		clusters = append(clusters, retrievedCluster)
-			// 	}
+			if !getKubeconfigFlags.all {
+				for _, clusterName := range args {
+					log.Infof("Load kubeconfig from %s cluster", clusterName)
+					ConfigFile = config.InitConfig(clusterName, CfgViper, PpViper)
+					cfg, err := config.FromViperSimple(CfgViper)
+					if err != nil {
+						log.Fatalln(err)
+					}
+					masters := []conf.ContrelPlanNodes{}
+					servers, _, err := util.GetGroupNodes(cfg.Spec.Nodes)
+					if err != nil {
+						log.Fatalln(err)
+					}
+					if len(cfg.Spec.Nodes) == 0 {
+						log.Fatalln("Is Not Nodes to install k3s cluster")
+					}
+					for _, node := range servers {
+						if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
+							log.Fatalln(err.Error())
+						} else {
+							masters = append(masters, conf.ContrelPlanNodes{
+								Bastion: bastion,
+								Node:    node,
+							})
+						}
+					}
+
+					kubeconfig, err := k3s.GetKubeconfig(masters, DryRun)
+					if err != nil {
+						log.Fatalln(err.Error())
+					}
+
+					isExternal := true
+					apiServerUrl, err := cfg.GetAPIServerUrl(masters, &cfg.Spec.Networking, isExternal)
+					if err != nil {
+						log.Fatal(err)
+					}
+					log.Debugf("apiServerUrl: %s", apiServerUrl)
+
+					opts := k3s.WriteKubeConfigOptions{
+						OverwriteExisting:    true,
+						UpdateCurrentContext: cfg.Spec.KubeconfigOptions.SwitchCurrentContext,
+					}
+					if !DryRun {
+						log.Debugf("source kubeconfig:\n%v", kubeconfig)
+						pathKubeConfig, err := k3s.SaveCfg(kubeconfig, apiServerUrl, clusterName, opts)
+						if err != nil {
+							log.Errorln(err.Error())
+						}
+						// c, _ := yaml.Marshal(newKubeConfig.Clusters)
+						log.Infof("new kubeconfig: %s", pathKubeConfig)
+						// log.Warnf(" cfg.Spec.KubeconfigOptions.SwitchCurrentContext: %v",  cfg.Spec.KubeconfigOptions.SwitchCurrentContext)
+					}
+					// 		retrievedCluster, err := client.ClusterGet(cmd.Context(), runtimes.SelectedRuntime, &k3d.Cluster{Name: clusterName})
+					// 		if err != nil {
+					// 			l.Log().Fatalln(err)
+					// 		}
+					// 		clusters = append(clusters, retrievedCluster)
+				}
+			} else {
+				log.Fatalln("TODO: load kubeconfig from all cluster")
+				// 	clusters, err = client.ClusterList(cmd.Context(), runtimes.SelectedRuntime)
+				// 	if err != nil {
+				// 		l.Log().Fatalln(err)
+				// 	}
+			}
+			// k, err := k3s.KubeconfigGetDefaultFile()
+			// if err != nil {
+			// 	log.Fatalln(err.Error())
 			// }
+			// log.Debugf("KubeconfigGetDefaultFile: %v", k)
+			// c, _ := k3s.KubeconfigGetDefaultFile()
+			// log.Warnf("clusters: %v", c.Clusters)
 
 			// // get kubeconfigs from all clusters
 			// errorGettingKubeconfig := false
@@ -97,11 +166,14 @@ func NewCmdKubeconfigGet() *cobra.Command {
 			// if errorGettingKubeconfig {
 			// 	os.Exit(1)
 			// }
+			// log.Errorf("TODO: %s", viper.GetString("kubeconfig"))
 		},
 	}
 
 	// add flags
 	cmd.Flags().BoolVarP(&getKubeconfigFlags.all, "all", "a", false, "Output kubeconfigs from all existing clusters")
+	cmd.Flags().Bool("kubeconfig-switch-context", true, "Directly switch the default kubeconfig's current-context to the new cluster's context (requires --kubeconfig-update-default)")
+	_ = CfgViper.BindPFlag("spec.kubeconfig.switchcurrentcontext", cmd.Flags().Lookup("kubeconfig-switch-context"))
 
 	// done
 	return cmd

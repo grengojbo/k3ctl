@@ -39,6 +39,8 @@ import (
 	"github.com/grengojbo/k3ctl/cmd/cluster"
 	// cfg "github.com/rancher/k3d/v4/cmd/config"
 	// "github.com/rancher/k3d/v4/cmd/image"
+
+	app "github.com/grengojbo/k3ctl/cmd/apply"
 	"github.com/grengojbo/k3ctl/cmd/kubeconfig"
 	"github.com/grengojbo/k3ctl/cmd/node"
 
@@ -102,11 +104,19 @@ func Execute() {
 
 func init() {
 
-	rootCmd.PersistentFlags().BoolVar(&flags.debugLogging, "verbose", false, "Enable verbose output (debug logging)")
-	rootCmd.PersistentFlags().BoolVar(&flags.traceLogging, "trace", false, "Enable super verbose output (trace logging)")
+	rootCmd.PersistentFlags().String("kubeconfig", "", "Local path for your kubeconfig file")
+	_ = viper.BindPFlag("kubeconfig", rootCmd.PersistentFlags().Lookup("kubeconfig"))
+	// viper.AutomaticEnv()
+	// _ = viper.BindEnv("kubeconfig")
+	rootCmd.PersistentFlags().Bool("verbose", false, "Enable verbose output (debug logging)")
+	rootCmd.PersistentFlags().Bool("trace", false, "Enable super verbose output (trace logging)")
+	// rootCmd.PersistentFlags().BoolVar(&flags.debugLogging, "verbose", false, "Enable verbose output (debug logging)")
+	// rootCmd.PersistentFlags().BoolVar(&flags.traceLogging, "trace", false, "Enable super verbose output (trace logging)")
 	rootCmd.PersistentFlags().BoolVar(&flags.timestampedLogging, "timestamps", false, "Enable Log timestamps")
 	rootCmd.PersistentFlags().Bool("dry-run", false, "Show run command and skip the k3s installer")
 	_ = viper.BindPFlag("dry-run", rootCmd.PersistentFlags().Lookup("dry-run"))
+	_ = viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+	_ = viper.BindPFlag("trace", rootCmd.PersistentFlags().Lookup("trace"))
 
 	// add local flags
 	rootCmd.Flags().BoolVar(&flags.version, "version", false, "Show k3ctl and default k3s version")
@@ -116,6 +126,7 @@ func init() {
 	rootCmd.AddCommand(cluster.NewCmdCluster())
 	rootCmd.AddCommand(kubeconfig.NewCmdKubeconfig())
 	rootCmd.AddCommand(node.NewCmdNode())
+	rootCmd.AddCommand(app.NewCmdApply())
 	// rootCmd.AddCommand(image.NewCmdImage())
 	// rootCmd.AddCommand(cfg.NewCmdConfig())
 	// rootCmd.AddCommand(registry.NewCmdRegistry())
@@ -136,9 +147,9 @@ func init() {
 
 // initLogging initializes the logger
 func initLogging() {
-	if flags.traceLogging {
+	if viper.GetBool("trace") {
 		log.SetLevel(log.TraceLevel)
-	} else if flags.debugLogging {
+	} else if viper.GetBool("verbose") {
 		log.SetLevel(log.DebugLevel)
 	} else {
 		switch logLevel := strings.ToUpper(os.Getenv("LOG_LEVEL")); logLevel {

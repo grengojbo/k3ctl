@@ -23,9 +23,7 @@ package types
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/docker/go-connections/nat"
@@ -33,51 +31,6 @@ import (
 	"github.com/grengojbo/k3ctl/version"
 )
 
-var (
-	InitCommand            = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --node-external-ip %s %s' %s sh -"
-	JoinCommand            = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
-	GetTokenCommand        = "sudo cat /var/lib/rancher/k3s/server/node-token"
-	CatCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
-	DockerCommand          = "if ! type docker; then curl -sSL %s | sh - %s; fi"
-	DeployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
-	MasterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
-	WorkerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
-	RegistryPath           = "/etc/rancher/k3s"
-)
-const (
-	// KubeCfgFile default kube config file path.
-	KubeCfgFile = ".kube/config"
-	// KubeCfgTempName default temp kube config file name prefix.
-	KubeCfgTempName = "autok3s-temp-*"
-	// K3sManifestsDir k3s manifests dir.
-	K3sManifestsDir = "/var/lib/rancher/k3s/server/manifests"
-	// MasterInstanceName master instance name.
-	MasterInstanceName = "autok3s.%s.master"
-	// WorkerInstanceName worker instance name.
-	WorkerInstanceName = "autok3s.%s.worker"
-	// TagClusterPrefix cluster's tag prefix.
-	TagClusterPrefix = "autok3s-"
-	// StatusRunning instance running status.
-	StatusRunning = "Running"
-	// StatusCreating instance creating status.
-	StatusCreating = "Creating"
-	// StatusMissing instance missing status.
-	StatusMissing = "Missing"
-	// StatusFailed instance failed status.
-	StatusFailed = "Failed"
-	// StatusUpgrading instance upgrading status.
-	StatusUpgrading = "Upgrading"
-	// UsageInfoTitle usage info title.
-	UsageInfoTitle = "=========================== Prompt Info ==========================="
-	// UsageContext usage info context.
-	UsageContext = "Use 'autok3s kubectl config use-context %s'"
-	// UsagePods usage  info pods.
-	UsagePods = "Use 'autok3s kubectl get pods -A' get POD status`"
-	// DBFolder default database dir.
-	DBFolder = ".db"
-	// DBFile default database file.
-	DBFile = "autok3s.db"
-)
 // DefaultClusterName specifies the default name used for newly created clusters
 const DefaultClusterName = "k3s-default"
 
@@ -105,7 +58,28 @@ const DefaultRegistryImageTag = "2"
 // DefaultObjectNamePrefix defines the name prefix for every object created by k3d
 const DefaultObjectNamePrefix = "k3s"
 
-const K3sGetScript = "curl -sfL https://get.k3s.io"
+// const K3sGetScript = "curl -sfL https://get.k3s.io"
+const K3sGetScript = "https://get.k3s.io"
+
+var (
+	InitMasterCommand = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server%s%s' %s sh -"
+	// InitMasterCommand      = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --node-external-ip %s %s' %s sh -"
+	JoinMasterCommand = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
+	// curl -sfL https://get.k3s.io | K3S_URL='https://<IP>6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='stable' sh -s - --node-label node-role.kubernetes.io/master=true --node-taint key=value:NoExecute
+	JoinAgentCommand = "curl -sfL https://get.k3s.io | K3S_URL='%s' %s %s sh -s -"
+	FileClusterToken = "/var/lib/rancher/k3s/server/node-token"
+	FileEnvServer    = "/etc/systemd/system/k3s.service.env"
+	// CatTokenCommand        = "cat /var/lib/rancher/k3s/server/node-token"
+	CatCfgCommand          = "cat /etc/rancher/k3s/k3s.yaml"
+	DockerCommand          = "if ! type docker; then curl -sSL %s | sh - %s; fi"
+	DeployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
+	MasterUninstallCommand = "/usr/local/bin/k3s-uninstall.sh"
+	WorkerUninstallCommand = "/usr/local/bin/k3s-agent-uninstall.sh"
+	DrainCommand           = "kubectl drain %s --ignore-daemonsets --delete-local-data --grace-period=30 --timeout=120s"
+	DeleteNodeCommand      = "kubectl delete node %s"
+	SetWorkerLabel         = "kubectl label --overwrite node %s node-role.kubernetes.io/worker=true"
+	TestExitFile           = "test -f %s || echo noFile"
+)
 
 // ReadyLogMessageByRole defines the log messages we wait for until a server node is considered ready
 var ReadyLogMessageByRole = map[Role]string{
@@ -115,11 +89,34 @@ var ReadyLogMessageByRole = map[Role]string{
 	RegistryRole:     "listening on",
 }
 
-// NodeWaitForLogMessageRestartWarnTime is the time after which to warn about a restarting container
-const NodeWaitForLogMessageRestartWarnTime = 2 * time.Minute
-
-// NodeStatusRestarting defines the status string that signals the node container is restarting
-const NodeStatusRestarting = "restarting"
+const (
+	// NodeWaitForLogMessageRestartWarnTime is the time after which to warn about a restarting container
+	NodeWaitForLogMessageRestartWarnTime = 2 * time.Minute
+	// NodeStatusRestarting defines the status string that signals the node container is restarting
+	NodeStatusRestarting = "restarting"
+	// ClusterStatusRunning cluster running status.
+	ClusterStatusRunning = "Running"
+	// ClusterStatusStopped cluster stopped status.
+	ClusterStatusStopped = "Stopped"
+	// ClusterStatusUnknown cluster unknown status.
+	ClusterStatusUnknown = "Unknown"
+	// StatusRunning instance running status.
+	StatusRunning = "Running"
+	// StatusCreating instance creating status.
+	StatusCreating = "Creating"
+	// StatusMissing instance missing status.
+	StatusMissing = "Missing"
+	// StatusFailed instance failed status.
+	StatusFailed = "Failed"
+	// StatusUpgrading instance upgrading status.
+	StatusUpgrading = "Upgrading"
+	// UsageInfoTitle usage info title.
+	UsageInfoTitle = "=========================== Prompt Info ==========================="
+	// UsageContext usage info context.
+	UsageContext = "Use 'kubectl config use-context %s'"
+	// UsagePods usage  info pods.
+	UsagePods = "Use 'kubectl get pods -A' get POD status`"
+)
 
 // Role defines a k3s node role
 type Role string
@@ -161,6 +158,11 @@ var DefaultObjectLabels = map[string]string{
 // DefaultObjectLabelsVar specifies a set of labels that will be attached to k3d objects by default but are not static (e.g. across k3d versions)
 var DefaultObjectLabelsVar = map[string]string{
 	"k3s.version": version.GetVersion(),
+}
+
+type LogEvent struct {
+	Name        string
+	ContextName string
 }
 
 const (
@@ -499,42 +501,11 @@ type RegistryExternal struct {
 	Port     string `yaml:"port" json:"port"`
 }
 
-// / Flag struct for flag.
-type Flag struct {
-	Name      string
-	P         interface{}
-	V         interface{}
-	ShortHand string
-	Usage     string
-	Required  bool
-	EnvVar    string
-}
-
-// StringArray gorm custom string array flag type.
-type StringArray []string
-
-// Scan gorm Scan implement.
-func (a *StringArray) Scan(value interface{}) (err error) {
-	switch v := value.(type) {
-	case string:
-		if v != "" {
-			*a = strings.Split(v, ",")
-		}
-	default:
-		return fmt.Errorf("failed to scan array value %v", value)
-	}
-	return nil
-}
-
-// Value gorm Value implement.
-func (a StringArray) Value() (driver.Value, error) {
-	if a == nil || len(a) == 0 {
-		return nil, nil
-	}
-	return strings.Join(a, ","), nil
-}
-
-// GormDataType returns gorm data type.
-func (a StringArray) GormDataType() string {
-	return "stringArray"
+type CmdFlags struct {
+	DryRun             bool
+	DebugLogging       bool
+	TraceLogging       bool
+	TimestampedLogging bool
+	Version            string
+	LogLevel           string
 }

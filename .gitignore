@@ -24,4 +24,6 @@ k3ctl
 *.swo
 *~
 
-variables/
+.env
+/variables
+/variables/*/

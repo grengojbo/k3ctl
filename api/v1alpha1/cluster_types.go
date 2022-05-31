@@ -20,17 +20,16 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"sync"
 
 	"github.com/docker/go-connections/nat"
+	log "github.com/sirupsen/logrus"
 
 	// log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	// go get sigs.k8s.io/cluster-api
+
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/syncmap"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -78,6 +77,7 @@ const (
 	SshPortDefault      int32  = 22
 	DatastoreMySql      string = "mysql"
 	DatastorePostgreSql string = "postgres"
+	DatastoreEtcd       string = "etcd"
 )
 
 var PrivateHost = []string{InternalIP, InternalDNS}
@@ -203,26 +203,73 @@ type Networking struct {
 // ######### END
 
 type Registry struct {
-	Use    []string `mapstructure:"use" yaml:"use" json:"use,omitempty"`
-	Create bool     `mapstructure:"create" yaml:"create" json:"create,omitempty"`
-	Config string   `mapstructure:"config" yaml:"config" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
+	Name      string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string   `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Type      string   `mapstructure:"type" yaml:"type" json:"type,omitempty"` // helm, manifest, orchestration
+	Use       []string `mapstructure:"use" yaml:"use" json:"use,omitempty"`
+	Create    bool     `mapstructure:"create" yaml:"create" json:"create,omitempty"`
+	Config    string   `mapstructure:"config" yaml:"config" json:"config,omitempty"` // registries.yaml (k3s config for containerd registry override)
+}
+
+type PulumiModule struct {
+	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+}
+
+type ExternalDns struct {
+	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+}
+
+type MetalLB struct {
+	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 }
 
 type CertManager struct {
-	Name    string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Enabled bool     `mapstructure:"enabled" yaml:"enabled" json:"enabled,omitempty"`
-	Values  []string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 }
 
 type Ingress struct {
-	Name   string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Values []string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	HostMode  bool              `mapstructure:"hostMode" yaml:"hostMode" json:"hostMode,omitempty"`
+	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+}
+
+type AddonOptions struct {
+	UpdateStrategy string `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
+	// helmAddons []string `mapstructure:"helmAddons" yaml:"helmAddons" json:"helmAddons,omitempty"`
 }
 
 type Addons struct {
-	Ingress     Ingress     `mapstructure:"ingress" yaml:"ingress" json:"ingress,omitempty"`
-	CertManager CertManager `mapstructure:"certManager" yaml:"certManager,omitempty" json:"certManager,omitempty"`
-	Registries  Registry    `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
+	Ingress      Ingress      `mapstructure:"ingress" yaml:"ingress" json:"ingress,omitempty"`
+	CertManager  CertManager  `mapstructure:"certManager" yaml:"certManager,omitempty" json:"certManager,omitempty"`
+	MetalLB      MetalLB      `mapstructure:"metallb" yaml:"metallb,omitempty" json:"metallb,omitempty"`
+	ExternalDns  ExternalDns  `mapstructure:"externalDns" yaml:"externalDns,omitempty" json:"externalDns,omitempty"`
+	PulumiModule PulumiModule `mapstructure:"pulumi" yaml:"pulumi,omitempty" json:"pulumi,omitempty"`
+	Registries   Registry     `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
+	Options      AddonOptions `mapstructure:"options" yaml:"options" json:"options,omitempty"`
 }
 
 // Role defines a k3s node role
@@ -243,10 +290,25 @@ type VolumeWithNodeFilters struct {
 	NodeFilters []string `mapstructure:"nodeFilters" yaml:"nodeFilters" json:"nodeFilters,omitempty"`
 }
 
-type ContrelPlanNodes struct {
-	Bastion *BastionNode `mapstructure:"bastion" yaml:"bastion" json:"bastion"`
-	Node    *Node        `mapstructure:"node" yaml:"node" json:"node"`
+// ClusterNode struct for cluster node.
+type ClusterNode struct {
+	InstanceID              string   `json:"instance-id,omitempty" yaml:"instance-id,omitempty"`
+	InstanceStatus          string   `json:"instance-status,omitempty" yaml:"instance-statu,omitempty"`
+	ExternalIP              []string `json:"external-ip,omitempty" yaml:"external-ip,omitempty"`
+	InternalIP              []string `json:"internal-ip,omitempty" yaml:"internal-ip,omitempty"`
+	Roles                   string   `json:"roles,omitempty" yaml:"status,omitempty"`
+	Status                  string   `json:"status,omitempty" yaml:"status,omitempty"`
+	HostName                string   `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	ContainerRuntimeVersion string   `json:"containerRuntimeVersion,omitempty" yaml:"containerRuntimeVersion,omitempty"`
+	Version                 string   `json:"version,omitempty" yaml:"version,omitempty"`
+	Master                  bool     `json:"-" yaml:"master,omitempty"`
+}
 
+type ContrelPlanNodes struct {
+	ClusterName     string       `mapstructure:"clusterName" yaml:"clusterName" json:"clusterName,omitempty"`
+	ApiServerAddres string       `mapstructure:"apiServerAddres" yaml:"apiServerAddres" json:"apiServerAddres,omitempty"`
+	Bastion         *BastionNode `mapstructure:"bastion" yaml:"bastion" json:"bastion"`
+	Node            *Node        `mapstructure:"node" yaml:"node" json:"node"`
 }
 type BastionNode struct {
 	// Name The bastion Name
@@ -271,7 +333,12 @@ type BastionNode struct {
 	RemoteSudo string `mapstructure:"remoteSudo,omitempty" yaml:"remoteSudo,omitempty" json:"remoteSudo,omitempty"`
 	// RemoteAddress адрес хоста за бастионом
 	// TODO: translate
-	RemoteAddress string
+	// +optional
+	RemoteAddress string `mapstructure:"remoteAddress,omitempty" yaml:"remoteAddress,omitempty" json:"remoteAddress,omitempty"`
+	// +optional
+	RemoteUser string `mapstructure:"remoteUser,omitempty" yaml:"remoteUser,omitempty" json:"remoteUser,omitempty"`
+	// +optional
+	RemotePort int32 `mapstructure:"remotePort,omitempty" yaml:"remotePort,omitempty" json:"remotePort,omitempty"`
 }
 
 // Node describes a k3d node
@@ -344,19 +411,22 @@ type SimpleConfigOptionsK3s struct {
 
 // SimpleConfigOptionsKubeconfig describes the set of options referring to the kubeconfig during cluster creation.
 type SimpleConfigOptionsKubeconfig struct {
-	UpdateDefaultKubeconfig bool `mapstructure:"updateDefaultKubeconfig" yaml:"updateDefaultKubeconfig" json:"updateDefaultKubeconfig,omitempty"` // default: true
-	SwitchCurrentContext    bool `mapstructure:"switchCurrentContext" yaml:"switchCurrentContext" json:"switchCurrentContext,omitempty"`          //nolint:lll    // default: true
+	// kubeconfig connection from k3ctl to server ExternalIP | InternalIP
+	ConnectType             string `mapstructure:"connectType" yaml:"connectType" json:"connectType,omitempty"`
+	Patch                   string `mapstructure:"patch" yaml:"patch" json:"patch,omitempty"`
+	UpdateDefaultKubeconfig bool   `mapstructure:"updateDefaultKubeconfig" yaml:"updateDefaultKubeconfig" json:"updateDefaultKubeconfig,omitempty"` // default: true
+	SwitchCurrentContext    bool   `mapstructure:"switchCurrentContext" yaml:"switchCurrentContext" json:"switchCurrentContext,omitempty"`          //nolint:lll    // default: true
 }
 
 type Options struct {
-	Protected                  bool          `mapstructure:"protected" yaml:"protected" json:"protected,omitempty"`
-	Wait                       bool          `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
-	Timeout                    time.Duration `mapstructure:"timeout" yaml:"timeout" json:"timeout,omitempty"`
-	DisableLoadbalancer        bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer" json:"disableLoadbalancer,omitempty"`
-	DisableIngress             bool          `mapstructure:"disableIngress" yaml:"disableIngress" json:"disableIngress,omitempty"`
-	DisableImageVolume         bool          `mapstructure:"disableImageVolume" yaml:"disableImageVolume" json:"disableImageVolume,omitempty"`
-	NoRollback                 bool          `mapstructure:"disableRollback" yaml:"disableRollback" json:"disableRollback,omitempty"`
-	PrepDisableHostIPInjection bool          `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection" json:"disableHostIPInjection,omitempty"`
+	Protected           bool          `mapstructure:"protected" yaml:"protected" json:"protected,omitempty"`
+	Wait                bool          `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
+	Timeout             time.Duration `mapstructure:"timeout" yaml:"timeout" json:"timeout,omitempty"`
+	DisableLoadbalancer bool          `mapstructure:"disableLoadbalancer" yaml:"disableLoadbalancer" json:"disableLoadbalancer,omitempty"`
+	// EnableIngress             bool          `mapstructure:"enableIngress" yaml:"enableIngress" json:"enableIngress,omitempty"`
+	DisableImageVolume         bool `mapstructure:"disableImageVolume" yaml:"disableImageVolume" json:"disableImageVolume,omitempty"`
+	NoRollback                 bool `mapstructure:"disableRollback" yaml:"disableRollback" json:"disableRollback,omitempty"`
+	PrepDisableHostIPInjection bool `mapstructure:"disableHostIPInjection" yaml:"disableHostIPInjection" json:"disableHostIPInjection,omitempty"`
 	// SELinux To leverage SELinux, specify the --selinux flag when starting K3s servers and agents.
 	// https://rancher.com/docs/k3s/latest/en/advanced/
 	// +optional
@@ -382,7 +452,7 @@ type Datastore struct {
 	// Provider Database name ("mysql", "postgres", "etcd")
 	Provider string `mapstructure:"provider" yaml:"provider" json:"provider,omitempty"`
 	Username string `mapstructure:"username" yaml:"username" json:"username,omitempty"`
-	Password string `mapstructure:"password" yaml:"password" json:"password,omitempty"`
+	Password string `mapstructure:"DB_PASSWORD"`
 	Host     string `mapstructure:"host" yaml:"host,omitempty" json:"host,omitempty"`
 	// Port DataBase port
 	// +optional
@@ -407,11 +477,12 @@ type ClusterSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Region            string                        `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Provider          string                        `mapstructure:"provider" json:"provider" yaml:"provider"`
 	Operator          bool                          `mapstructure:"operator" yaml:"operator" json:"operator,omitempty"`
-	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"`         //nolint:lll    // default 1
-	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`            //nolint:lll    // default 0
-	ClusterToken      string                        `mapstructure:"clusterToken" yaml:"clusterToken" json:"clusterToken,omitempty"` // default: auto-generated
-	AgentToken        string                       	`mapstructure:"agentToken" yaml:"agentToken" json:"agentToken,omitempty"` // default: auto-generated
+	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"` //nolint:lll    // default 1
+	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`    //nolint:lll    // default 0
+	ClusterToken      string                        `mapstructure:"clusterToken" yaml:"clusterToken" json:"clusterToken,omitempty"`
+	AgentToken        string                        `mapstructure:"agentToken" yaml:"agentToken" json:"agentToken,omitempty"`
 	Bastions          []*BastionNode                `mapstructure:"bastions" yaml:"bastions" json:"bastions,omitempty"`
 	Nodes             []*Node                       `mapstructure:"nodes" yaml:"nodes" json:"nodes,omitempty"`
 	Labels            []LabelWithNodeFilters        `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
@@ -465,19 +536,13 @@ type ClusterSpec struct {
 	NTP *NTP `json:"ntp,omitempty"`
 }
 
-type providerProcess struct {
-	ContextName string
-	Event       string
-	Fn          func(interface{})
-}
-
 // ClusterStatus defines the observed state of Cluster
 type ClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Status      string `json:"status,omitempty"`
-  MasterNodes []Node `json:"master-nodes,omitempty"`
-  WorkerNodes []Node `json:"worker-nodes,omitempty"`
+	Status      string  `json:"status,omitempty"`
+	MasterNodes []*Node `json:"masters,omitempty"`
+	WorkerNodes []*Node `json:"workers,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -489,36 +554,7 @@ type Cluster struct {
 
 	Spec   ClusterSpec   `json:"spec,omitempty"`
 	Status ClusterStatus `json:"status,omitempty"`
-	M              *sync.Map
-	Logger         *logrus.Logger
-	Callbacks      map[string]*providerProcess
 }
-
-// NewBaseProvider new base provider.
-func NewBaseProvider() *Cluster {
-	return &Cluster{
-		// Metadata: types.Metadata{
-		// 	UI:            ui,
-		// 	K3sVersion:    k3sVersion,
-		// 	K3sChannel:    k3sChannel,
-		// 	InstallScript: k3sInstallScript,
-		// 	Cluster:       embedEtcd,
-		// 	Master:        master,
-		// 	Worker:        worker,
-		// 	ClusterCidr:   defaultCidr,
-		// 	DockerScript:  dockerInstallScript,
-		// },
-		Status: ClusterStatus{
-			MasterNodes: make([]Node, 0),
-			WorkerNodes: make([]Node, 0),
-		},
-		// SSH: types.SSH{
-		// 	SSHPort: "22",
-		// },
-		M: new(syncmap.Map),
-	}
-}
-
 
 // +kubebuilder:object:root=true
 
@@ -527,6 +563,113 @@ type ClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Cluster `json:"items"`
+}
+
+// type K3sExecOptions struct {
+// 	Datastore           string
+// 	ExtraArgs           []string
+// 	FlannelIPSec        bool
+// 	NoExtras            bool
+// 	LoadBalancer        *LoadBalancer
+// 	Networking          *Networking
+// 	Options 						*Options
+// 	K3sChannel          string
+// 	KubernetesVersion 	string
+// 	ClusterToken 				string
+// 	AgentToken 					string
+// 	Ingress             string
+// 	// DisableLoadbalancer bool
+// 	// DisableIngress      bool
+// 	// SELinux             bool
+// 	// Rootless            bool
+
+// 	// SecretsEncryption   bool
+// }
+
+type K3sIstallOptions struct {
+	ExecString   string
+	LoadBalancer string
+	Ingress      string
+	CNI          string
+	Backend      string
+	K3sVersion   string
+	K3sChannel   string
+	IsCluster    bool
+	Node         *Node
+}
+type K3sWorkerOptions struct {
+	JoinAgentCommand string `json:"joinAgentCommand,omitempty"`
+	ExecString       string `json:"execString,omitempty"`
+	ApiServerAddres  string `json:"apiServerAddres,omitempty"`
+	ApiServerPort    int32  `json:"apiServerPort,omitempty"`
+	Token            string `json:"token,omitempty"`
+	K3sVersion       string `json:"k3sVersion,omitempty"`
+	K3sChannel       string `json:"k3sChannel,omitempty"`
+}
+
+type EnvServer struct {
+	K3sDatastoreEndpoint string `mapstructure:"K3S_DATASTORE_ENDPOINT"`
+	K3sDatastoreXafile   string `mapstructure:"K3S_DATASTORE_CAFILE"`
+	K3sDatastoreCertfile string `mapstructure:"K3S_DATASTORE_CERTFILE"`
+	K3sDatastoreKeyfile  string `mapstructure:"K3S_DATASTORE_KEYFILE"`
+	AwsAccessKeyId       string `mapstructure:"AWS_ACCESS_KEY_ID"`
+	AwsSecretAccessKey   string `mapstructure:"AWS_SECRET_ACCESS_KEY"`
+	K3sToken             string `mapstructure:"K3S_TOKEN"`
+	K3sTokenFile         string `mapstructure:"K3S_TOKEN_FILE"`
+	K3sKubeconfigOutput  string `mapstructure:"K3S_KUBECONFIG_OUTPUT"`
+	K3sKubeconfigMode    string `mapstructure:"K3S_KUBECONFIG_MODE"`
+	K3sNodeName          string `mapstructure:"K3S_NODE_NAME"`
+	K3sSelinux           string `mapstructure:"K3S_SELINUX"`
+	K3sLbServerPort      string `mapstructure:"K3S_LB_SERVER_PORT"`
+	K3sResolvConf        string `mapstructure:"K3S_RESOLV_CONF"`
+	K3sAgentToken        string `mapstructure:"K3S_AGENT_TOKEN"`
+	K3sAgentTokenFile    string `mapstructure:"K3S_AGENT_TOKEN_FILE"`
+	K3sUrl               string `mapstructure:"K3S_URL"`
+	K3sClusterInit       string `mapstructure:"K3S_CLUSTER_INIT"`
+	K3sClusterReset      string `mapstructure:"K3S_CLUSTER_RESET"`
+	K3sClusterSecret     string `mapstructure:"K3S_CLUSTER_SECRET"`
+}
+
+type EnvConfig struct {
+	DBPassword          string `mapstructure:"DB_PASSWORD"`
+	HcloudToken         string `mapstructure:"HCLOUD_TOKEN"`
+	AwsAccessKeyId      string `mapstructure:"AWS_ACCESS_KEY_ID"`
+	AwsSecretAccessKey  string `mapstructure:"AWS_SECRET_ACCESS_KEY"`
+	AzureClientId       string `mapstructure:"ARM_CLIENT_ID"`
+	AzureClientSecret   string `mapstructure:"ARM_CLIENT_SECRET"`
+	AzureTenantId       string `mapstructure:"ARM_TENANT_ID"`
+	AzureSubscriptionId string `mapstructure:"ARM_SUBSCRIPTION_ID"`
+}
+type HelmInterfaces struct {
+	Name       string `yaml:"name" json:"name"`
+	Namespace  string `yaml:"namespace" json:"namespace"`
+	Revision   int    `yaml:"revision" json:"revision"`
+	Updated    string `yaml:"updated" json:"updated"`
+	Status     string `yaml:"status" json:"status"`
+	Chart      string `yaml:"chart" json:"chart"`
+	AppVersion string `yaml:"app_version" json:"app_version"`
+}
+
+type HelmRelease struct {
+	Wait           bool             `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
+	UpdateStrategy string           `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
+	Releases       []HelmInterfaces `mapstructure:"releases" yaml:"releases" json:"releases,omitempty"`
+}
+
+// GetHelmRelease return installed release
+func GetHelmRelease(name string, releases []HelmInterfaces) (ok bool, result HelmInterfaces) {
+	for _, item := range releases {
+		// log.Debugf("Release: %s VERSION: %s STATUS: %s", item.Name, item.AppVersion, item.Status)
+		// log.Warnf("%s == %s", item.Name, name)
+		if item.Name == name {
+			return true, item
+		}
+	}
+	return false, result
+}
+
+func (r *Cluster) GetProvider() string {
+	return r.Spec.Provider
 }
 
 func (r *Cluster) GetUser(name string) User {
@@ -541,7 +684,7 @@ func (r *Cluster) GetUser(name string) User {
 }
 
 // GetDatastore connection string
-func (r *Cluster) GetDatastore() (string, error) {
+func (r *Cluster) GetDatastore(dbPassword string) (string, error) {
 	conUrl := ""
 	if len(r.Spec.Datastore.Provider) == 0 {
 		return "", errors.New("Is not set datastore.provider")
@@ -552,8 +695,8 @@ func (r *Cluster) GetDatastore() (string, error) {
 	if len(r.Spec.Datastore.Host) == 0 {
 		return "", errors.New("Is not set datastore.host")
 	}
-	if len(r.Spec.Datastore.Password) == 0 {
-		return "", errors.New("Is not set datastore.password")
+	if len(dbPassword) == 0 {
+		return "", errors.New("Is not set DB_PASSWORD")
 	}
 	if len(r.Spec.Datastore.Username) == 0 {
 		return "", errors.New("Is not set datastore.username")
@@ -566,13 +709,13 @@ func (r *Cluster) GetDatastore() (string, error) {
 		// K3S_DATASTORE_CERTFILE='/path/to/client.crt' \
 		// K3S_DATASTORE_KEYFILE='/path/to/client.key' \
 		// k3s server
-		conUrl = fmt.Sprintf("mysql://%s:%s@tcp(%s:%d)/%s", r.Spec.Datastore.Username, r.Spec.Datastore.Password, r.Spec.Datastore.Host, r.Spec.Datastore.Port, r.Spec.Datastore.Name)
+		conUrl = fmt.Sprintf("mysql://%s:%s@tcp(%s:%d)/%s", r.Spec.Datastore.Username, dbPassword, r.Spec.Datastore.Host, r.Spec.Datastore.Port, r.Spec.Datastore.Name)
 	} else if r.Spec.Datastore.Provider == DatastorePostgreSql {
 		if r.Spec.Datastore.Port == 0 {
 			r.Spec.Datastore.Port = 5432
 		}
 		// K3S_DATASTORE_ENDPOINT='postgres://username:password@hostname:5432/k3s' k3s server
-		conUrl = fmt.Sprintf("postgres://%s:%s@%s:%d/%s", r.Spec.Datastore.Username, r.Spec.Datastore.Password, r.Spec.Datastore.Host, r.Spec.Datastore.Port, r.Spec.Datastore.Name)
+		conUrl = fmt.Sprintf("postgres://%s:%s@%s:%d/%s", r.Spec.Datastore.Username, dbPassword, r.Spec.Datastore.Host, r.Spec.Datastore.Port, r.Spec.Datastore.Name)
 	} else {
 		return "", errors.New(fmt.Sprintf("Is not suport Datastore provider %s.", r.Spec.Datastore.Provider))
 	}
@@ -592,6 +735,45 @@ func (r *Cluster) GetTlsSan(node *Node, vpc *Networking) (tlsSAN []string) {
 		}
 	}
 	return tlsSAN
+}
+
+// GetAPIServerUrl url для подключения к API серверу
+// TODO: delete
+func (r *Cluster) GetAPIServerUrl(masters []ContrelPlanNodes, vpc *Networking, isExternal bool) (apiServerUrl string, err error) {
+	if isExternal {
+		for _, item := range vpc.APIServerAddresses {
+			if string(item.Type) == ExternalDNS {
+				return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+			} else if string(item.Type) == ExternalIP {
+				return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+			}
+		}
+	}
+	for _, item := range vpc.APIServerAddresses {
+		if string(item.Type) == InternalDNS {
+			return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+		} else if string(item.Type) == InternalIP {
+			return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+		} else if string(item.Type) == ExternalDNS {
+			return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+		} else if string(item.Type) == ExternalIP {
+			return fmt.Sprintf("https://%s:%d", item.Address, vpc.APIServerPort), nil
+		}
+	}
+
+	for _, item := range masters {
+		if isExternal {
+			nodeIP, ok := r.GetNodeAddress(item.Node, "external")
+			if ok {
+				return fmt.Sprintf("https://%s:%d", nodeIP, vpc.APIServerPort), nil
+			}
+		}
+		nodeIP, ok := r.GetNodeAddress(item.Node, "internal")
+		if ok {
+			return fmt.Sprintf("https://%s:%d", nodeIP, vpc.APIServerPort), nil
+		}
+	}
+	return "", fmt.Errorf("Is NOT set Api server URL")
 }
 
 // GetAPIServerAddress возвращает hostname  or ip API Server
@@ -630,6 +812,7 @@ func (r *Cluster) GetAPIServerAddress(node *Node, vpc *Networking) (apiServerAdd
 // GetBastion search and return bastion host
 // для работы через baston смотреть README
 func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err error) {
+	log.Debugf("[GetBastion] 1) name: %s node: %s", name, node.Name)
 	bastion = &BastionNode{
 		SshPort:          SshPortDefault,
 		SSHAuthorizedKey: SshKeyDefault,
@@ -637,10 +820,11 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 	if name == "localhost" || name == "127.0.0.1" || name == "local" {
 		bastion.Name = "local"
 		bastion.Address = "127.0.0.1"
+		log.Debugf("[GetBastion] 2) connect address: %s", bastion.Address)
 		return bastion, nil
 	}
 	if len(node.Addresses) == 0 {
-		return bastion, errors.New(fmt.Sprintf("Is not set addresses in node %s", node.Name))
+		return bastion, fmt.Errorf("Is not set addresses in node %s", node.Name)
 	}
 
 	if len(name) == 0 || name == InternalIP || name == InternalDNS || name == ExternalDNS || name == ExternalIP {
@@ -648,28 +832,37 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 			if name == string(addr.Type) {
 				bastion.Address = addr.Address
 				bastion.Name = string(addr.Type)
-				bastion.RemoteAddress = addr.Address
+				// bastion.RemoteAddress = addr.Address
+				log.Warnf("[GetBastion] 3) connect address: %s, remote address: %s", bastion.Address, bastion.RemoteAddress)
 				return bastion, nil
 			}
 		}
 		bastion.Address = node.Addresses[0].Address
 		bastion.Name = string(node.Addresses[0].Type)
 		bastion.User = node.User
+		log.Warnf("[GetBastion] 4) connect address: %s, remote address: %s", bastion.Address, bastion.RemoteAddress)
 		return bastion, nil
 	}
 
-	for _, node := range r.Spec.Bastions {
-		if name == node.Name {
-			if node.SshPort == 0 {
-				node.SshPort = SshPortDefault
+	for _, item := range r.Spec.Bastions {
+		if item.SshPort == 0 {
+			item.SshPort = SshPortDefault
+		}
+		if len(item.SSHAuthorizedKey) == 0 {
+			item.SSHAuthorizedKey = SshKeyDefault
+		}
+		if name != node.Name {
+			remoteAddress, ok := r.GetNodeAddress(node, "internal")
+			if ok {
+				item.RemoteAddress = remoteAddress
+				item.RemoteUser = node.User
+				item.RemotePort = SshPortDefault
 			}
-			if len(node.SSHAuthorizedKey) == 0 {
-				node.SSHAuthorizedKey = SshKeyDefault
-			}
-			return node, nil
+			log.Warnf("[GetBastion] 5) connect address: %s, remote address: %s", item.Address, item.RemoteAddress)
+			return item, nil
 		}
 	}
-	return bastion, errors.New(fmt.Sprintf("Is not bastion %s host.", name))
+	return bastion, fmt.Errorf("Is not bastion %s host.", name)
 }
 
 func Find(slice []string, val string) (string, bool) {
@@ -717,7 +910,6 @@ func (r *Cluster) GetNodeAddress(node *Node, valType string) (string, bool) {
 	}
 	return res, false
 }
-
 
 func init() {
 	SchemeBuilder.Register(&Cluster{}, &ClusterList{})

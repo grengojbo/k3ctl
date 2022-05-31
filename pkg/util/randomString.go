@@ -22,6 +22,7 @@ THE SOFTWARE.
 package util
 
 import (
+	"encoding/hex"
 	"math/rand"
 	"strings"
 	"time"
@@ -33,12 +34,6 @@ const (
 	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
 	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 )
-// Borrowed from https://github.com/AliyunContainerService/docker-machine-driver-aliyunecs/blob/master/aliyunecs/utils.go#L38.
-const digital = "0123456789"
-// const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-const specialChars = "()`~!@#$%^&*-+=|{}[]:;'<>,.?/"
-const dictionary = digital + letterBytes + specialChars
-const passwordLen = 16
 
 var src = rand.NewSource(time.Now().UnixNano())
 
@@ -64,23 +59,12 @@ func GenerateRandomString(n int) string {
 	return sb.String()
 }
 
-func RandomPassword() string {
-	var bytes = make([]byte, passwordLen)
-	_, _ = rand.Read(bytes)
-	for k, v := range bytes {
-		var ch byte
-
-		switch k {
-		case 0:
-			ch = letterBytes[v%byte(len(letterBytes))]
-		case 1:
-			ch = digital[v%byte(len(digital))]
-		case 2:
-			ch = specialChars[v%byte(len(specialChars))]
-		default:
-			ch = dictionary[v%byte(len(dictionary))]
-		}
-		bytes[k] = ch
+// // RandomToken generate random token.
+func RandomToken(size int) (string, error) {
+	token := make([]byte, size)
+	_, err := rand.Read(token)
+	if err != nil {
+		return "", err
 	}
-	return string(bytes)
+	return hex.EncodeToString(token), err
 }

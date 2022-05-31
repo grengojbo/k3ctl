@@ -111,7 +111,52 @@ func createDirIfNotExists(path string) error {
 	return nil
 }
 
-func GerConfigFileName(configFile string) (configFilePath string) {
+// GetEnvDir
+func GetEnvDir(clusterName string) (envPath string) {
+	envFile := ".env"
+	// file, err := afero.ReadFile(v.fs, filename)
+	// if err != nil {
+	// 	return err
+	// }
+	// if _, err := afero.Exists(configFile); err != nil {
+	// 	log.Errorf("")
+	// }
+	envFileVariablesDir := fmt.Sprintf("./variables/%s/%s", clusterName, envFile)
+	if _, err := os.Stat(envFileVariablesDir); err != nil {
+		envFileVariables := fmt.Sprintf("./variables/%s", envFile)
+		if _, err := os.Stat(envFileVariables); err != nil {
+			if _, err := os.Stat(envFile); err != nil {
+				envFileHomeDir := fmt.Sprintf("~/%s/%s", clusterName, envFile)
+				if _, err := os.Stat(envFileHomeDir); err != nil {
+					envFileDefaultDir := fmt.Sprintf("~/%s/%s/%s", types.DefaultConfigDirName, clusterName, envFile)
+					if _, err := os.Stat(envFileDefaultDir); err != nil {
+						envFileDefaultFile := fmt.Sprintf("~/%s/%s", types.DefaultConfigDirName, envFile)
+						if _, err := os.Stat(envFileDefaultFile); err == nil {
+							return envFileDefaultFile
+						}
+					} else {
+						return envFileDefaultDir
+					}
+				} else {
+					return envFileHomeDir
+				}
+				// // log.Fatalf("%+v", err)
+				// log.Fatalln(messageError)
+			} else {
+				return envFile
+			}
+		} else {
+			return envFileVariables
+		}
+	} else {
+		return envFileVariablesDir
+	}
+	return ""
+}
+
+// GetConfigFileName load config from file
+// seach path <clusterName>.yaml, ./variables/<clusterName>.yaml, ~/<clusterName>/cluster.yaml, ~/.k3s/<clusterName>.yaml, ~/.k3s/<clusterName>/cluster.yaml
+func GetConfigFileName(configFile string) (configFilePath string) {
 	messageError := "Is NOT cluster config file:"
 	if configFile == "sample" {
 		return "config/samples/k3s_v1alpha1_cluster.yaml"

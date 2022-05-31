@@ -22,26 +22,24 @@ THE SOFTWARE.
 package kubeconfig
 
 import (
-	"fmt"
+
 	// "os"
 	// "path"
 	// "strings"
 
 	// "github.com/rancher/k3d/v5/cmd/util"
 	// "github.com/rancher/k3d/v5/pkg/client"
-	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/tools/clientcmd"
-
 	// "github.com/rancher/k3d/v5/pkg/runtimes"
 	// k3d "github.com/rancher/k3d/v5/pkg/types"
 	// k3dutil "github.com/rancher/k3d/v5/pkg/util"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	// "k8s.io/client-go/tools/clientcmd"
 )
 
 type mergeKubeconfigFlags struct {
 	all           bool
-	// output        string
+	output        string
 	targetDefault bool
 }
 
@@ -50,18 +48,17 @@ func NewCmdKubeconfigMerge() *cobra.Command {
 
 	// writeKubeConfigOptions := client.WriteKubeConfigOptions{}
 
-	mergeKubeconfigFlags := mergeKubeconfigFlags{}
+	// mergeKubeconfigFlags := mergeKubeconfigFlags{}
 
 	// create new command
 	cmd := &cobra.Command{
-		Use:               "merge [CLUSTER [CLUSTER [...]] | --all]",
-		Aliases:           []string{"write"},
-		Long:              `Write/Merge kubeconfig(s) from cluster(s) into new or existing kubeconfig/file.`,
-		Short:             "Write/Merge kubeconfig(s) from cluster(s) into new or existing kubeconfig/file.",
+		Use:     "merge [CLUSTER [CLUSTER [...]] | --all]",
+		Aliases: []string{"write"},
+		Long:    `Write/Merge kubeconfig(s) from cluster(s) into new or existing kubeconfig/file.`,
+		Short:   "Write/Merge kubeconfig(s) from cluster(s) into new or existing kubeconfig/file.",
 		// ValidArgsFunction: util.ValidArgsAvailableClusters,
-		Args:              cobra.MinimumNArgs(0),
+		Args: cobra.MinimumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Warnln("TODO: merge kubeconfig")
 			// var clusters []*k3d.Cluster
 			// var err error
 
@@ -123,6 +120,7 @@ func NewCmdKubeconfigMerge() *cobra.Command {
 			// if errorGettingKubeconfig {
 			// 	os.Exit(1)
 			// }
+			log.Errorln("TODO")
 		},
 	}
 
@@ -131,11 +129,11 @@ func NewCmdKubeconfigMerge() *cobra.Command {
 	// if err := cmd.MarkFlagFilename("output"); err != nil {
 	// 	l.Log().Fatalln("Failed to mark flag --output as filename")
 	// }
-	cmd.Flags().BoolVarP(&mergeKubeconfigFlags.targetDefault, "kubeconfig-merge-default", "d", false, fmt.Sprintf("Merge into the default kubeconfig ($KUBECONFIG or %s)", clientcmd.RecommendedHomeFile))
+	// cmd.Flags().BoolVarP(&mergeKubeconfigFlags.targetDefault, "kubeconfig-merge-default", "d", false, fmt.Sprintf("Merge into the default kubeconfig ($KUBECONFIG or %s)", clientcmd.RecommendedHomeFile))
 	// cmd.Flags().BoolVarP(&writeKubeConfigOptions.UpdateExisting, "update", "u", true, "Update conflicting fields in existing kubeconfig")
 	// cmd.Flags().BoolVarP(&writeKubeConfigOptions.UpdateCurrentContext, "kubeconfig-switch-context", "s", true, "Switch to new context")
 	// cmd.Flags().BoolVar(&writeKubeConfigOptions.OverwriteExisting, "overwrite", false, "[Careful!] Overwrite existing file, ignoring its contents")
-	cmd.Flags().BoolVarP(&mergeKubeconfigFlags.all, "all", "a", false, "Get kubeconfigs from all existing clusters")
+	// cmd.Flags().BoolVarP(&mergeKubeconfigFlags.all, "all", "a", false, "Get kubeconfigs from all existing clusters")
 
 	// done
 	return cmd

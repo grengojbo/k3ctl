@@ -19,22 +19,32 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package client
+package k3s
 
-// "bytes"
-// "context"
-// "fmt"
-// "io"
-// "os"
-// "path/filepath"
-// "time"
+import (
+	// "bytes"
+	// "context"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 
-// l "github.com/rancher/k3d/v5/pkg/logger"
-// "github.com/rancher/k3d/v5/pkg/runtimes"
-// k3d "github.com/rancher/k3d/v5/pkg/types"
-// log "github.com/sirupsen/logrus"
-// "k8s.io/client-go/tools/clientcmd"
-// clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	// "io"
+	// "os"
+	// "path/filepath"
+	"time"
+
+	// l "github.com/rancher/k3d/v5/pkg/logger"
+	// "github.com/rancher/k3d/v5/pkg/runtimes"
+	// k3d "github.com/rancher/k3d/v5/pkg/types"
+	"github.com/grengojbo/k3ctl/pkg/util"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+)
 
 // WriteKubeConfigOptions provide a set of options for writing a KubeConfig file
 type WriteKubeConfigOptions struct {
@@ -225,86 +235,255 @@ type WriteKubeConfigOptions struct {
 
 // }
 
-// // KubeconfigMerge merges a new kubeconfig into an existing kubeconfig and returns the result
-// func KubeconfigMerge(ctx context.Context, newKubeConfig *clientcmdapi.Config, existingKubeConfig *clientcmdapi.Config, outPath string, overwriteConflicting bool, updateCurrentContext bool) error {
+// func KubeconfigMerge(srcKubeConfig string) (newKubeConfig *clientcmdapi.Config) {
+// 	log.Infof("%v", clientcmd.RecommendedConfigPathEnvVar)
+// 	newKubeConfig = clientcmdapi.NewConfig()
 
-// 	log.Tracef("Merging new Kubeconfig:\n%+v\n>>> into existing Kubeconfig:\n%+v", newKubeConfig, existingKubeConfig)
-
-// 	// Overwrite values in existing kubeconfig
-// 	for k, v := range newKubeConfig.Clusters {
-// 		if _, ok := existingKubeConfig.Clusters[k]; ok {
-// 			if !overwriteConflicting {
-// 				return fmt.Errorf("Cluster '%s' already exists in target KubeConfig", k)
-// 			}
-// 		}
-// 		existingKubeConfig.Clusters[k] = v
-// 	}
-
-// 	for k, v := range newKubeConfig.AuthInfos {
-// 		if _, ok := existingKubeConfig.AuthInfos[k]; ok {
-// 			if !overwriteConflicting {
-// 				return fmt.Errorf("AuthInfo '%s' already exists in target KubeConfig", k)
-// 			}
-// 		}
-// 		existingKubeConfig.AuthInfos[k] = v
-// 	}
-
-// 	for k, v := range newKubeConfig.Contexts {
-// 		if _, ok := existingKubeConfig.Contexts[k]; ok && !overwriteConflicting {
-// 			return fmt.Errorf("Context '%s' already exists in target KubeConfig", k)
-// 		}
-// 		existingKubeConfig.Contexts[k] = v
-// 	}
-
-// 	// Set current context if it's
-// 	// a) empty
-// 	// b) not empty, but we want to update it
-// 	if existingKubeConfig.CurrentContext == "" {
-// 		updateCurrentContext = true
-// 	}
-// 	if updateCurrentContext {
-// 		log.Debugf("Setting new current-context '%s'", newKubeConfig.CurrentContext)
-// 		existingKubeConfig.CurrentContext = newKubeConfig.CurrentContext
-// 	}
-
-// 	return KubeconfigWrite(ctx, existingKubeConfig, outPath)
-// }
-
-// // KubeconfigWrite writes a kubeconfig to a path atomically
-// func KubeconfigWrite(ctx context.Context, kubeconfig *clientcmdapi.Config, path string) error {
-// 	tempPath := fmt.Sprintf("%s.k3d_%s", path, time.Now().Format("20060102_150405.000000"))
-// 	if err := clientcmd.WriteToFile(*kubeconfig, tempPath); err != nil {
-// 		return fmt.Errorf("failed to write merged kubeconfig to temporary file '%s': %w", tempPath, err)
-// 	}
-
-// 	// Move temporary file over existing KubeConfig
-// 	if err := os.Rename(tempPath, path); err != nil {
-// 		return fmt.Errorf("failed to overwrite existing KubeConfig '%s' with new kubeconfig '%s': %w", path, tempPath, err)
-// 	}
-
-// 	log.Debugf("Wrote kubeconfig to '%s'", path)
-
+// 	// k := clientcmd.NewDefaultClientConfigLoadingRules()
+// 	// newKubeConfig = clientcmdapi.NewCmdKubeconfig()
 // 	return nil
 // }
 
-// // KubeconfigGetDefaultFile loads the default KubeConfig file
-// func KubeconfigGetDefaultFile() (*clientcmdapi.Config, error) {
-// 	path, err := KubeconfigGetDefaultPath()
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to get default kubeconfig path: %w", err)
-// 	}
-// 	log.Debugf("Using default kubeconfig '%s'", path)
-// 	return clientcmd.LoadFromFile(path)
-// }
+// KubeconfigMerge merges a new kubeconfig into an existing kubeconfig and returns the result
+func KubeconfigMerge(newKubeConfig *clientcmdapi.Config, existingKubeConfig *clientcmdapi.Config, outPath string, opts WriteKubeConfigOptions) error {
 
-// // KubeconfigGetDefaultPath returns the path of the default kubeconfig, but errors if the KUBECONFIG env var specifies more than one file
-// func KubeconfigGetDefaultPath() (string, error) {
-// 	defaultKubeConfigLoadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-// 	if len(defaultKubeConfigLoadingRules.GetLoadingPrecedence()) > 1 {
-// 		return "", fmt.Errorf("multiple kubeconfigs specified via KUBECONFIG env var: Please reduce to one entry, unset KUBECONFIG or explicitly choose an output")
-// 	}
-// 	return defaultKubeConfigLoadingRules.GetDefaultFilename(), nil
-// }
+	log.Debugf("Merging new Kubeconfig:\n%+v\n>>> into existing Kubeconfig:\n%+v", newKubeConfig, existingKubeConfig)
+
+	// Overwrite values in existing kubeconfig
+	for k, v := range newKubeConfig.Clusters {
+		if _, ok := existingKubeConfig.Clusters[k]; ok {
+			if !opts.OverwriteExisting {
+				return fmt.Errorf("Cluster '%s' already exists in target KubeConfig", k)
+			}
+		}
+		existingKubeConfig.Clusters[k] = v
+	}
+
+	for k, v := range newKubeConfig.AuthInfos {
+		if _, ok := existingKubeConfig.AuthInfos[k]; ok {
+			if !opts.OverwriteExisting {
+				return fmt.Errorf("AuthInfo '%s' already exists in target KubeConfig", k)
+			}
+		}
+		existingKubeConfig.AuthInfos[k] = v
+	}
+
+	for k, v := range newKubeConfig.Contexts {
+		if _, ok := existingKubeConfig.Contexts[k]; ok && !opts.OverwriteExisting {
+			return fmt.Errorf("Context '%s' already exists in target KubeConfig", k)
+		}
+		existingKubeConfig.Contexts[k] = v
+	}
+
+	// Set current context if it's
+	// a) empty
+	// b) not empty, but we want to update it
+	if existingKubeConfig.CurrentContext == "" {
+		opts.UpdateCurrentContext = true
+	}
+	if opts.UpdateCurrentContext {
+		log.Debugf("Setting new current-context '%s'", newKubeConfig.CurrentContext)
+		existingKubeConfig.CurrentContext = newKubeConfig.CurrentContext
+	}
+
+	return KubeconfigWrite(existingKubeConfig, outPath)
+}
+
+// KubeconfigWrite writes a kubeconfig to a path atomically
+func KubeconfigWrite(kubeconfig *clientcmdapi.Config, path string) error {
+	tempPath := fmt.Sprintf("%s.k3s_%s", path, time.Now().Format("20060102_150405.000000"))
+	if err := clientcmd.WriteToFile(*kubeconfig, tempPath); err != nil {
+		return fmt.Errorf("failed to write merged kubeconfig to temporary file '%s': %w", tempPath, err)
+	}
+
+	// Move temporary file over existing KubeConfig
+	if err := os.Rename(tempPath, path); err != nil {
+		return fmt.Errorf("failed to overwrite existing KubeConfig '%s' with new kubeconfig '%s': %w", path, tempPath, err)
+	}
+
+	log.Debugf("Wrote kubeconfig to '%s'", path)
+
+	return nil
+}
+
+// KubeconfigTmpWrite write kubeconfig to tmp file
+func KubeconfigTmpWrite(kubeconfig *clientcmdapi.Config) (path string, err error) {
+	// path = fmt.Sprintf("%s.k3s_%s", path, time.Now().Format("20060102_150405.000000"))
+	tmpPath, err := ioutil.TempFile("", "k3s_*.yaml")
+	if err != nil {
+		log.Fatal(err)
+	}
+	path = tmpPath.Name()
+	if err := clientcmd.WriteToFile(*kubeconfig, path); err != nil {
+		return path, fmt.Errorf("failed to write merged kubeconfig to temporary file '%s': %w", path, err)
+	}
+	// log.Debugf("Wrote kubeconfig tmp to '%s'", path)
+	return path, nil
+}
+
+// LoadKubeconfig
+func LoadKubeconfig(cfg, ip, context string, opts WriteKubeConfigOptions) (kubeconfig *clientcmdapi.Config, err error) {
+	// log.Debugf("cfg: %v", cfg)
+	if len(cfg) == 0 {
+		return nil, fmt.Errorf("[LoadKubeconfig] %s", "Is not kubeconfig")
+	}
+	// kubeconfig, err = clientcmd.LoadFromFile(absPath)
+	kubeconfig, err = clientcmd.Load([]byte(cfg))
+	if err != nil {
+		// log.Errorf("[LoadKubeconfig] %v", err.Error())
+		return nil, err
+	}
+
+	// update the server URL
+	kubeconfig.Clusters["default"].Server = ip
+
+	// rename user from default to admin
+	newAuthInfoName := fmt.Sprintf("admin@%s", context)
+	kubeconfig.AuthInfos[newAuthInfoName] = kubeconfig.AuthInfos["default"]
+	delete(kubeconfig.AuthInfos, "default")
+
+	// rename cluster from default to clustername
+	kubeconfig.Clusters[context] = kubeconfig.Clusters["default"]
+	delete(kubeconfig.Clusters, "default")
+
+	// rename context from default to clustername
+	kubeconfig.Contexts[context] = kubeconfig.Contexts["default"]
+	delete(kubeconfig.Contexts, "default")
+
+	// update context with new values for cluster and user
+	kubeconfig.Contexts[context].AuthInfo = newAuthInfoName
+	kubeconfig.Contexts[context].Cluster = context
+
+	// set current-context to new context name
+	kubeconfig.CurrentContext = context
+
+	return kubeconfig, err
+}
+
+func SaveKubeconfig(kubeconfig *clientcmdapi.Config, opts WriteKubeConfigOptions) (pathKubeConfig string, err error) {
+
+	pathKubeConfig, existingKubeConfig, err := KubeconfigGetDefaultFile()
+	if err != nil {
+		// log.Errorf("-------[ERROR] defaultPathKubeconfig: %v", err.Error())
+		existingKubeConfig = clientcmdapi.NewConfig()
+	}
+	// log.Warnf("------- defaultPathKubeconfig: %s", existingKubeConfig)
+	err = KubeconfigMerge(kubeconfig, existingKubeConfig, pathKubeConfig, opts)
+	// path, err := os.Stat(defaultPathKubeconfig)
+	// if err !=nil {
+	// 	log.Errorf("-------[ERROR] File exits: %v", err.Error())
+	// }
+	// log.Warnf("------- file: %s", path.Name())
+	return pathKubeConfig, err
+}
+
+// RemoveCfg removes kubectl config file.
+func RemoveCfg(context string) (err error) {
+	pathKubeConfig, existingKubeConfig, err := KubeconfigGetDefaultFile()
+	if err != nil {
+		// log.Errorf("-------[ERROR] defaultPathKubeconfig: %v", err.Error())
+		existingKubeConfig = clientcmdapi.NewConfig()
+	}
+	if existingKubeConfig.CurrentContext == context {
+		existingKubeConfig.CurrentContext = ""
+	}
+
+	delete(existingKubeConfig.Contexts, context)
+	delete(existingKubeConfig.Clusters, context)
+	delete(existingKubeConfig.AuthInfos, context)
+
+	// the auth info entry associated with the context needs to be deleted.
+	for key := range existingKubeConfig.AuthInfos {
+		if strings.Contains(key, fmt.Sprintf("@%s", context)) {
+			delete(existingKubeConfig.AuthInfos, key)
+		}
+	}
+
+	// p.Log.Debugf("Deleteted kubeconfig: %s", pathKubeConfig)
+	// v, _ := yaml.Marshal(existingKubeConfig)
+	// p.Log.Debugf("-----------------------\n%s", v)
+	if err := clientcmd.WriteToFile(*existingKubeConfig, pathKubeConfig); err != nil {
+		return fmt.Errorf("failed to write merged kubeconfig to temporary file '%s': %w", pathKubeConfig, err)
+	}
+	return nil
+}
+
+// / SaveCfg save kube config file.
+func SaveCfg(cfg, ip, context string, opts WriteKubeConfigOptions) (pathKubeConfig string, err error) {
+	kubeconfig, err := LoadKubeconfig(cfg, ip, context, opts)
+	if err != nil {
+		return pathKubeConfig, err
+	}
+
+	pathKubeConfig, existingKubeConfig, err := KubeconfigGetDefaultFile()
+	if err != nil {
+		existingKubeConfig = clientcmdapi.NewConfig()
+	}
+	err = KubeconfigMerge(kubeconfig, existingKubeConfig, pathKubeConfig, opts)
+	return pathKubeConfig, err
+}
+
+func SwitchContext(ctx, kubeconfig string) (err error) {
+	// config := LoadConfigFromPath(kubeconfig)
+	// rawConfig, err := config.RawConfig()
+	// if err != nil {
+	// 	return err
+	// }
+	// if rawConfig.Contexts[ctx] == nil {
+	// 	return fmt.Errorf("context %s doesn't exists", ctx)
+	// }
+	// rawConfig.CurrentContext = ctx
+	// err = clientcmd.ModifyConfig(clientcmd.NewDefaultPathOptions(), rawConfig, true)
+	return
+}
+
+func BuildKubeConfigFromFlags(context string) (*rest.Config, error) {
+	var err error
+	var path string
+
+	pathKubeConfig := viper.GetString("kubeconfig")
+	if len(pathKubeConfig) > 0 {
+		path, _ = filepath.Abs(util.ExpandPath(pathKubeConfig))
+	} else {
+		path, err = KubeconfigGetDefaultPath()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get default kubeconfig path: %w", err)
+		}
+	}
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: path},
+		&clientcmd.ConfigOverrides{
+			CurrentContext: context,
+		}).ClientConfig()
+}
+
+// KubeconfigGetDefaultFile loads the default KubeConfig file
+func KubeconfigGetDefaultFile() (string, *clientcmdapi.Config, error) {
+	var err error
+	var path string
+
+	pathKubeConfig := viper.GetString("kubeconfig")
+	if len(pathKubeConfig) > 0 {
+		path, _ = filepath.Abs(util.ExpandPath(pathKubeConfig))
+	} else {
+		path, err = KubeconfigGetDefaultPath()
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to get default kubeconfig path: %w", err)
+		}
+	}
+	log.Debugf("Using default kubeconfig '%s'", path)
+	newKubeConfig, err := clientcmd.LoadFromFile(path)
+	return path, newKubeConfig, err
+}
+
+// KubeconfigGetDefaultPath returns the path of the default kubeconfig, but errors if the KUBECONFIG env var specifies more than one file
+func KubeconfigGetDefaultPath() (string, error) {
+	defaultKubeConfigLoadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	if len(defaultKubeConfigLoadingRules.GetLoadingPrecedence()) > 1 {
+		return "", fmt.Errorf("multiple kubeconfigs specified via KUBECONFIG env var: Please reduce to one entry, unset KUBECONFIG or explicitly choose an output")
+	}
+	return defaultKubeConfigLoadingRules.GetDefaultFilename(), nil
+}
 
 // // KubeconfigRemoveClusterFromDefaultConfig removes a cluster's details from the default kubeconfig
 // func KubeconfigRemoveClusterFromDefaultConfig(ctx context.Context, cluster *k3d.Cluster) error {

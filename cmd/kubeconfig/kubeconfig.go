@@ -24,7 +24,15 @@ package kubeconfig
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+// var ClusterName string
+var NodeName string
+var ConfigFile string
+var CfgViper = viper.New()
+var PpViper = viper.New()
+var DryRun bool
 
 // NewCmdKubeconfig returns a new cobra command
 func NewCmdKubeconfig() *cobra.Command {
@@ -34,6 +42,7 @@ func NewCmdKubeconfig() *cobra.Command {
 		Use:   "kubeconfig",
 		Short: "Manage kubeconfig(s)",
 		Long:  `Manage kubeconfig(s)`,
+
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := cmd.Help(); err != nil {
 				log.Errorln("Couldn't get help text")

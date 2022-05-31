@@ -28,14 +28,13 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 
 	// "github.com/spf13/viper"
 
-	conf "github.com/grengojbo/k3ctl/api/v1alpha1"
+	"github.com/grengojbo/k3ctl/controllers"
 	"github.com/grengojbo/k3ctl/pkg/config"
-	k3s "github.com/grengojbo/k3ctl/pkg/k3s"
 	"github.com/grengojbo/k3ctl/pkg/types"
-	"github.com/grengojbo/k3ctl/pkg/util"
 
 	// dockerunits "github.com/docker/go-units"
 	// cliutil "github.com/rancher/k3d/v5/cmd/util"
@@ -50,8 +49,6 @@ import (
 // NewCmdNodeCreate returns a new cobra command
 func NewCmdNodeAdd() *cobra.Command {
 
-	// createNodeOpts := k3d.NodeCreateOpts{}
-
 	// create new command
 	cmd := &cobra.Command{
 		Use:   "add",
@@ -59,108 +56,45 @@ func NewCmdNodeAdd() *cobra.Command {
 		Long:  `Add a new containerized k3s node.`,
 		Args:  cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			DryRun = viper.GetBool("dry-run")
-			
+
+			cmdFlags.DryRun = viper.GetBool("dry-run")
+			cmdFlags.DebugLogging = viper.GetBool("verbose")
+			cmdFlags.TraceLogging = viper.GetBool("trace")
+
 			NodeName = args[0]
 			// --cluster
-			ClusterName, err := cmd.Flags().GetString("cluster")
+			clusterName, err := cmd.Flags().GetString("cluster")
 			if err != nil {
 				log.Fatalln(err)
 			}
-			ConfigFile = config.InitConfig(ClusterName, CfgViper, PpViper)
+			ConfigFile = config.InitConfig(clusterName, CfgViper, PpViper)
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			isAddNode := false
+			// isAddNode := false
 			/*************************
 			 * Compute Configuration *
 			 *************************/
-			 cfg, err := config.FromViperSimple(CfgViper)
-			 if err != nil {
-				 log.Fatalln(err)
-			 }
-			if len(cfg.Spec.Nodes) == 0 {
-				log.Fatalln("Is Not Nodes to install k3s cluster")
-			}
-
-			servers, agents, err := util.GetGroupNodes(cfg.Spec.Nodes)
+			c, err := controllers.NewClusterFromConfig(CfgViper, cmdFlags)
 			if err != nil {
 				log.Fatalln(err)
 			}
-			k3sOpt := k3s.K3sExecOptions{
-				// 	NoExtras:     k3sNoExtras,
-				ExtraArgs:           cfg.Spec.K3sOptions.ExtraServerArgs,
-				Ingress:             cfg.Spec.Addons.Ingress.Name,
-				DisableLoadbalancer: cfg.Spec.Options.DisableLoadbalancer,
-				DisableIngress:      cfg.Spec.Options.DisableIngress,
-				SecretsEncryption:   cfg.Spec.Options.SecretsEncryption,
-				SELinux:             cfg.Spec.Options.SELinux,
-				Rootless:            cfg.Spec.Options.Rootless,
-				LoadBalancer:        &cfg.Spec.LoadBalancer,
-				Networking:          &cfg.Spec.Networking,
-			}
-			masters := []conf.ContrelPlanNodes{}
-			for _, node := range servers {
-				if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
-					log.Fatalln(err.Error())
-				} else {
-					masters = append(masters, conf.ContrelPlanNodes{
-						Bastion: bastion,
-						Node: node,
-					})
-					if node.Name == NodeName {
-						log.Infof("TODO: Add master Node: %s", node.Name)		
-					}
-				}
+
+			cfg, _ := yaml.Marshal(c.Cluster)
+			log.Tracef("Simple Config:\n%s", cfg)
+
+			if len(c.Cluster.Spec.Nodes) == 0 {
+				log.Fatalln("Is Not Nodes to install k3s cluster")
 			}
 
-			token, err := k3s.GetAgentToken(masters, DryRun)
-				if err != nil {
-					log.Fatalln(err.Error())
-				}
-				
-				// log.Debugf("K3S_TOKEN=%s", token)
-				for _, node := range agents {
-					if node.Name == NodeName {
-						if bastion, err := cfg.GetBastion(node.Bastion, node); err != nil {
-							log.Fatalln(err.Error())
-						} else {
-							apiServerAddres, err := cfg.GetAPIServerAddress(node, &cfg.Spec.Networking)
-							if err != nil {
-								log.Fatal(err)
-							}
-							cnt := cfg.GetNodeLabels(node)
-							log.Warnf("=-> cnt: %d", cnt)
-							// log.Warnf("apiServerAddresses: %s", apiServerAddres)
-							installk3sAgentExec := k3s.MakeAgentInstallExec(apiServerAddres, token, k3sOpt)
-							installk3sAgentExec.K3sChannel = cfg.Spec.K3sChannel
-							installk3sAgentExec.K3sVersion = cfg.Spec.KubernetesVersion
-							installk3sAgentExec.Node = node
-
-							if err := k3s.RunK3sCommand(bastion, &installk3sAgentExec, DryRun); err != nil {
-								log.Fatalln(err.Error())
-							}
-							log.Infof("Successfully added Agent Node: %s", node.Name)
-							isAddNode = true
-						}
-					}
-				}
-			// node, clusterName := parseCreateNodeCmd(cmd, args)
-			// if strings.HasPrefix(clusterName, "https://") {
-			// 	l.Log().Infof("Adding %d node(s) to the remote cluster '%s'...", len(nodes), clusterName)
-			// 	if err := k3dc.NodeAddToClusterMultiRemote(cmd.Context(), runtimes.SelectedRuntime, nodes, clusterName, createNodeOpts); err != nil {
-			// 		l.Log().Fatalf("failed to add %d node(s) to the remote cluster '%s': %v", len(nodes), clusterName, err)
-			// 	}
-			// } else {
-			// 	l.Log().Infof("Adding %d node(s) to the runtime local cluster '%s'...", len(nodes), clusterName)
-			// 	if err := k3dc.NodeAddToClusterMulti(cmd.Context(), runtimes.SelectedRuntime, nodes, &k3d.Cluster{Name: clusterName}, createNodeOpts); err != nil {
-			// 		l.Log().Fatalf("failed to add %d node(s) to the runtime local cluster '%s': %v", len(nodes), clusterName, err)
-			// 	}
+			// if ok := c.AddNode(NodeName); ok {
+			// 	isAddNode = true
 			// }
-			if !isAddNode {
-				log.Errorf("Is NOT set node: %v", NodeName)
-			}
-			// l.Log().Infof("Successfully created %d node(s)!", len(nodes))
+			// if !isAddNode {
+			// 	log.Errorf("Is NOT set node: %v", NodeName)
+			// } else {
+			// 	log.Infof("Successfully added %s node(s)!", NodeName)
+			// }
 		},
 	}
 
