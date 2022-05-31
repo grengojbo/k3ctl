@@ -27,3 +27,6 @@ k3ctl
 .env
 /variables
 /variables/*/
+dist/
+
+dist/
