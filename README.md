@@ -4,7 +4,7 @@
 Download and install
 
 ```bash
-https://raw.githubusercontent.com/grengojbo/k3ctl/main/install.sh
+curl -sfL https://raw.githubusercontent.com/grengojbo/k3ctl/main/install.sh | sh -
 ```
 
 ```bash
@@ -34,7 +34,6 @@ Example create cluster
 
 ```bash
 ./k3ctl cluster create sample --dry-run --verbosee
-ssh login@ip -C "sudo cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/cluster-name.yaml
 ```
 
 ## For developers
@@ -60,59 +59,4 @@ ssh login@ip -C "sudo cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/cluster-name.yaml
 
 ```bash
 ./k3ctl kubeconfig get sample --kubeconfig-switch-context=false
-```
-
-## Monitoring
-
-TODO: добавить скрипт
-
-```bash
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-helm repo add netdata https://netdata.github.io/helmchart/
-helm repo update
-helm upgrade -i --wait -f ./variables/cloud/netdata.yaml -n monitoring netdata netdata/netdata
-```
-
-```bash
-kubectl label nodes --all node-role.kubernetes.io/MyRole=true
-# --node-label 'kubernetes.io/role=agent'
-
-./k3ctl cluster create --verbose -c sample -h
- 4326  ./k3ctl cluster create -c sample --k3s-version v1.19
- 4327  ./k3ctl cluster create --verbose -c sample --k3s-version v1.19
- 4370  ./k3ctl cluster create --verbose -c sample
- 4388  ./k3ctl cluster create -c sample -h
- 4389  ./k3ctl cluster create -c sample --trace
- 4396  ./k3ctl cluster create -c sample --dry-run --debug
- 4397  ./k3ctl cluster create -c sample --dry-run --verbose --no-lb=true
- 4398  ./k3ctl cluster create -c sample --dry-run --verbose --no-lb
- 4400  ./k3ctl cluster create -c sample --dry-run --verbose --no-ingress
- 4402  ./k3ctl cluster create -c sample --dry-run -h
- 4403  ./k3ctl cluster create -c sample --dry-run --secrets-encryption
- 4404  ./k3ctl cluster create -c sample --dry-run --rootless
- 4405  ./k3ctl cluster create -c sample --dry-run --selinux
- 4406  sudo ./k3ctl cluster create -c sample
- 4409  ./k3ctl cluster create -c sample --dry-run
- 4419  sudo ./k3ctl cluster create -c sample --verbose
- 4420  ./k3ctl cluster create -c sample --verbose
- 4421  ./k3ctl cluster create -c sample
- 4575  ./k3ctl cluster create -c sample --dry-run --verbose
- 4580  ./k3ctl cluster create --dry-run --verbose
- 4581  ./k3ctl cluster create --dry-run --verbose sample
- 4582  ./k3ctl cluster create sample --dry-run --verbose aaa
- 4583  ./k3ctl cluster create --dry-run --verbose aaa
- 4584  ./k3ctl cluster create sample --dry-run
- 4585  git clone git@github.com:grengojbo/k3ctl.git
- 4586  cd k3ctl
- 4595  ./k3ctl cluster create aaa --dry-run --verbose
- 4596  ./k3ctl cluster create samle --dry-run --verbose
- 4597  ./k3ctl cluster create sample --dry-run --verbose
- 4598  ./k3ctl cluster create developer --dry-run --verbose
- 4599  ./k3ctl cluster create developer --dry-run
- 4600  ./k3ctl cluster create aaa --dry-run
- 4601  ./k3ctl cluster create noname --dry-run
- 4602  ./k3ctl cluster create demo --dry-run
- 4603  ./k3ctl cluster create demo -h
-
- ./k3ctl node --dry-run --verbose add k3s-worker3 -c sample
 ```
