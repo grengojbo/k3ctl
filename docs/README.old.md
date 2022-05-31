@@ -49,6 +49,30 @@ ssh login@ip -C "sudo cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/cluster-name.yaml
       bastion: mybastion
 ```
 
+и в се
+
+```bash
+kubeadm token generate
+kubeadm certs certificate-key
+
+sudo cat /var/lib/rancher/k3s/server/node-token
+sudo kubectl get nodes --selector='node-role.kubernetes.io/worker' -o json | jq -r '.items[].status.nodeInfo.kubeletVersion' | sort -u | tr '+' '-'
+
+```
+
+```bash
+curl -sfL https://get.k3s.io | K3S_URL='https://<IP>:6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='v1.23' sh -s -
+```
+
+```bash
+WORKER_NODE=$(kubectl get node -o jsonpath='{.items[*].metadata.name}' --selector='!node-role.kubernetes.io/master')
+for n in ${WORKER_NODE}
+  do
+    echo "kubectl label node ${n} node-role.kubernetes.io/worker=worker"
+  done
+kubectl get nodes -o wide
+```
+
 Неизменять текущий контест
 
 ```bash
