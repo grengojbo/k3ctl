@@ -1,0 +1,11 @@
+--2022-05-31 18:37:09--  https://api.github.com/repos/grengojbo/k3ctl/releases/latest
+Распознаётся api.github.com (api.github.com)… 140.82.121.6
+Подключение к api.github.com (api.github.com)|140.82.121.6|:443... соединение установлено.
+HTTP-запрос отправлен. Ожидание ответа… 200 OK
+Длина: 13089 (13K) [application/json]
+Сохранение в: «latest.3»
+
+     0K .......... ..                                         100%  441K=0,03s
+
+2022-05-31 18:37:09 (441 KB/s) - «latest.3» сохранён [13089/13089]
+
