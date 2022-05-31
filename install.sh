@@ -4,6 +4,7 @@ PROJECT_NAME=k3ctl
 GITHUB_ACCOUNT=grengojbo
 APP_CHANNEL=latest
 GITHUB_URL=https://github.com/${GITHUB_ACCOUNT}/${PROJECT_NAME}/releases
+STORAGE_URL=STORAGE_URL=https://storage.googleapis.com/k3s-ci-builds
 
 APP_ARHIVE_NAME=k3ctl_0.1.1_linux_amd64.tar.gz
 # https://github.com/grengojbo/k3ctl/releases/download/v0.1.1/${APP_ARHIVE_NAME}
@@ -38,6 +39,15 @@ fatal()
 {
   echo '[ERROR] ' "$@" >&2
   exit 1
+}
+
+GetOS() {
+  OS=`uname -s`
+  case "$OS" in
+    Darwin) OS="darwin" ;;
+    Linux) OS="linux" ;;
+    FreeBSD) OS="FreeBSD" ;;
+  esac
 }
 
 # --- set arch and suffix, fatal if architecture not supported ---
@@ -89,7 +99,7 @@ verify_downloader() {
 setup_tmp() {
     TMP_DIR=$(mktemp -d -t k3ctl-install.XXXXXXXXXX)
     TMP_HASH=${TMP_DIR}/k3ctl.hash
-    TMP_BIN=${TMP_DIR}/k3ctl.bin
+    TMP_BIN=${TMP_DIR}/k3ctl.tar.gz
     cleanup() {
         code=$?
         set +e
@@ -103,13 +113,7 @@ setup_tmp() {
 # --- use desired k3s version if defined or find version from channel ---
 get_release_version() {
 	echo "Getting download page for latest release"
-    # if [ -n "${INSTALL_K3S_COMMIT}" ]; then
-    #     VERSION_K3S="commit ${INSTALL_K3S_COMMIT}"
-    # elif [ -n "${INSTALL_K3S_VERSION}" ]; then
-    #     VERSION_K3S=${INSTALL_K3S_VERSION}
-    # else
-  # info "Finding release for channel ${INSTALL_K3S_CHANNEL}"
-  info "Finding release for channel ${APP_CHANNEL}"
+ 	info "Finding release for channel ${APP_CHANNEL}"
     #     version_url="${INSTALL_K3S_CHANNEL_URL}/${INSTALL_K3S_CHANNEL}"
   case $DOWNLOADER in
     curl)
@@ -124,8 +128,8 @@ get_release_version() {
       fatal "Incorrect downloader executable '$DOWNLOADER'"
       ;;
   esac
-    # fi
-    info "Using ${APP_VERSION} as release"
+	APP_ARHIVE_NAME=${PROJECT_NAME}_${OS}_${ARCH}_${APP_VERSION}.tar.gz
+	info "Using ${APP_VERSION} as release"
 }
 
 # --- download from github url ---
@@ -155,33 +159,83 @@ download_hash() {
     # else
     #     HASH_URL=${GITHUB_URL}/download/${VERSION_K3S}/sha256sum-${ARCH}.txt
     # fi
-  HASH_URL=${GITHUB_URL}/download/${APP_VERSION}/sha256sum-${ARCH}.txt
-	https://github.com/grengojbo/k3ctl/releases/download/v0.1.1/${PROJECT_NAME}_0.1.1_checksums.txt
-    # info "Downloading hash ${HASH_URL}"
-    # download ${TMP_HASH} ${HASH_URL}
-    # HASH_EXPECTED=$(grep " k3s${SUFFIX}$" ${TMP_HASH})
-    # HASH_EXPECTED=${HASH_EXPECTED%%[[:blank:]]*}
+  HASH_URL=${GITHUB_URL}/download/${APP_VERSION}/checksums.txt
+    info "Downloading hash ${HASH_URL}"
+    download ${TMP_HASH} ${HASH_URL}
+		# cat ${TMP_HASH}
+    HASH_EXPECTED=$(grep " ${APP_ARHIVE_NAME}" ${TMP_HASH})
+    HASH_EXPECTED=${HASH_EXPECTED%%[[:blank:]]*}
+		# echo "HASH_EXPECTED: ${HASH_EXPECTED}"
 }
+
+# --- check hash against installed version ---
+installed_hash_matches() {
+  if [ -x ${BIN_DIR}/${PROJECT_NAME} ]; then
+    HASH_INSTALLED=$(sha256sum ${BIN_DIR}/${PROJECT_NAME})
+    HASH_INSTALLED=${HASH_INSTALLED%%[[:blank:]]*}
+    if [ "${HASH_EXPECTED}" = "${HASH_INSTALLED}" ]; then
+      return
+    fi
+  fi
+  return 1
+}
+
+# --- download binary from github url ---
+download_binary() {
+  # if [ -n "${INSTALL_K3S_COMMIT}" ]; then
+  #   BIN_URL=${STORAGE_URL}/k3s${SUFFIX}-${INSTALL_K3S_COMMIT}
+  # else
+  #   BIN_URL=${GITHUB_URL}/download/${VERSION_K3S}/k3s${SUFFIX}
+  # fi
+  BIN_URL=${GITHUB_URL}/download/${APP_VERSION}/${APP_ARHIVE_NAME}
+  info "Downloading binary ${BIN_URL}"
+  download ${TMP_BIN} ${BIN_URL}
+}
+
+# --- verify downloaded binary hash ---
+verify_binary() {
+  info "Verifying binary download"
+  HASH_BIN=$(sha256sum ${TMP_BIN})
+  HASH_BIN=${HASH_BIN%%[[:blank:]]*}
+  if [ "${HASH_EXPECTED}" != "${HASH_BIN}" ]; then
+    fatal "Download sha256 does not match ${HASH_EXPECTED}, got ${HASH_BIN}"
+  fi
+}
+
+# --- setup permissions and move binary to system directory ---
+setup_binary() {
+	# echo "TMP_BIN: ${TMP_BIN}"
+	# echo "Untarring..."
+	# tar -zxvf ${TMP_BIN}
+	# ls -l ${TMP_BIN}
+	chmod 755 ${TMP_BIN}
+  info "Installing ${PROJECT_NAME} to ${BIN_DIR}/${PROJECT_NAME}"
+  $SUDO chown root:root ${TMP_BIN}
+  $SUDO mv -f ${TMP_BIN} ${BIN_DIR}/${PROJECT_NAME}
+}
+
 # --- download and verify k3s ---
 download_and_verify() {
   setup_verify_arch
-	echo "ARCH: ${ARCH}"
+	GetOS
+	echo "ARCH: ${ARCH} OS: ${OS}"
   verify_downloader curl1 || verify_downloader wget || fatal 'Can not find curl or wget for downloading files'
   setup_tmp
   get_release_version
-    # download_hash
+  download_hash
 
-    # if installed_hash_matches; then
-    #     info 'Skipping binary downloaded, installed k3s matches hash'
-    #     return
-    # fi
+  if installed_hash_matches; then
+    info 'Skipping binary downloaded, installed k3s matches hash'
+    return
+  fi
 
-    # download_binary
-    # verify_binary
-    # setup_binary
+  download_binary
+  verify_binary
+  setup_binary
 }
 
-InstallApp() {
+# --- define needed environment variables ---
+setup_env() {
 	# --- use sudo if we are not already root ---
 	SUDO=sudo
   if [ $(id -u) -eq 0 ]; then
@@ -202,4 +256,5 @@ InstallApp() {
 
 }
 
+setup_env
 download_and_verify
