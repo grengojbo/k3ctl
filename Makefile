@@ -36,7 +36,7 @@ patch:  ##  Set patch version
 downloads: ## Download library
 	@curl -L -o kubebuilder https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/kubebuilder_linux_amd64
 	@chmod +x kubebuilder && mv kubebuilder /usr/local/bin/
-	@curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+	@#curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
 
 # Run tests
 test: generate fmt vet manifests
