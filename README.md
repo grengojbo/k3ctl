@@ -1,5 +1,12 @@
 # k3ctl management k3s kubernetes clusters
 
+
+Download and install
+
+```bash
+https://raw.githubusercontent.com/grengojbo/k3ctl/main/install.sh
+```
+
 ```bash
 export AWS_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
 export AWS_SECRET_ACCESS_KEY=<YOUR_SECRET_ACCESS_KEY>
