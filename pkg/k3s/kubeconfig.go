@@ -247,7 +247,7 @@ type WriteKubeConfigOptions struct {
 // KubeconfigMerge merges a new kubeconfig into an existing kubeconfig and returns the result
 func KubeconfigMerge(newKubeConfig *clientcmdapi.Config, existingKubeConfig *clientcmdapi.Config, outPath string, opts WriteKubeConfigOptions) error {
 
-	log.Debugf("Merging new Kubeconfig:\n%+v\n>>> into existing Kubeconfig:\n%+v", newKubeConfig, existingKubeConfig)
+	log.Tracef("Merging new Kubeconfig:\n%+v\n>>> into existing Kubeconfig:\n%+v", newKubeConfig, existingKubeConfig)
 
 	// Overwrite values in existing kubeconfig
 	for k, v := range newKubeConfig.Clusters {

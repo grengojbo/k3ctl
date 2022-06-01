@@ -32,7 +32,7 @@ import (
 	"github.com/grengojbo/k3ctl/pkg/config"
 	log "github.com/sirupsen/logrus"
 
-	// k3s "github.com/grengojbo/k3ctl/pkg/k3s"
+	k3s "github.com/grengojbo/k3ctl/pkg/k3s"
 
 	"github.com/grengojbo/k3ctl/controllers"
 	// log "github.com/sirupsen/logrus"
@@ -92,6 +92,21 @@ func NewCmdKubeconfigGet() *cobra.Command {
 
 			// обновляем статус нод
 			c.LoadNodeStatus()
+			// Array master nodes
+			// masters := c.GetMasterNodes()
+			// a, err := c.GetKubeconfig(masters[0])
+
+			if c.Clientset != nil {
+				log.Infoln("Save kubeconfig to file...")
+				opts := k3s.WriteKubeConfigOptions{
+					OverwriteExisting:    true,
+					UpdateCurrentContext: c.Cluster.Spec.KubeconfigOptions.SwitchCurrentContext,
+				}
+				_, err := k3s.SaveKubeconfig(c.Config, opts)
+				if err != nil {
+					log.Errorf(err.Error())
+				}
+			}
 
 			// if !getKubeconfigFlags.all {
 			// 	for _, clusterName := range args {
