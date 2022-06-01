@@ -36,10 +36,10 @@ var (
 	isCli    = "yes"
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
-	version = "dev"
-  commit  = "none"
-  date    = "unknown"
-  builtBy = "unknown"
+	version  = "dev"
+	commit   = "none"
+	date     = "unknown"
+	builtBy  = "unknown"
 )
 
 func init() {

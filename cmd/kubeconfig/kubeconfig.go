@@ -22,17 +22,19 @@ THE SOFTWARE.
 package kubeconfig
 
 import (
+	"github.com/grengojbo/k3ctl/pkg/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-// var ClusterName string
 var NodeName string
 var ConfigFile string
-var CfgViper = viper.New()
-var PpViper = viper.New()
-var DryRun bool
+var cfgViper = viper.New()
+var ppViper = viper.New()
+
+var clusterName string
+var cmdFlags types.CmdFlags
 
 // NewCmdKubeconfig returns a new cobra command
 func NewCmdKubeconfig() *cobra.Command {

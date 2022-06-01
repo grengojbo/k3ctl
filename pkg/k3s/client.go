@@ -43,6 +43,9 @@ func GetClusterConfig(context string) (*kubernetes.Clientset, error) {
 
 // GetKubeconfig подключаемся к мастеру и скачиваем kubeconfig
 func GetKubeconfig(masters []k3sv1alpha1.ContrelPlanNodes, dryRun bool) (kubeconfig string, err error) {
+	if dryRun {
+		return "", nil
+	}
 	if len(masters) == 0 {
 		return "", fmt.Errorf("Is NOT set control plane nodes")
 	}

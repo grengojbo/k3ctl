@@ -153,6 +153,7 @@ func NewCmdClusterCreate() *cobra.Command {
 			// обновляем статус нод
 			c.LoadNodeStatus()
 
+			// log.Debugln("------- CreateK3sCluster --------")
 			// servers, agents, err := util.GetGroupNodes(cfg.Spec.Nodes)
 			if err = c.CreateK3sCluster(); err != nil {
 				log.Fatalln(err)

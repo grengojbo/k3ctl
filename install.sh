@@ -6,7 +6,6 @@ APP_CHANNEL=latest
 GITHUB_URL=https://github.com/${GITHUB_ACCOUNT}/${PROJECT_NAME}/releases
 STORAGE_URL=STORAGE_URL=https://storage.googleapis.com/k3s-ci-builds
 
-APP_ARHIVE_NAME=k3ctl_0.1.1_linux_amd64.tar.gz
 # https://github.com/grengojbo/k3ctl/releases/download/v0.1.1/${APP_ARHIVE_NAME}
 # pause
 # echo "Finding download url"
@@ -99,7 +98,7 @@ verify_downloader() {
 setup_tmp() {
     TMP_DIR=$(mktemp -d -t k3ctl-install.XXXXXXXXXX)
     TMP_HASH=${TMP_DIR}/k3ctl.hash
-    TMP_BIN=${TMP_DIR}/k3ctl.tar.gz
+    TMP_BIN=${TMP_DIR}/k3ctl.bin
     cleanup() {
         code=$?
         set +e
@@ -128,7 +127,7 @@ get_release_version() {
       fatal "Incorrect downloader executable '$DOWNLOADER'"
       ;;
   esac
-	APP_ARHIVE_NAME=${PROJECT_NAME}_${OS}_${ARCH}_${APP_VERSION}.tar.gz
+	APP_ARHIVE_NAME=${PROJECT_NAME}_${OS}_${ARCH}_${APP_VERSION}
 	info "Using ${APP_VERSION} as release"
 }
 
