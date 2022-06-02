@@ -1706,6 +1706,16 @@ func (p *ProviderBase) SetAddons() {
 	releases := []k3sv1alpha1.HelmInterfaces{}
 	json.Unmarshal(stdOut, &releases)
 
+	// Curren Install Ingress
+	currentIngress := ""
+	toIngress := ""
+	for _, release := range releases {
+		if _, ok := k3sv1alpha1.Find(types.IngressControllers, release.Name); ok {
+			currentIngress = release.Name
+		}
+	}
+	p.Log.Warnf("currentIngress: %s", currentIngress)
+
 	ns := []string{}
 	helmDeleteReleases := []k3sv1alpha1.HelmInterfaces{}
 	for i, item := range p.HelmRelease.Releases {
@@ -1717,10 +1727,17 @@ func (p *ProviderBase) SetAddons() {
 				helmDeleteReleases = append(helmDeleteReleases, item)
 			}
 		}
+		if _, ok := k3sv1alpha1.Find(types.IngressControllers, item.Name); ok {
+			toIngress = item.Name
+		}
 		ns = append(ns, item.Namespace)
 		p.HelmRelease.Releases[i] = item
 		p.Log.Debugf("Release: %s VERSION: %s STATUS: %s", p.HelmRelease.Releases[i].Name, p.HelmRelease.Releases[i].AppVersion, p.HelmRelease.Releases[i].Status)
 	}
+	// if currentIngress != toIngress {
+	// 	ingressDeleteReleases := k3sv1alpha1.HelmInterfaces{}
+	// 	// TODO
+	// }
 
 	module.CreateNamespace(ns, kubeConfigPath, p.CmdFlags.DryRun)
 	updateRepo := true
