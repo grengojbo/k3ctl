@@ -60,3 +60,9 @@ Example create cluster
 ```bash
 ./k3ctl kubeconfig get sample --kubeconfig-switch-context=false
 ```
+
+Удаление ноды из кластера
+
+```bash
+./k3ctl node delete <node name> -c <cluster name> 
+```

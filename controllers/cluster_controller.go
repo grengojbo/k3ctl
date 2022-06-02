@@ -182,6 +182,29 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		cfg.Spec.AgentToken = util.GenerateRandomString(32)
 	}
 
+	// Set default addons
+	// if len(cfg.Spec.Addons.Ingress.Name) == 0 {
+	// 	cfg.Spec.Addons.Ingress.Name = "ingress-nginx"
+	// }
+	if !cfg.Spec.Addons.CertManager.Disabled {
+		if len(cfg.Spec.Addons.CertManager.Name) == 0 {
+			cfg.Spec.Addons.CertManager.Name = "cert-manager"
+		}
+		if len(cfg.Spec.Addons.CertManager.Namespace) == 0 {
+			cfg.Spec.Addons.CertManager.Namespace = "cert-manager"
+		}
+		// if len(cfg.Spec.Addons.CertManager.Repo) == 0 {
+		// 	cfg.Spec.Addons.CertManager.Namespace = "cert-manager"
+		// }
+		HelmCertManager := k3sv1alpha1.HelmInterfaces{
+			Name: cfg.Spec.Addons.CertManager.Name,
+			Namespace: cfg.Spec.Addons.CertManager.Namespace,
+			Repo: "jetstack/cert-manager",
+			Url: "https://charts.jetstack.io",
+		}
+		p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmCertManager)
+	}
+
 	if len(cfg.Spec.KubeconfigOptions.ConnectType) == 0 {
 		cfg.Spec.KubeconfigOptions.ConnectType = k3sv1alpha1.InternalIP
 	}
@@ -1626,28 +1649,45 @@ func (p *ProviderBase) sshStream(command string, isPrint bool) {
 
 // SetAddons
 func (p *ProviderBase) SetAddons() {
-	kubeConfigPath, err := k3s.KubeconfigTmpWrite(p.Config)
+	// var err = Error
+	kubeConfigPath, err := k3s.KubeconfigGetDefaultPath()
 	if err != nil {
-		p.Log.Errorf("[KubeconfigTmpWrite] %s\n%v", err.Error())
+		p.Log.Errorf("[%s] %s\n", "SetAddons", err.Error())
 	}
-	defer os.RemoveAll(kubeConfigPath)
-
+	p.Log.Warnf("[SetAddons] Config: %v", kubeConfigPath)
+	if p.Config != nil {
+		kubeConfigPath, err := k3s.KubeconfigTmpWrite(p.Config)
+		if err != nil {
+			p.Log.Errorf("[KubeconfigTmpWrite] %s\n", err.Error())
+		}
+		defer os.RemoveAll(kubeConfigPath)
+	}
 	// helm list
 	command := fmt.Sprintf(types.HelmListCommand, kubeConfigPath)
 	stdOut, _, err := k3s.RunLocalCommand(command, false, p.CmdFlags.DryRun)
+	// stdOut: [{"name":"ingress-nginx","namespace":"ingress-nginx","revision":"5","updated":"2022-06-02 18:09:39.232841792 +0300 EEST","status":"deployed","chart":"ingress-nginx-4.1.3","app_version":"1.2.1"}]
+	// p.Log.Debugf("stdOut: %s", stdOut)
 	if err != nil {
-		p.Log.Errorf("[RunLocalCommand] %s\n%v", err.Error())
+		p.Log.Errorf("[RunLocalCommand] %v\n", err.Error())
 	}
 
-	json.Unmarshal(stdOut, &p.HelmRelease.Releases)
-	if len(p.HelmRelease.Releases) > 0 {
-		for _, item := range p.HelmRelease.Releases {
-			p.Log.Debugf("Release: %s VERSION: %s STATUS: %s", item.Name, item.AppVersion, item.Status)
-		}
+	// Installed Helm charts
+	releases := []k3sv1alpha1.HelmInterfaces{}
+	json.Unmarshal(stdOut, &releases)
+	// p.Log.Warn(releases)
+	
+	// json.Unmarshal(stdOut, &p.HelmRelease.Releases)
+	// if len(p.HelmRelease.Releases) > 0 {
+	for _, item := range p.HelmRelease.Releases {
+		p.Log.Debugf("Release: %s VERSION: %s STATUS: %s", item.Name, item.AppVersion, item.Status)
 	}
+	// }
 
-	isRun := true
+	module.CreateNamespace("test", kubeConfigPath, p.CmdFlags.DryRun)
+
+	isRun := false
 	if isRun {
+		// if !p.CmdFlags.DryRun {
 		// Install MetalLB in L2 (ARP) mode
 		if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
 			p.Log.Warnln("TODO: add support MetalLb...")

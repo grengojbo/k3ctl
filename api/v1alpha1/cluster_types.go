@@ -643,6 +643,8 @@ type EnvConfig struct {
 type HelmInterfaces struct {
 	Name       string `yaml:"name" json:"name"`
 	Namespace  string `yaml:"namespace" json:"namespace"`
+	Repo  string `yaml:"repo" json:"repo"`
+	Url  string `yaml:"url" json:"url"`
 	Revision   int    `yaml:"revision" json:"revision"`
 	Updated    string `yaml:"updated" json:"updated"`
 	Status     string `yaml:"status" json:"status"`
