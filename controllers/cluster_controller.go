@@ -186,24 +186,55 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	// if len(cfg.Spec.Addons.Ingress.Name) == 0 {
 	// 	cfg.Spec.Addons.Ingress.Name = "ingress-nginx"
 	// }
-	if !cfg.Spec.Addons.CertManager.Disabled {
-		if len(cfg.Spec.Addons.CertManager.Name) == 0 {
-			cfg.Spec.Addons.CertManager.Name = "cert-manager"
-		}
-		if len(cfg.Spec.Addons.CertManager.Namespace) == 0 {
-			cfg.Spec.Addons.CertManager.Namespace = "cert-manager"
-		}
-		// if len(cfg.Spec.Addons.CertManager.Repo) == 0 {
-		// 	cfg.Spec.Addons.CertManager.Namespace = "cert-manager"
-		// }
-		HelmCertManager := k3sv1alpha1.HelmInterfaces{
-			Name: cfg.Spec.Addons.CertManager.Name,
-			Namespace: cfg.Spec.Addons.CertManager.Namespace,
-			Repo: "jetstack/cert-manager",
-			Url: "https://charts.jetstack.io",
-		}
-		p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmCertManager)
+
+	//
+	HelmCertManager := k3sv1alpha1.HelmInterfaces{
+		Repo: "jetstack",
+		// Repo:   "jetstack/cert-manager",
+		Url:    "https://charts.jetstack.io",
+		Values: cfg.Spec.Addons.CertManager.Values,
 	}
+	if cfg.Spec.Addons.CertManager.Disabled {
+		HelmCertManager.Deleted = true
+	}
+	if len(cfg.Spec.Addons.CertManager.Name) == 0 {
+		HelmCertManager.Name = "cert-manager"
+	} else {
+		HelmCertManager.Name = cfg.Spec.Addons.CertManager.Name
+	}
+	if len(cfg.Spec.Addons.CertManager.Namespace) == 0 {
+		HelmCertManager.Namespace = "cert-manager"
+	} else {
+		HelmCertManager.Namespace = cfg.Spec.Addons.CertManager.Namespace
+	}
+	if len(cfg.Spec.Addons.CertManager.Version) > 0 {
+		HelmCertManager.Version = cfg.Spec.Addons.CertManager.Version
+	}
+	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmCertManager)
+
+	//
+	HelmIngress := k3sv1alpha1.HelmInterfaces{
+		Repo:   "ingress-nginx",
+		Url:    types.NginxHelmURL,
+		Values: cfg.Spec.Addons.Ingress.Values,
+	}
+	if cfg.Spec.Addons.Ingress.Disabled {
+		HelmIngress.Deleted = true
+	}
+	if len(cfg.Spec.Addons.Ingress.Name) == 0 {
+		HelmIngress.Name = types.NginxDefaultName
+	} else {
+		HelmIngress.Name = cfg.Spec.Addons.Ingress.Name
+	}
+	if len(cfg.Spec.Addons.Ingress.Namespace) == 0 {
+		HelmIngress.Namespace = types.NginxDefaultNamespace
+	} else {
+		HelmIngress.Namespace = cfg.Spec.Addons.Ingress.Namespace
+	}
+	if len(cfg.Spec.Addons.Ingress.Version) > 0 {
+		HelmIngress.Version = cfg.Spec.Addons.Ingress.Version
+	}
+	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmIngress)
 
 	if len(cfg.Spec.KubeconfigOptions.ConnectType) == 0 {
 		cfg.Spec.KubeconfigOptions.ConnectType = k3sv1alpha1.InternalIP
@@ -1654,7 +1685,7 @@ func (p *ProviderBase) SetAddons() {
 	if err != nil {
 		p.Log.Errorf("[%s] %s\n", "SetAddons", err.Error())
 	}
-	p.Log.Warnf("[SetAddons] Config: %v", kubeConfigPath)
+	// p.Log.Warnf("[SetAddons] Config: %v", kubeConfigPath)
 	if p.Config != nil {
 		kubeConfigPath, err := k3s.KubeconfigTmpWrite(p.Config)
 		if err != nil {
@@ -1662,11 +1693,11 @@ func (p *ProviderBase) SetAddons() {
 		}
 		defer os.RemoveAll(kubeConfigPath)
 	}
+	
 	// helm list
 	command := fmt.Sprintf(types.HelmListCommand, kubeConfigPath)
 	stdOut, _, err := k3s.RunLocalCommand(command, false, p.CmdFlags.DryRun)
 	// stdOut: [{"name":"ingress-nginx","namespace":"ingress-nginx","revision":"5","updated":"2022-06-02 18:09:39.232841792 +0300 EEST","status":"deployed","chart":"ingress-nginx-4.1.3","app_version":"1.2.1"}]
-	// p.Log.Debugf("stdOut: %s", stdOut)
 	if err != nil {
 		p.Log.Errorf("[RunLocalCommand] %v\n", err.Error())
 	}
@@ -1674,21 +1705,30 @@ func (p *ProviderBase) SetAddons() {
 	// Installed Helm charts
 	releases := []k3sv1alpha1.HelmInterfaces{}
 	json.Unmarshal(stdOut, &releases)
-	// p.Log.Warn(releases)
-	
-	// json.Unmarshal(stdOut, &p.HelmRelease.Releases)
-	// if len(p.HelmRelease.Releases) > 0 {
-	for _, item := range p.HelmRelease.Releases {
-		p.Log.Debugf("Release: %s VERSION: %s STATUS: %s", item.Name, item.AppVersion, item.Status)
-	}
-	// }
 
-	module.CreateNamespace("test", kubeConfigPath, p.CmdFlags.DryRun)
+	ns := []string{}
+	helmDeleteReleases := []k3sv1alpha1.HelmInterfaces{}
+	for i, item := range p.HelmRelease.Releases {
+		if row, ok := k3sv1alpha1.FindRelease(releases, item.Name); ok {
+			item.AppVersion = row.AppVersion
+			item.Status = row.Status
+			item.Updated = row.Updated
+			if item.Deleted {
+				helmDeleteReleases = append(helmDeleteReleases, item)
+			}
+		}
+		ns = append(ns, item.Namespace)
+		p.HelmRelease.Releases[i] = item
+		p.Log.Debugf("Release: %s VERSION: %s STATUS: %s", p.HelmRelease.Releases[i].Name, p.HelmRelease.Releases[i].AppVersion, p.HelmRelease.Releases[i].Status)
+	}
+
+	module.CreateNamespace(ns, kubeConfigPath, p.CmdFlags.DryRun)
+	updateRepo := true
+	module.AddHelmRepo(p.HelmRelease.Releases, kubeConfigPath, updateRepo, p.CmdFlags.DryRun)
+	module.DeleteHelmReleases(helmDeleteReleases, kubeConfigPath, p.CmdFlags.DryRun)
 
 	isRun := false
 	if isRun {
-		// if !p.CmdFlags.DryRun {
-		// Install MetalLB in L2 (ARP) mode
 		if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
 			p.Log.Warnln("TODO: add support MetalLb...")
 		}
@@ -1708,7 +1748,6 @@ func (p *ProviderBase) SetAddons() {
 		}
 
 	}
-
 }
 
 // SetEnvServer

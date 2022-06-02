@@ -641,15 +641,18 @@ type EnvConfig struct {
 	AzureSubscriptionId string `mapstructure:"ARM_SUBSCRIPTION_ID"`
 }
 type HelmInterfaces struct {
-	Name       string `yaml:"name" json:"name"`
-	Namespace  string `yaml:"namespace" json:"namespace"`
-	Repo  string `yaml:"repo" json:"repo"`
-	Url  string `yaml:"url" json:"url"`
-	Revision   int    `yaml:"revision" json:"revision"`
-	Updated    string `yaml:"updated" json:"updated"`
-	Status     string `yaml:"status" json:"status"`
-	Chart      string `yaml:"chart" json:"chart"`
-	AppVersion string `yaml:"app_version" json:"app_version"`
+	Name       string            `mapstructure:"name" yaml:"name" json:"name"`
+	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace"`
+	Repo       string            `mapstructure:"repo" yaml:"repo" json:"repo"`
+	Url        string            `mapstructure:"url" yaml:"url" json:"url"`
+	Revision   int               `mapstructure:"revision" yaml:"revision" json:"revision"`
+	Updated    string            `mapstructure:"updated" yaml:"updated" json:"updated"`
+	Deleted    bool              `mapstructure:"deleted" yaml:"deleted" json:"deleted,omitempty"`
+	Status     string            `mapstructure:"status" yaml:"status" json:"status"`
+	Chart      string            `mapstructure:"chart" yaml:"chart" json:"chart"`
+	AppVersion string            `mapstructure:"appVersion" yaml:"app_version" json:"app_version"`
+	Version    string            `mapstructure:"version" yaml:"version" json:"version"`
+	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 }
 
 type HelmRelease struct {
@@ -842,7 +845,7 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 		bastion.Address = node.Addresses[0].Address
 		bastion.Name = string(node.Addresses[0].Type)
 		bastion.User = node.User
-		log.Warnf("[GetBastion] 4) connect address: %s, remote address: %s", bastion.Address, bastion.RemoteAddress)
+		log.Debugf("[GetBastion] 4) connect address: %s, remote address: %s", bastion.Address, bastion.RemoteAddress)
 		return bastion, nil
 	}
 
@@ -876,6 +879,18 @@ func Find(slice []string, val string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// FindRelease - Find installed Release
+func FindRelease(slice []HelmInterfaces, val string) (HelmInterfaces, bool) {
+	// log.Errorln(slice)
+	for _, item := range slice {
+		// log.Warnf("==> item: %s = val: %s", item, val)
+		if item.Name == val {
+			return item, true
+		}
+	}
+	return HelmInterfaces{}, false
 }
 
 func (r *Cluster) GetNodeLabels(node *Node) (cnt int) {
