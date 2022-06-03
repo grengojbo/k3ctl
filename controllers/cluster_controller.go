@@ -282,12 +282,6 @@ func (p *ProviderBase) SetDefaulSettings() {
 	} else if p.Cluster.Spec.Agents > 0 && p.Cluster.Spec.Servers > 1 {
 		p.Log.Infoln("[SetDefaulSettings] TODO: Settings for multi master cluster...")
 	}
-	p.HelmRelease.Wait = p.Cluster.Spec.Options.Wait
-	p.HelmRelease.UpdateStrategy = p.Cluster.Spec.Addons.Options.UpdateStrategy
-
-	if len(p.Cluster.Spec.Addons.Ingress.Name) == 0 {
-		p.Cluster.Spec.Addons.Ingress.Name = types.IngressDefaultName
-	}
 }
 
 // InitK3sCluster initial K3S cluster.

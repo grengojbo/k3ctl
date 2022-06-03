@@ -41,7 +41,7 @@ func MakeInstallCertManager(certManager *k3sv1alpha1.CertManager, args *k3sv1alp
 		overrides["installCRDs"] = "true"
 	}
 
-	option := k3sv1alpha1.HelmOptions{
+	options := k3sv1alpha1.HelmOptions{
 		CreateNamespace: false,
 		KubeconfigPath:  kubeConfigPath,
 		Overrides:       overrides,
@@ -50,7 +50,7 @@ func MakeInstallCertManager(certManager *k3sv1alpha1.CertManager, args *k3sv1alp
 		Verbose:         false,
 		DryRun:          dryRun,
 	}
-	err = Helm3Upgrade(&option)
+	err = Helm3Upgrade(&options)
 
 	// if deleted {
 	// 	log.Infoln("TODO: Deleted Cert Manager...")

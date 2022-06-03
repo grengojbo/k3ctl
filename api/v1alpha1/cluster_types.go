@@ -663,7 +663,7 @@ type HelmInterfaces struct {
 }
 
 type HelmRelease struct {
-	Verbose           bool             `mapstructure:"verbose" yaml:"verbose" json:"verbose,omitempty"`
+	Verbose        bool             `mapstructure:"verbose" yaml:"verbose" json:"verbose,omitempty"`
 	Wait           bool             `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
 	UpdateStrategy string           `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
 	Releases       []HelmInterfaces `mapstructure:"releases" yaml:"releases" json:"releases,omitempty"`
