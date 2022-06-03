@@ -199,6 +199,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 	if len(cfg.Spec.Addons.CertManager.Name) == 0 {
 		HelmCertManager.Name = "cert-manager"
+		cfg.Spec.Addons.CertManager.Name = "cert-manager"
 	} else {
 		HelmCertManager.Name = cfg.Spec.Addons.CertManager.Name
 	}
@@ -209,6 +210,12 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 	if len(cfg.Spec.Addons.CertManager.Version) > 0 {
 		HelmCertManager.Version = cfg.Spec.Addons.CertManager.Version
+	}
+	if len(cfg.Spec.Addons.CertManager.Values) > 0 {
+		HelmCertManager.Values = cfg.Spec.Addons.CertManager.Values
+	}
+	if len(cfg.Spec.Addons.CertManager.ValuesFile) > 0 {
+		HelmCertManager.ValuesFile = cfg.Spec.Addons.CertManager.ValuesFile
 	}
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmCertManager)
 
@@ -223,6 +230,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 	if len(cfg.Spec.Addons.Ingress.Name) == 0 {
 		HelmIngress.Name = types.NginxDefaultName
+		cfg.Spec.Addons.Ingress.Name = types.NginxDefaultName
 	} else {
 		HelmIngress.Name = cfg.Spec.Addons.Ingress.Name
 	}
@@ -234,13 +242,22 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	if len(cfg.Spec.Addons.Ingress.Version) > 0 {
 		HelmIngress.Version = cfg.Spec.Addons.Ingress.Version
 	}
+	if len(cfg.Spec.Addons.Ingress.Values) > 0 {
+		HelmIngress.Values = cfg.Spec.Addons.Ingress.Values
+	}
+	if len(cfg.Spec.Addons.Ingress.ValuesFile) > 0 {
+		HelmIngress.ValuesFile = cfg.Spec.Addons.Ingress.ValuesFile
+	}
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmIngress)
 
-
 	// Other settings
-	if len(cfg.Spec.Addons.Options.UpdateStrategy) == 0 {
+	if len(cfg.Spec.Addons.Options.UpdateStrategy) == 0 || cfg.Spec.Addons.Options.UpdateStrategy == "none" {
 		cfg.Spec.Addons.Options.UpdateStrategy = "latest"
 	}
+	p.HelmRelease.UpdateStrategy = cfg.Spec.Addons.Options.UpdateStrategy
+	p.HelmRelease.Wait = !cfg.Spec.Addons.Options.NoWait
+	p.HelmRelease.Verbose = p.CmdFlags.DebugLogging
+
 	if len(cfg.Spec.KubeconfigOptions.ConnectType) == 0 {
 		cfg.Spec.KubeconfigOptions.ConnectType = k3sv1alpha1.InternalIP
 	}
@@ -1750,20 +1767,20 @@ func (p *ProviderBase) SetAddons() {
 	module.AddHelmRepo(p.HelmRelease.Releases, kubeConfigPath, updateRepo, p.CmdFlags.DryRun)
 	module.DeleteHelmReleases(helmDeleteReleases, kubeConfigPath, p.CmdFlags.DryRun)
 
-	isRun := false
+	isRun := true
 	if isRun {
 		if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
 			p.Log.Errorln("TODO: add support MetalLb...")
 		}
 
 		// Install HELM Release
-		// if err := module.MakeInstallCertManager(kubeConfigPath, p.CmdFlags.DryRun, &p.Cluster.Spec.Addons.CertManager, &p.HelmRelease); err != nil {
-		// 	p.Log.Errorf(err.Error())
-		// }
+		if err := module.MakeInstallCertManager(&p.Cluster.Spec.Addons.CertManager, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
+			p.Log.Errorf(err.Error())
+		}
 
 		if p.Cluster.Spec.Addons.Ingress.Name == types.NginxDefaultName {
-			p.Log.Infoln("Install Nginx HELM chart...")
-			if err := module.MakeInstallNginx(kubeConfigPath, p.CmdFlags.DryRun, &p.Cluster.Spec.Addons.Ingress, &p.HelmRelease); err != nil {
+			// p.Log.Infoln("Install Nginx HELM chart...")
+			if err := module.MakeInstallNginx(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 				p.Log.Errorf(err.Error())
 			}
 		} else {

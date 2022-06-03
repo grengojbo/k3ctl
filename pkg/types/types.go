@@ -509,3 +509,7 @@ type CmdFlags struct {
 	Version            string
 	LogLevel           string
 }
+
+const KubernetesGenericSecret = "generic"
+const StringLiteralSecret = "string-literal"
+const FromFileSecret = "from-file"

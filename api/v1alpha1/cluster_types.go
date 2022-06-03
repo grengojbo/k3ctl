@@ -263,7 +263,8 @@ type Ingress struct {
 }
 
 type AddonOptions struct {
-	UpdateStrategy string `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
+	UpdateStrategy string `mapstructure:"updateStrategy,omitempty" yaml:"updateStrategy,omitempty" json:"updateStrategy,omitempty"` // none, latest
+	NoWait         bool   `mapstructure:"noWait" yaml:"noWait" json:"noWait,omitempty"`
 	// helmAddons []string `mapstructure:"helmAddons" yaml:"helmAddons" json:"helmAddons,omitempty"`
 }
 
@@ -658,12 +659,39 @@ type HelmInterfaces struct {
 	AppVersion string            `mapstructure:"appVersion" yaml:"app_version" json:"app_version"`
 	Version    string            `mapstructure:"version" yaml:"version" json:"version"`
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 }
 
 type HelmRelease struct {
+	Verbose           bool             `mapstructure:"verbose" yaml:"verbose" json:"verbose,omitempty"`
 	Wait           bool             `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
 	UpdateStrategy string           `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
 	Releases       []HelmInterfaces `mapstructure:"releases" yaml:"releases" json:"releases,omitempty"`
+}
+
+type HelmOptions struct {
+	CreateNamespace bool
+	KubeconfigPath  string
+	Overrides       map[string]string
+	NodeArch        string
+	Helm            *HelmInterfaces
+	Wait            bool
+	Verbose         bool
+	DryRun          bool
+	Secrets         []K8sSecret
+}
+
+type K8sSecret struct {
+	Type       string
+	Name       string
+	SecretData []SecretsData
+	Namespace  string
+}
+
+type SecretsData struct {
+	Type  string // file or literal
+	Key   string
+	Value string
 }
 
 // GetHelmRelease return installed release
