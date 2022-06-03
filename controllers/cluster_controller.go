@@ -236,6 +236,11 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmIngress)
 
+
+	// Other settings
+	if len(cfg.Spec.Addons.Options.UpdateStrategy) == 0 {
+		cfg.Spec.Addons.Options.UpdateStrategy = "latest"
+	}
 	if len(cfg.Spec.KubeconfigOptions.ConnectType) == 0 {
 		cfg.Spec.KubeconfigOptions.ConnectType = k3sv1alpha1.InternalIP
 	}
@@ -1693,7 +1698,7 @@ func (p *ProviderBase) SetAddons() {
 		}
 		defer os.RemoveAll(kubeConfigPath)
 	}
-	
+
 	// helm list
 	command := fmt.Sprintf(types.HelmListCommand, kubeConfigPath)
 	stdOut, _, err := k3s.RunLocalCommand(command, false, p.CmdFlags.DryRun)
@@ -1714,7 +1719,7 @@ func (p *ProviderBase) SetAddons() {
 			currentIngress = release.Name
 		}
 	}
-	p.Log.Warnf("currentIngress: %s", currentIngress)
+	// p.Log.Warnf("currentIngress: %s", currentIngress)
 
 	ns := []string{}
 	helmDeleteReleases := []k3sv1alpha1.HelmInterfaces{}
@@ -1734,10 +1739,11 @@ func (p *ProviderBase) SetAddons() {
 		p.HelmRelease.Releases[i] = item
 		p.Log.Debugf("Release: %s VERSION: %s STATUS: %s", p.HelmRelease.Releases[i].Name, p.HelmRelease.Releases[i].AppVersion, p.HelmRelease.Releases[i].Status)
 	}
-	// if currentIngress != toIngress {
-	// 	ingressDeleteReleases := k3sv1alpha1.HelmInterfaces{}
-	// 	// TODO
-	// }
+	if currentIngress == toIngress {
+		// ingressDeleteReleases := k3sv1alpha1.HelmInterfaces{}
+		// TODO
+		p.Log.Errorf("TODO: currentIngress: %s toIngress: %s", currentIngress, toIngress)
+	}
 
 	module.CreateNamespace(ns, kubeConfigPath, p.CmdFlags.DryRun)
 	updateRepo := true
@@ -1747,13 +1753,13 @@ func (p *ProviderBase) SetAddons() {
 	isRun := false
 	if isRun {
 		if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
-			p.Log.Warnln("TODO: add support MetalLb...")
+			p.Log.Errorln("TODO: add support MetalLb...")
 		}
 
 		// Install HELM Release
-		if err := module.MakeInstallCertManager(kubeConfigPath, p.CmdFlags.DryRun, &p.Cluster.Spec.Addons.CertManager, &p.HelmRelease); err != nil {
-			p.Log.Errorf(err.Error())
-		}
+		// if err := module.MakeInstallCertManager(kubeConfigPath, p.CmdFlags.DryRun, &p.Cluster.Spec.Addons.CertManager, &p.HelmRelease); err != nil {
+		// 	p.Log.Errorf(err.Error())
+		// }
 
 		if p.Cluster.Spec.Addons.Ingress.Name == types.NginxDefaultName {
 			p.Log.Infoln("Install Nginx HELM chart...")

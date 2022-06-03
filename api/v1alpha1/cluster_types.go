@@ -212,49 +212,54 @@ type Registry struct {
 }
 
 type PulumiModule struct {
-	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
-	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
-	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
-	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
-	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	Name       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version    string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 }
 
 type ExternalDns struct {
-	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
-	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
-	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
-	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
-	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	Name       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version    string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 }
 
 type MetalLB struct {
-	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
-	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
-	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
-	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
-	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	Name       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version    string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 }
 
 type CertManager struct {
-	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
-	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
-	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
-	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
-	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	Name       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version    string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 }
 
 type Ingress struct {
-	Name      string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Namespace string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
-	Disabled  bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
-	HostMode  bool              `mapstructure:"hostMode" yaml:"hostMode" json:"hostMode,omitempty"`
-	Version   string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
-	URL       string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
-	Values    map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	Name       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	HostMode   bool              `mapstructure:"hostMode" yaml:"hostMode" json:"hostMode,omitempty"`
+	Version    string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 }
 
 type AddonOptions struct {

@@ -21,6 +21,11 @@ func mergeFlags(existingMap map[string]string, setOverrides []string) error {
 	return nil
 }
 
+
+func MakeInstallChart(releases k3sv1alpha1.HelmInterfaces, kubeconfigPath string, dryRun bool) (err error) {
+	return nil
+}
+
 // DeleteHelmReleases - Delete Helm Releases
 func DeleteHelmReleases(releases []k3sv1alpha1.HelmInterfaces, kubeconfigPath string, dryRun bool) {
 	for _, release := range releases {

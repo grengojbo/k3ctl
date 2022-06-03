@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func MakeInstallCertManager(kubeConfigPath string, dryRun bool, certManager *k3sv1alpha1.CertManager, args *k3sv1alpha1.HelmRelease) (err error) {
+func MakeInstallCertManager(certManager *k3sv1alpha1.CertManager, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
 	namespace := "cert-manager"
 	wait := true
 	updateRepo := true
@@ -57,15 +57,15 @@ func MakeInstallCertManager(kubeConfigPath string, dryRun bool, certManager *k3s
 			return err
 		}
 
-		log.Infof(certManagerInstallMsg)
+		// log.Infof(certManagerInstallMsg)
 	}
 	return err
 }
 
-const CertManagerInfoMsg = `# Get started with cert-manager here:
-# https://docs.cert-manager.io/en/latest/tutorials/acme/http-validation.html`
+// const CertManagerInfoMsg = `# Get started with cert-manager here:
+// # https://docs.cert-manager.io/en/latest/tutorials/acme/http-validation.html`
 
-const certManagerInstallMsg = `=======================================================================
-= cert-manager  has been installed.                                   =
-=======================================================================` +
-	"\n\n" + CertManagerInfoMsg + "\n\n"
+// const certManagerInstallMsg = `=======================================================================
+// = cert-manager  has been installed.                                   =
+// =======================================================================` +
+// 	"\n\n" + CertManagerInfoMsg + "\n\n"
