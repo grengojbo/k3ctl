@@ -25,7 +25,7 @@ func mergeFlags(existingMap map[string]string, setOverrides []string) error {
 // Helm3Upgrade - Install or update HELM Chart
 func Helm3Upgrade(options *k3sv1alpha1.HelmOptions) (err error) {
 	if options.CreateNamespace {
-		log.Warnln("[HelmChart] TODO: CreateNamespace")
+		log.Warnln("[Helm3Upgrade] TODO: CreateNamespace")
 	}
 
 	for _, secret := range options.Secrets {
@@ -74,7 +74,14 @@ func Helm3Upgrade(options *k3sv1alpha1.HelmOptions) (err error) {
 	if len(args) > 0 {
 		argsSt := strings.Join(args, " ")
 		command := fmt.Sprintf("helm %s", argsSt)
-		log.Debugf("Command: %s\n", command)
+		// log.Debugf("Command: %s\n", command)
+		stdOut, _, err := k3s.RunLocalCommand(command, false, options.DryRun)
+		if err != nil {
+			log.Errorf("[Helm3Upgrade:RunLocalCommand] %v\n", err.Error())
+		} else {
+			log.Debug(stdOut)
+			log.Infof("Release \"%s\" has been upgraded.", options.Helm.Name)
+		}
 	}
 	return nil
 }

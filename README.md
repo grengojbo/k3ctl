@@ -33,7 +33,8 @@ DB_PASSWORD=XXX
 Example create cluster
 
 ```bash
-./k3ctl cluster create sample --dry-run --verbosee
+./k3ctl cluster create sample
+./k3ctl apply -c iwisops
 ```
 
 ## For developers

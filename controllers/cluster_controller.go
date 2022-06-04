@@ -221,7 +221,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 
 	//
 	HelmIngress := k3sv1alpha1.HelmInterfaces{
-		Repo:   "ingress-nginx",
+		Repo:   types.NginxHelmRepo,
 		Url:    types.NginxHelmURL,
 		Values: cfg.Spec.Addons.Ingress.Values,
 	}
@@ -235,7 +235,11 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		HelmIngress.Name = cfg.Spec.Addons.Ingress.Name
 	}
 	if len(cfg.Spec.Addons.Ingress.Namespace) == 0 {
+		if HelmIngress.Name == types.HaproxyDefaultName {
+		HelmIngress.Namespace =  types.HaproxyDefaultNamespace
+		} else {
 		HelmIngress.Namespace = types.NginxDefaultNamespace
+		} 
 	} else {
 		HelmIngress.Namespace = cfg.Spec.Addons.Ingress.Namespace
 	}
@@ -247,6 +251,11 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 	if len(cfg.Spec.Addons.Ingress.ValuesFile) > 0 {
 		HelmIngress.ValuesFile = cfg.Spec.Addons.Ingress.ValuesFile
+	}
+	// Haproxy https://www.haproxy.com/documentation/kubernetes/latest/installation/community/kubernetes/
+	if HelmIngress.Name == types.HaproxyDefaultName {
+		HelmIngress.Repo = types.HaproxyHelmRepo
+		HelmIngress.Url = types.HaproxyHelmURL
 	}
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmIngress)
 
@@ -1730,7 +1739,7 @@ func (p *ProviderBase) SetAddons() {
 			currentIngress = release.Name
 		}
 	}
-	// p.Log.Warnf("currentIngress: %s", currentIngress)
+	p.Log.Warnf("currentIngress: %s", currentIngress)
 
 	ns := []string{}
 	helmDeleteReleases := []k3sv1alpha1.HelmInterfaces{}
@@ -1750,7 +1759,7 @@ func (p *ProviderBase) SetAddons() {
 		p.HelmRelease.Releases[i] = item
 		p.Log.Debugf("Release: %s VERSION: %s STATUS: %s", p.HelmRelease.Releases[i].Name, p.HelmRelease.Releases[i].AppVersion, p.HelmRelease.Releases[i].Status)
 	}
-	if currentIngress == toIngress {
+	if len(currentIngress) > 0 && currentIngress != toIngress {
 		// ingressDeleteReleases := k3sv1alpha1.HelmInterfaces{}
 		// TODO
 		p.Log.Errorf("TODO: currentIngress: %s toIngress: %s", currentIngress, toIngress)
