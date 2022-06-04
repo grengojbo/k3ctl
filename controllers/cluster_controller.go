@@ -236,10 +236,10 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 	if len(cfg.Spec.Addons.Ingress.Namespace) == 0 {
 		if HelmIngress.Name == types.HaproxyDefaultName {
-		HelmIngress.Namespace =  types.HaproxyDefaultNamespace
+			HelmIngress.Namespace = types.HaproxyDefaultNamespace
 		} else {
-		HelmIngress.Namespace = types.NginxDefaultNamespace
-		} 
+			HelmIngress.Namespace = types.NginxDefaultNamespace
+		}
 	} else {
 		HelmIngress.Namespace = cfg.Spec.Addons.Ingress.Namespace
 	}
