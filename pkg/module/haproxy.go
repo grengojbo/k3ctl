@@ -7,10 +7,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// MakeInstallNginx
-func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
-	name := "MakeInstallNginx"
-	description := "Ingress Nginx"
+// MakeInstallHaproxy
+func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
+	name := "MakeInstallHaproxy"
+	description := "Ingress Haproxy"
 	update := false
 
 	release, ok := k3sv1alpha1.FindRelease(args.Releases, ingress.Name)

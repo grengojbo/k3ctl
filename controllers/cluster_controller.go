@@ -219,7 +219,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmCertManager)
 
-	//
+	// Ingress controler
 	HelmIngress := k3sv1alpha1.HelmInterfaces{
 		Repo:   types.NginxHelmRepo,
 		Url:    types.NginxHelmURL,
@@ -230,9 +230,13 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 	if len(cfg.Spec.Addons.Ingress.Name) == 0 {
 		HelmIngress.Name = types.NginxDefaultName
-		cfg.Spec.Addons.Ingress.Name = types.NginxDefaultName
+		// cfg.Spec.Addons.Ingress.Name = types.NginxDefaultName
+	} else if cfg.Spec.Addons.Ingress.Name == "nginx" {
+		HelmIngress.Name = types.NginxDefaultName
+	} else if cfg.Spec.Addons.Ingress.Name == "haproxy" {
+		HelmIngress.Name = types.HaproxyDefaultName
 	} else {
-		HelmIngress.Name = cfg.Spec.Addons.Ingress.Name
+		HelmIngress.Name = types.NginxDefaultName
 	}
 	if len(cfg.Spec.Addons.Ingress.Namespace) == 0 {
 		if HelmIngress.Name == types.HaproxyDefaultName {
@@ -253,6 +257,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		HelmIngress.ValuesFile = cfg.Spec.Addons.Ingress.ValuesFile
 	}
 	// Haproxy https://www.haproxy.com/documentation/kubernetes/latest/installation/community/kubernetes/
+	// https://github.com/haproxytech/helm-charts
 	if HelmIngress.Name == types.HaproxyDefaultName {
 		HelmIngress.Repo = types.HaproxyHelmRepo
 		HelmIngress.Url = types.HaproxyHelmURL
