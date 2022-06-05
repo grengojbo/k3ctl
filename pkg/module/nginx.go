@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
+	"github.com/grengojbo/k3ctl/pkg/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -13,7 +14,7 @@ func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmReleas
 	description := "Ingress Nginx"
 	update := false
 
-	release, ok := k3sv1alpha1.FindRelease(args.Releases, ingress.Name)
+	release, ok := k3sv1alpha1.FindRelease(args.Releases, types.NginxDefaultName)
 	if !ok {
 		return fmt.Errorf("[%s] is not release...", name)
 	}
@@ -53,11 +54,20 @@ func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmReleas
 		overrides["controller.service.externalTrafficPolicy"] = "Local"
 		overrides["controller.config.use-proxy-protocol"] = "false"
 		overrides["defaultBackend.enabled"] = "true"
-		// TODO: добавить пользовательский defalt backend
-		// overrides["defaultBackend.image.registry"] = "k8s.gcr.io"
-		// overrides["defaultBackend.image.image"] = "defaultbackend-amd64"
-		// overrides["defaultBackend.image.tag"] = "1.5"
 	}
+
+	if len(ingress.DefaultBackend.Registry) > 0 {
+		overrides["defaultBackend.image.registry"] = ingress.DefaultBackend.Registry
+	}
+	if len(ingress.DefaultBackend.Image) > 0 {
+		overrides["defaultBackend.image.image"] = ingress.DefaultBackend.Image
+	}
+	if len(ingress.DefaultBackend.Tag) > 0 {
+		overrides["defaultBackend.image.tag"] = ingress.DefaultBackend.Tag
+	}
+	// overrides["defaultBackend.image.registry"] = "k8s.gcr.io"
+	// overrides["defaultBackend.image.image"] = "defaultbackend-amd64"
+	// overrides["defaultBackend.image.tag"] = "1.5"
 
 	options := k3sv1alpha1.HelmOptions{
 		CreateNamespace: false,

@@ -229,9 +229,9 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		HelmIngress.Deleted = true
 	}
 	if len(cfg.Spec.Addons.Ingress.Name) == 0 {
-		HelmIngress.Name = types.NginxDefaultName
-		// cfg.Spec.Addons.Ingress.Name = types.NginxDefaultName
-	} else if cfg.Spec.Addons.Ingress.Name == "nginx" {
+		cfg.Spec.Addons.Ingress.Name = "nginx"
+	}
+	if cfg.Spec.Addons.Ingress.Name == "nginx" {
 		HelmIngress.Name = types.NginxDefaultName
 	} else if cfg.Spec.Addons.Ingress.Name == "haproxy" {
 		HelmIngress.Name = types.HaproxyDefaultName
@@ -1786,7 +1786,7 @@ func (p *ProviderBase) SetAddons() {
 			p.Log.Errorf(err.Error())
 		}
 
-		if p.Cluster.Spec.Addons.Ingress.Name == types.NginxDefaultName {
+		if p.Cluster.Spec.Addons.Ingress.Name == "nginx" {
 			// p.Log.Infoln("Install Nginx HELM chart...")
 			if err := module.MakeInstallNginx(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 				p.Log.Errorf(err.Error())

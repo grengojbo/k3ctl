@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
+	"github.com/grengojbo/k3ctl/pkg/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -13,7 +14,7 @@ func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRele
 	description := "Ingress Haproxy"
 	update := false
 
-	release, ok := k3sv1alpha1.FindRelease(args.Releases, ingress.Name)
+	release, ok := k3sv1alpha1.FindRelease(args.Releases, types.HaproxyDefaultName)
 	if !ok {
 		return fmt.Errorf("[%s] is not release...", name)
 	}
