@@ -12,7 +12,7 @@ import (
 func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
 	name := "MakeInstallHaproxy"
 	description := "Ingress Haproxy"
-	update := false
+	// update := false
 
 	release, ok := k3sv1alpha1.FindRelease(args.Releases, types.HaproxyDefaultName)
 	if !ok {
@@ -30,16 +30,17 @@ func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRele
 			return nil
 		}
 		log.Infof("Update %s...", description)
-		update = true
+		// update = true
 	} else {
 		log.Infof("Install %s...", description)
 	}
 
+	// https://github.com/haproxytech/helm-charts/blob/main/kubernetes-ingress/values.yaml
 	overrides := map[string]string{}
 
-	if !update {
-		overrides["installCRDs"] = "true"
-	}
+	// if !update {
+	// 	overrides["installCRDs"] = "true"
+	// }
 
 	if ingress.HostMode {
 		log.Infof("Running in host networking mode")
@@ -48,16 +49,33 @@ func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRele
 		overrides["controller.service.type"] = "NodePort"
 		overrides["dnsPolicy"] = "ClusterFirstWithHostNet"
 		overrides["controller.kind"] = "DaemonSet"
-		overrides["defaultBackend.enabled"] = "true"
 	} else {
+		overrides["controller.service.type"] = "LoadBalancer"
+		// overrides["controller.service.externalIPs[]"] = ""
+		// LoadBalancer IP
+		// ref: https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer
+		// overrides["controller.service.loadBalancerIP"] = ""
 		// overrides["controller.service.externalTrafficPolicy"] = "Cluster"
 		overrides["controller.service.externalTrafficPolicy"] = "Local"
-		overrides["controller.config.use-proxy-protocol"] = "false"
-		overrides["defaultBackend.enabled"] = "true"
-		// TODO: добавить пользовательский defalt backend
-		// overrides["defaultBackend.image.registry"] = "k8s.gcr.io"
-		// overrides["defaultBackend.image.image"] = "defaultbackend-amd64"
-		// overrides["defaultBackend.image.tag"] = "1.5"
+		// overrides["controller.config.use-proxy-protocol"] = "false"
+	}
+
+	overrides["controller.replicaCount"] = "1"
+
+	overrides["defaultBackend.enabled"] = "true"
+	overrides["defaultBackend.replicaCount"] = "1"
+
+	// overrides["defaultBackend.image.registry"] = "k8s.gcr.io"
+	// overrides["defaultBackend.image.image"] = "defaultbackend-amd64"
+	// overrides["defaultBackend.image.tag"] = "1.5"
+	if len(ingress.DefaultBackend.Registry) > 0 {
+		overrides["defaultBackend.image.registry"] = ingress.DefaultBackend.Registry
+	}
+	if len(ingress.DefaultBackend.Image) > 0 {
+		overrides["defaultBackend.image.image"] = ingress.DefaultBackend.Image
+	}
+	if len(ingress.DefaultBackend.Tag) > 0 {
+		overrides["defaultBackend.image.tag"] = ingress.DefaultBackend.Tag
 	}
 
 	options := k3sv1alpha1.HelmOptions{

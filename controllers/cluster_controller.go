@@ -1744,7 +1744,7 @@ func (p *ProviderBase) SetAddons() {
 			currentIngress = release.Name
 		}
 	}
-	p.Log.Warnf("currentIngress: %s", currentIngress)
+	// p.Log.Warnf("currentIngress: %s", currentIngress)
 
 	ns := []string{}
 	helmDeleteReleases := []k3sv1alpha1.HelmInterfaces{}
@@ -1764,10 +1764,21 @@ func (p *ProviderBase) SetAddons() {
 		p.HelmRelease.Releases[i] = item
 		p.Log.Debugf("Release: %s VERSION: %s STATUS: %s", p.HelmRelease.Releases[i].Name, p.HelmRelease.Releases[i].AppVersion, p.HelmRelease.Releases[i].Status)
 	}
-	if len(currentIngress) > 0 && currentIngress != toIngress {
-		// ingressDeleteReleases := k3sv1alpha1.HelmInterfaces{}
-		// TODO
-		p.Log.Errorf("TODO: currentIngress: %s toIngress: %s", currentIngress, toIngress)
+
+	if len(currentIngress) > 0 && len(toIngress) > 0 && currentIngress != toIngress {
+		// p.Log.Errorf("TODO: currentIngress: %s toIngress: %s", currentIngress, toIngress)
+		delIngress := k3sv1alpha1.HelmInterfaces{
+			Name: currentIngress,
+		}
+		if currentIngress == types.NginxDefaultName {
+			delIngress.Namespace = types.NginxDefaultNamespace
+		} else if currentIngress == types.HaproxyDefaultName {
+			delIngress.Namespace = types.HaproxyDefaultNamespace
+		} else {
+			p.Log.Errorf("Is not defined deleted ingress: %s", currentIngress)
+		}
+		p.Log.Warnf("Set to delete ingress: %s", delIngress.Name)
+		helmDeleteReleases = append(helmDeleteReleases, delIngress)
 	}
 
 	module.CreateNamespace(ns, kubeConfigPath, p.CmdFlags.DryRun)
@@ -1789,6 +1800,11 @@ func (p *ProviderBase) SetAddons() {
 		if p.Cluster.Spec.Addons.Ingress.Name == "nginx" {
 			// p.Log.Infoln("Install Nginx HELM chart...")
 			if err := module.MakeInstallNginx(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
+				p.Log.Errorf(err.Error())
+			}
+		} else if p.Cluster.Spec.Addons.Ingress.Name == "haproxy" {
+			// p.Log.Infoln("Install Haproxy HELM chart...")
+			if err := module.MakeInstallHaproxy(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 				p.Log.Errorf(err.Error())
 			}
 		} else {

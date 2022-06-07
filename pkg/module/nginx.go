@@ -48,13 +48,13 @@ func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmReleas
 		overrides["controller.service.type"] = "NodePort"
 		overrides["dnsPolicy"] = "ClusterFirstWithHostNet"
 		overrides["controller.kind"] = "DaemonSet"
-		overrides["defaultBackend.enabled"] = "true"
 	} else {
 		// overrides["controller.service.externalTrafficPolicy"] = "Cluster"
 		overrides["controller.service.externalTrafficPolicy"] = "Local"
 		overrides["controller.config.use-proxy-protocol"] = "false"
-		overrides["defaultBackend.enabled"] = "true"
 	}
+
+	overrides["defaultBackend.enabled"] = "true"
 
 	if len(ingress.DefaultBackend.Registry) > 0 {
 		overrides["defaultBackend.image.registry"] = ingress.DefaultBackend.Registry

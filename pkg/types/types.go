@@ -172,6 +172,7 @@ const (
 	IngressAmbassador    string = "ambassador"
 	IngressAmbassadorAPI string = "ambassadorApi"
 	IngressHaproxy       string = "haproxy"
+	IngressHaproxyName   string = "kubernetes-ingress"
 	IngressContour       string = "contour"
 	IngressNginx         string = "ingress-nginx"
 	IngressKing          string = "king"
@@ -223,7 +224,7 @@ var DefaultRoleCmds = map[Role][]string{
 // 	WireGuard: {"wireguard"},
 // }
 
-var IngressControllers = []string{IngressAmbassador, IngressAmbassadorAPI, IngressContour, IngressHaproxy, IngressKing, IngressNginx, IngressTraefik}
+var IngressControllers = []string{IngressAmbassador, IngressAmbassadorAPI, IngressContour, IngressHaproxyName, IngressHaproxy, IngressKing, IngressNginx, IngressTraefik}
 var FlannelBackends = []string{Vxlan, None, IpSec, HostGw, WireGuard}
 var CalicoBackends = []string{Vxlan, IpIp, WireGuard, Bgp}
 var CiliumBackends = []string{Vxlan, IpIp, WireGuard}
