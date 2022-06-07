@@ -62,8 +62,10 @@ func Helm3Upgrade(options *k3sv1alpha1.HelmOptions) (err error) {
 	// }
 
 	for k, v := range options.Overrides {
-		args = append(args, "--set")
-		args = append(args, fmt.Sprintf("%s=%s", k, v))
+		if len(options.Helm.Values[k]) == 0 {
+			args = append(args, "--set")
+			args = append(args, fmt.Sprintf("%s=%s", k, v))
+		}
 	}
 
 	for k, v := range options.Helm.Values {
@@ -169,12 +171,14 @@ func CreateNamespace(ns []string, kubeconfigPath string, dryRun bool) {
 	for _, line := range ns {
 		if _, ok := util.Find(lines, line); !ok {
 			// log.Debugf("create namespace: %s", line)
-			command = fmt.Sprintf("kubectl create namespace %s --kubeconfig %s", line, kubeconfigPath)
-			stdOut, _, err := k3s.RunLocalCommand(command, false, dryRun)
-			if err != nil {
-				log.Errorf("[RunLocalCommand] %v\n", err.Error())
-			} else {
-				log.Infof("[CreateNamespace] %s", stdOut)
+			if line != "default" && line != "kube-system" {
+				command = fmt.Sprintf("kubectl create namespace %s --kubeconfig %s", line, kubeconfigPath)
+				stdOut, _, err := k3s.RunLocalCommand(command, false, dryRun)
+				if err != nil {
+					log.Errorf("[RunLocalCommand] %v\n", err.Error())
+				} else {
+					log.Infof("[CreateNamespace] %s", stdOut)
+				}
 			}
 		}
 	}

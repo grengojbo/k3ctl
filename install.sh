@@ -255,5 +255,47 @@ setup_env() {
 
 }
 
+InstallArkade() {
+  echo "install arkade..."
+  rm -rf ${HOME}/.arkade
+  curl -SLfs https://get.arkade.dev | sudo sh
+
+  # arkade --help
+  # ark --help  # a handy alias
+
+  # Windows users with Git Bash
+  # curl -sLS https://get.arkade.dev | sh
+
+  #arkade get porter
+  #sudo mv ${HOME}/.arkade/bin/porter ${BIN_DIR}/
+
+  arkade get jq
+  sudo mv ${HOME}/.arkade/bin/jq ${BIN_DIR}/
+
+  arkade get yq
+  sudo mv ${HOME}/.arkade/bin/yq ${BIN_DIR}/
+
+  #arkade get k3d
+  #sudo mv ${HOME}/.arkade/bin/k3d ${BIN_DIR}/
+
+  arkade get kubectl
+  sudo mv ${HOME}/.arkade/bin/kubectl ${BIN_DIR}/
+  
+  arkade get kustomize
+  sudo mv ${HOME}/.arkade/bin/kustomize ${BIN_DIR}/
+
+  arkade get helm  
+  sudo mv ${HOME}/.arkade/bin/helm ${BIN_DIR}/
+
+  arkade get krew
+  sudo mv ${HOME}/.arkade/bin/krew ${BIN_DIR}/
+
+  arkade get stern
+  sudo mv ${HOME}/.arkade/bin/stern ${BIN_DIR}/
+
+}
+
+
 setup_env
+InstallArkade
 download_and_verify

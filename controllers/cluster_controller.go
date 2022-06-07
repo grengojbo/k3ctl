@@ -1709,7 +1709,7 @@ func (p *ProviderBase) sshStream(command string, isPrint bool) {
 }
 
 // SetAddons
-func (p *ProviderBase) SetAddons() {
+func (p *ProviderBase) SetAddons(addonsName string) {
 	// var err = Error
 	kubeConfigPath, err := k3s.KubeconfigGetDefaultPath()
 	if err != nil {
@@ -1793,24 +1793,27 @@ func (p *ProviderBase) SetAddons() {
 		}
 
 		// Install HELM Release
-		if err := module.MakeInstallCertManager(&p.Cluster.Spec.Addons.CertManager, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
-			p.Log.Errorf(err.Error())
-		}
-
-		if p.Cluster.Spec.Addons.Ingress.Name == "nginx" {
-			// p.Log.Infoln("Install Nginx HELM chart...")
-			if err := module.MakeInstallNginx(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
+		if len(addonsName) == 0 || addonsName == "certManager" {
+			if err := module.MakeInstallCertManager(&p.Cluster.Spec.Addons.CertManager, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 				p.Log.Errorf(err.Error())
 			}
-		} else if p.Cluster.Spec.Addons.Ingress.Name == "haproxy" {
-			// p.Log.Infoln("Install Haproxy HELM chart...")
-			if err := module.MakeInstallHaproxy(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
-				p.Log.Errorf(err.Error())
-			}
-		} else {
-			p.Log.Errorf("Is not support Ingress: %s", p.Cluster.Spec.Addons.Ingress.Name)
 		}
 
+		if len(addonsName) == 0 || addonsName == "ingress" {
+			if p.Cluster.Spec.Addons.Ingress.Name == "nginx" {
+				// p.Log.Infoln("Install Nginx HELM chart...")
+				if err := module.MakeInstallNginx(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
+					p.Log.Errorf(err.Error())
+				}
+			} else if p.Cluster.Spec.Addons.Ingress.Name == "haproxy" {
+				// p.Log.Infoln("Install Haproxy HELM chart...")
+				if err := module.MakeInstallHaproxy(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
+					p.Log.Errorf(err.Error())
+				}
+			} else {
+				p.Log.Errorf("Is not support Ingress: %s", p.Cluster.Spec.Addons.Ingress.Name)
+			}
+		}
 	}
 }
 

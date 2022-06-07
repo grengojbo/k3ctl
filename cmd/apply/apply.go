@@ -65,6 +65,12 @@ func NewCmdApply() *cobra.Command {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			// addonsNameList := []string{"certManager", "ingress"}
+			addonsName := ""
+			if len(args) > 0 {
+				addonsName = args[0]
+			}
+
 			/*************************
 			 * Compute Configuration *
 			 *************************/
@@ -88,7 +94,7 @@ func NewCmdApply() *cobra.Command {
 			// обновляем статус нод
 			c.LoadNodeStatus()
 
-			c.SetAddons()
+			c.SetAddons(addonsName)
 
 			// isModuleRun := false
 			// if isModuleRun {

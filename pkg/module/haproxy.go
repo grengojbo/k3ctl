@@ -44,11 +44,13 @@ func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRele
 
 	if ingress.HostMode {
 		log.Infof("Running in host networking mode")
-		overrides["controller.hostNetwork"] = "true"
-		overrides["controller.hostPort.enabled"] = "true"
-		overrides["controller.service.type"] = "NodePort"
+		overrides["controller.service.enabled"] = "false"
 		overrides["dnsPolicy"] = "ClusterFirstWithHostNet"
 		overrides["controller.kind"] = "DaemonSet"
+		overrides["controller.daemonset.useHostPort"] = "true"
+		overrides["controller.daemonset.useHostNetwork"] = "true"
+		// overrides["controller."] = ""
+		// overrides["controller."] = ""
 	} else {
 		overrides["controller.service.type"] = "LoadBalancer"
 		// overrides["controller.service.externalIPs[]"] = ""
