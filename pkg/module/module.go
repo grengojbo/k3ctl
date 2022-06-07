@@ -74,6 +74,18 @@ func Helm3Upgrade(options *k3sv1alpha1.HelmOptions) (err error) {
 	}
 
 	if len(args) > 0 {
+
+		// Dependency Update
+		if options.Helm.DependencyUpdate {
+			command := fmt.Sprintf("helm dependency update %s/%s", options.Helm.Repo, options.Helm.Name)
+			stdOut, _, err := k3s.RunLocalCommand(command, false, options.DryRun)
+			if err != nil {
+				log.Errorf("[Helm3Upgrade:RunLocalCommand] %v\n", err.Error())
+			} else {
+				log.Debug(stdOut)
+			}
+		}
+
 		argsSt := strings.Join(args, " ")
 		command := fmt.Sprintf("helm %s", argsSt)
 		// log.Debugf("Command: %s\n", command)

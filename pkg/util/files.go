@@ -151,3 +151,21 @@ func GetConfigFileName(configFile string) (configFilePath string) {
 	}
 	return configFile
 }
+
+// CheckExitValueFile
+func CheckExitValueFile(clusterName string, addonsName string) (file string, err error) {
+	file = fmt.Sprintf("./variables/%s/%s-value.yml", clusterName, addonsName)
+	if _, err = os.Stat(file); err != nil {
+		file = fmt.Sprintf("./variables/%s/%s-value.yaml", clusterName, addonsName)
+		if _, err = os.Stat(file); err != nil {
+			return file, fmt.Errorf("IS NOT file: %s", file)
+		}
+	}
+	return file, nil
+}
+
+// CheckExitFile
+func CheckExitFile(file string) (err error) {
+	_, err = os.Stat(file)
+	return err
+}

@@ -65,7 +65,7 @@ func NewCmdApply() *cobra.Command {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			// addonsNameList := []string{"certManager", "ingress"}
+			// addonsNameList := []string{"cert-manager", "ingress", "grafana-agent-cloud"}
 			addonsName := ""
 			if len(args) > 0 {
 				addonsName = args[0]

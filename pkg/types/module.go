@@ -20,6 +20,13 @@ const HaproxyHelmURL = "https://haproxytech.github.io/helm-charts"
 const HaproxyDefaultNamespace = "haproxy-controller"
 const HaproxyDefaultName = "kubernetes-ingress"
 
+const MonitoringDefaultNamespace = "monitoring"
+
+const GrafanaAgentCloudHelmRepo = "grengojbo"
+const GrafanaAgentCloudHelmURL = "https://grengojbo.github.io/charts/"
+const GrafanaAgentCloudDefaultNamespace = "monitoring"
+const GrafanaAgentCloudDefaultName = "grafana-agent-cloud"
+
 const (
 	MetalLBVersion           = "v0.12.1"
 	MetalLBNamespaceManifest = "https://raw.githubusercontent.com/metallb/metallb/%s/manifests/namespace.yaml"

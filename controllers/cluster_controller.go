@@ -146,6 +146,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	cfg.TypeMeta.Kind = config.GetString("kind")
 
 	cfg.ObjectMeta.Name = config.GetString("metadata.name")
+	cfg.Spec.ClusterName = cfg.ObjectMeta.Name
 
 	// if !cfg.Spec.KubeconfigOptions.SwitchCurrentContext {
 	// cfg.Spec.KubeconfigOptions.SwitchCurrentContext = true
@@ -186,6 +187,13 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	// if len(cfg.Spec.Addons.Ingress.Name) == 0 {
 	// 	cfg.Spec.Addons.Ingress.Name = "ingress-nginx"
 	// }
+
+	// grafana-agent-cloud
+	HelmMonitoring := k3sv1alpha1.HelmInterfaces{
+		Repo:   "grengojbo",
+		Url:    "https://grengojbo.github.io/charts/",
+		Values: cfg.Spec.Addons.Monitoring.Values,
+	}
 
 	//
 	HelmCertManager := k3sv1alpha1.HelmInterfaces{
@@ -264,6 +272,30 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmIngress)
 
+	// Monitoring
+	if cfg.Spec.Addons.Monitoring.Disabled {
+		HelmCertManager.Deleted = true
+	}
+	if len(cfg.Spec.Addons.Monitoring.Name) == 0 {
+		cfg.Spec.Addons.Monitoring.Name = types.GrafanaAgentCloudDefaultName
+	}
+	HelmMonitoring.Name = cfg.Spec.Addons.Monitoring.Name
+	if len(cfg.Spec.Addons.Monitoring.Namespace) == 0 {
+		HelmMonitoring.Namespace = types.MonitoringDefaultNamespace
+	} else {
+		HelmMonitoring.Namespace = cfg.Spec.Addons.Monitoring.Namespace
+	}
+	if len(cfg.Spec.Addons.Monitoring.Version) > 0 {
+		HelmMonitoring.Version = cfg.Spec.Addons.Monitoring.Version
+	}
+	if len(cfg.Spec.Addons.Monitoring.Values) > 0 {
+		HelmMonitoring.Values = cfg.Spec.Addons.Monitoring.Values
+	}
+	if len(cfg.Spec.Addons.Monitoring.ValuesFile) > 0 {
+		HelmMonitoring.ValuesFile = cfg.Spec.Addons.Monitoring.ValuesFile
+	}
+	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmMonitoring)
+
 	// Other settings
 	if len(cfg.Spec.Addons.Options.UpdateStrategy) == 0 || cfg.Spec.Addons.Options.UpdateStrategy == "none" {
 		cfg.Spec.Addons.Options.UpdateStrategy = "latest"
@@ -271,6 +303,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	p.HelmRelease.UpdateStrategy = cfg.Spec.Addons.Options.UpdateStrategy
 	p.HelmRelease.Wait = !cfg.Spec.Addons.Options.NoWait
 	p.HelmRelease.Verbose = p.CmdFlags.DebugLogging
+	p.HelmRelease.ClusterName = cfg.Spec.ClusterName
 
 	if len(cfg.Spec.KubeconfigOptions.ConnectType) == 0 {
 		cfg.Spec.KubeconfigOptions.ConnectType = k3sv1alpha1.InternalIP
@@ -1745,6 +1778,7 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 		}
 	}
 	// p.Log.Warnf("currentIngress: %s", currentIngress)
+	// p.Log.Warnf("clusterName: %s", p.Cluster.GetName())
 
 	ns := []string{}
 	helmDeleteReleases := []k3sv1alpha1.HelmInterfaces{}
@@ -1793,7 +1827,7 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 		}
 
 		// Install HELM Release
-		if len(addonsName) == 0 || addonsName == "certManager" {
+		if len(addonsName) == 0 || addonsName == "cert-manager" {
 			if err := module.MakeInstallCertManager(&p.Cluster.Spec.Addons.CertManager, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 				p.Log.Errorf(err.Error())
 			}
@@ -1814,6 +1848,13 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 				p.Log.Errorf("Is not support Ingress: %s", p.Cluster.Spec.Addons.Ingress.Name)
 			}
 		}
+
+		if len(addonsName) == 0 || addonsName == "grafana-agent-cloud" {
+			if err := module.MakeInstallGrafanaAgentCloud(&p.Cluster.Spec.Addons.Monitoring, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
+				p.Log.Errorf(err.Error())
+			}
+		}
+
 	}
 }
 

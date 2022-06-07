@@ -251,6 +251,26 @@ type CertManager struct {
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 }
 
+type Monitoring struct {
+	Name       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version    string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+}
+
+type BackUp struct {
+	Name       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version    string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+}
+
 type Ingress struct {
 	Name           string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
 	Namespace      string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
@@ -279,6 +299,8 @@ type Addons struct {
 	Ingress      Ingress      `mapstructure:"ingress" yaml:"ingress" json:"ingress,omitempty"`
 	CertManager  CertManager  `mapstructure:"certManager" yaml:"certManager,omitempty" json:"certManager,omitempty"`
 	MetalLB      MetalLB      `mapstructure:"metallb" yaml:"metallb,omitempty" json:"metallb,omitempty"`
+	Monitoring   Monitoring   `mapstructure:"monitoring" yaml:"monitoring,omitempty" json:"monitoring,omitempty"`
+	BackUp       BackUp       `mapstructure:"backup" yaml:"backup,omitempty" json:"backup,omitempty"`
 	ExternalDns  ExternalDns  `mapstructure:"externalDns" yaml:"externalDns,omitempty" json:"externalDns,omitempty"`
 	PulumiModule PulumiModule `mapstructure:"pulumi" yaml:"pulumi,omitempty" json:"pulumi,omitempty"`
 	Registries   Registry     `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
@@ -654,22 +676,24 @@ type EnvConfig struct {
 	AzureSubscriptionId string `mapstructure:"ARM_SUBSCRIPTION_ID"`
 }
 type HelmInterfaces struct {
-	Name       string            `mapstructure:"name" yaml:"name" json:"name"`
-	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace"`
-	Repo       string            `mapstructure:"repo" yaml:"repo" json:"repo"`
-	Url        string            `mapstructure:"url" yaml:"url" json:"url"`
-	Revision   int               `mapstructure:"revision" yaml:"revision" json:"revision"`
-	Updated    string            `mapstructure:"updated" yaml:"updated" json:"updated"`
-	Deleted    bool              `mapstructure:"deleted" yaml:"deleted" json:"deleted,omitempty"`
-	Status     string            `mapstructure:"status" yaml:"status" json:"status"`
-	Chart      string            `mapstructure:"chart" yaml:"chart" json:"chart"`
-	AppVersion string            `mapstructure:"appVersion" yaml:"app_version" json:"app_version"`
-	Version    string            `mapstructure:"version" yaml:"version" json:"version"`
-	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
-	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	Name             string            `mapstructure:"name" yaml:"name" json:"name"`
+	Namespace        string            `mapstructure:"namespace" yaml:"namespace" json:"namespace"`
+	Repo             string            `mapstructure:"repo" yaml:"repo" json:"repo"`
+	Url              string            `mapstructure:"url" yaml:"url" json:"url"`
+	Revision         int               `mapstructure:"revision" yaml:"revision" json:"revision"`
+	Updated          string            `mapstructure:"updated" yaml:"updated" json:"updated"`
+	Deleted          bool              `mapstructure:"deleted" yaml:"deleted" json:"deleted,omitempty"`
+	DependencyUpdate bool              `mapstructure:"dependencyUpdate" yaml:"dependencyUpdate" json:"dependencyUpdate,omitempty"`
+	Status           string            `mapstructure:"status" yaml:"status" json:"status"`
+	Chart            string            `mapstructure:"chart" yaml:"chart" json:"chart"`
+	AppVersion       string            `mapstructure:"appVersion" yaml:"app_version" json:"app_version"`
+	Version          string            `mapstructure:"version" yaml:"version" json:"version"`
+	Values           map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile       string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 }
 
 type HelmRelease struct {
+	ClusterName    string           `mapstructure:"clusterName" yaml:"clusterName" json:"clusterName,omitempty"`
 	Verbose        bool             `mapstructure:"verbose" yaml:"verbose" json:"verbose,omitempty"`
 	Wait           bool             `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
 	UpdateStrategy string           `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
