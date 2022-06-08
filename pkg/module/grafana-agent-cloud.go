@@ -35,7 +35,7 @@ func MakeInstallGrafanaAgentCloud(addons *k3sv1alpha1.Monitoring, args *k3sv1alp
 		}
 	}
 	release.ValuesFile = addons.ValuesFile
-	release.DependencyUpdate = true
+	// release.DependencyUpdate = true
 
 	if addons.Disabled {
 		log.Warnf("%s disabled...", description)

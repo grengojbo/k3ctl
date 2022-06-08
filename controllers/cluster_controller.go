@@ -197,22 +197,18 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 
 	//
 	HelmCertManager := k3sv1alpha1.HelmInterfaces{
-		Repo: "jetstack",
-		// Repo:   "jetstack/cert-manager",
-		Url:    "https://charts.jetstack.io",
+		RepoName: types.CertManagerHelmRepoName,
+		Repo: types.CertManagerHelmRepo,
+		Url:    types.CertManagerHelmURL,
 		Values: cfg.Spec.Addons.CertManager.Values,
 	}
 	if cfg.Spec.Addons.CertManager.Disabled {
 		HelmCertManager.Deleted = true
 	}
-	if len(cfg.Spec.Addons.CertManager.Name) == 0 {
-		HelmCertManager.Name = "cert-manager"
-		cfg.Spec.Addons.CertManager.Name = "cert-manager"
-	} else {
-		HelmCertManager.Name = cfg.Spec.Addons.CertManager.Name
-	}
+		HelmCertManager.Name = types.CertManagerDefaultName
+		cfg.Spec.Addons.CertManager.Name = types.CertManagerDefaultName
 	if len(cfg.Spec.Addons.CertManager.Namespace) == 0 {
-		HelmCertManager.Namespace = "cert-manager"
+		HelmCertManager.Namespace = types.CertManagerDefaultNamespace
 	} else {
 		HelmCertManager.Namespace = cfg.Spec.Addons.CertManager.Namespace
 	}
@@ -240,12 +236,12 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		cfg.Spec.Addons.Ingress.Name = "nginx"
 	}
 	if cfg.Spec.Addons.Ingress.Name == "nginx" {
-		HelmIngress.Name = types.NginxDefaultName
+		HelmIngress.Repo = types.NginxHelmRepo
 	} else if cfg.Spec.Addons.Ingress.Name == "haproxy" {
-		HelmIngress.Name = types.HaproxyDefaultName
-	} else {
-		HelmIngress.Name = types.NginxDefaultName
+		HelmIngress.Repo = types.HaproxyHelmRepo
 	}
+	HelmIngress.Name = cfg.Spec.Addons.Ingress.Name
+	
 	if len(cfg.Spec.Addons.Ingress.Namespace) == 0 {
 		if HelmIngress.Name == types.HaproxyDefaultName {
 			HelmIngress.Namespace = types.HaproxyDefaultNamespace

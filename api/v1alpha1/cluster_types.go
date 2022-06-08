@@ -251,6 +251,7 @@ type CertManager struct {
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 }
 
+// observer
 type Monitoring struct {
 	Name       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
 	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
@@ -678,6 +679,7 @@ type EnvConfig struct {
 type HelmInterfaces struct {
 	Name             string            `mapstructure:"name" yaml:"name" json:"name"`
 	Namespace        string            `mapstructure:"namespace" yaml:"namespace" json:"namespace"`
+	RepoName             string            `mapstructure:"repoName" yaml:"repoName" json:"repoName"`
 	Repo             string            `mapstructure:"repo" yaml:"repo" json:"repo"`
 	Url              string            `mapstructure:"url" yaml:"url" json:"url"`
 	Revision         int               `mapstructure:"revision" yaml:"revision" json:"revision"`
