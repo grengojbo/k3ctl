@@ -266,7 +266,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 
 	// Monitoring
 	if cfg.Spec.Addons.Monitoring.Disabled {
-		HelmCertManager.Deleted = true
+		HelmMonitoring.Deleted = true
 	}
 	if len(cfg.Spec.Addons.Monitoring.Name) == 0 {
 		cfg.Spec.Addons.Monitoring.Name = types.GrafanaAgentCloudDefaultName
@@ -1775,11 +1775,14 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 	ns := []string{}
 	helmDeleteReleases := []k3sv1alpha1.HelmInterfaces{}
 	for i, item := range p.HelmRelease.Releases {
+		// p.Log.Warnf("0) helmDeleteReleases: %s", item.Name)
 		if row, ok := k3sv1alpha1.FindRelease(releases, item.Name); ok {
+			// p.Log.Warnf("1) helmDeleteReleases: %s", item.Name)
 			item.AppVersion = row.AppVersion
 			item.Status = row.Status
 			item.Updated = row.Updated
 			if item.Deleted {
+				// p.Log.Warnf("2) helmDeleteReleases: %s", item.Name)
 				helmDeleteReleases = append(helmDeleteReleases, item)
 			}
 		}

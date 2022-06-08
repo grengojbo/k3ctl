@@ -951,7 +951,7 @@ func Find(slice []string, val string) (string, bool) {
 func FindRelease(slice []HelmInterfaces, val string) (HelmInterfaces, bool) {
 	// log.Errorln(slice)
 	for _, item := range slice {
-		// log.Warnf("==> item: %s = val: %s", item, val)
+		// log.Warnf("==> item: %s = val: %s", item.Name, val)
 		if item.Name == val {
 			return item, true
 		}

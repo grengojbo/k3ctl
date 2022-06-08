@@ -82,7 +82,8 @@ func Helm3Upgrade(options *k3sv1alpha1.HelmOptions) (err error) {
 			if err != nil {
 				log.Errorf("[Helm3Upgrade:RunLocalCommand] %v\n", err.Error())
 			} else {
-				log.Debug(stdOut)
+				// log.Debug(stdOut)
+				log.Debugf("%s", stdOut)
 			}
 		}
 
@@ -93,7 +94,8 @@ func Helm3Upgrade(options *k3sv1alpha1.HelmOptions) (err error) {
 		if err != nil {
 			log.Errorf("[Helm3Upgrade:RunLocalCommand] %v\n", err.Error())
 		} else {
-			log.Debug(stdOut)
+			// log.Debug(stdOut)
+			log.Debugf("%s", stdOut)
 			log.Infof("Release \"%s\" has been upgraded.", options.Helm.Name)
 		}
 	}
@@ -166,7 +168,7 @@ func AddHelmRepo(repos []k3sv1alpha1.HelmInterfaces, kubeconfigPath string, upda
 			log.Errorf("[RunLocalCommand] %v\n", err.Error())
 		} else {
 			log.Infoln("[AddHelmRepo] start updated...")
-			log.Info(stdOut)
+			log.Debugf("%s", stdOut)
 			log.Infoln("[AddHelmRepo] finish updated")
 		}
 	}
