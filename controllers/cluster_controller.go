@@ -190,23 +190,24 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 
 	// grafana-agent-cloud
 	HelmMonitoring := k3sv1alpha1.HelmInterfaces{
-		Repo:   "grengojbo",
-		Url:    "https://grengojbo.github.io/charts/",
-		Values: cfg.Spec.Addons.Monitoring.Values,
+		RepoName: types.GrafanaAgentCloudHelmRepoName,
+		Repo:     types.GrafanaAgentCloudHelmRepo,
+		Url:      types.GrafanaAgentCloudHelmURL,
+		Values:   cfg.Spec.Addons.Monitoring.Values,
 	}
 
 	//
 	HelmCertManager := k3sv1alpha1.HelmInterfaces{
 		RepoName: types.CertManagerHelmRepoName,
-		Repo: types.CertManagerHelmRepo,
-		Url:    types.CertManagerHelmURL,
-		Values: cfg.Spec.Addons.CertManager.Values,
+		Repo:     types.CertManagerHelmRepo,
+		Url:      types.CertManagerHelmURL,
+		Values:   cfg.Spec.Addons.CertManager.Values,
 	}
 	if cfg.Spec.Addons.CertManager.Disabled {
 		HelmCertManager.Deleted = true
 	}
-		HelmCertManager.Name = types.CertManagerDefaultName
-		cfg.Spec.Addons.CertManager.Name = types.CertManagerDefaultName
+	HelmCertManager.Name = types.CertManagerDefaultName
+	cfg.Spec.Addons.CertManager.Name = types.CertManagerDefaultName
 	if len(cfg.Spec.Addons.CertManager.Namespace) == 0 {
 		HelmCertManager.Namespace = types.CertManagerDefaultNamespace
 	} else {
@@ -225,28 +226,22 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 
 	// Ingress controler
 	HelmIngress := k3sv1alpha1.HelmInterfaces{
-		Repo:   types.NginxHelmRepo,
-		Url:    types.NginxHelmURL,
-		Values: cfg.Spec.Addons.Ingress.Values,
+		RepoName:  types.NginxHelmRepoNane,
+		Repo:      types.NginxHelmRepo,
+		Url:       types.NginxHelmURL,
+		Namespace: types.NginxDefaultNamespace,
+		Values:    cfg.Spec.Addons.Ingress.Values,
 	}
 	if cfg.Spec.Addons.Ingress.Disabled {
 		HelmIngress.Deleted = true
 	}
 	if len(cfg.Spec.Addons.Ingress.Name) == 0 {
-		cfg.Spec.Addons.Ingress.Name = "nginx"
-	}
-	if cfg.Spec.Addons.Ingress.Name == "nginx" {
-		HelmIngress.Repo = types.NginxHelmRepo
-	} else if cfg.Spec.Addons.Ingress.Name == "haproxy" {
-		HelmIngress.Repo = types.HaproxyHelmRepo
+		cfg.Spec.Addons.Ingress.Name = types.NginxDefaultName
 	}
 	HelmIngress.Name = cfg.Spec.Addons.Ingress.Name
-	
 	if len(cfg.Spec.Addons.Ingress.Namespace) == 0 {
 		if HelmIngress.Name == types.HaproxyDefaultName {
 			HelmIngress.Namespace = types.HaproxyDefaultNamespace
-		} else {
-			HelmIngress.Namespace = types.NginxDefaultNamespace
 		}
 	} else {
 		HelmIngress.Namespace = cfg.Spec.Addons.Ingress.Namespace
@@ -263,6 +258,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	// Haproxy https://www.haproxy.com/documentation/kubernetes/latest/installation/community/kubernetes/
 	// https://github.com/haproxytech/helm-charts
 	if HelmIngress.Name == types.HaproxyDefaultName {
+		HelmIngress.RepoName = types.HaproxyHelmRepoName
 		HelmIngress.Repo = types.HaproxyHelmRepo
 		HelmIngress.Url = types.HaproxyHelmURL
 	}

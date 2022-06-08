@@ -679,7 +679,7 @@ type EnvConfig struct {
 type HelmInterfaces struct {
 	Name             string            `mapstructure:"name" yaml:"name" json:"name"`
 	Namespace        string            `mapstructure:"namespace" yaml:"namespace" json:"namespace"`
-	RepoName             string            `mapstructure:"repoName" yaml:"repoName" json:"repoName"`
+	RepoName         string            `mapstructure:"repoName" yaml:"repoName" json:"repoName"`
 	Repo             string            `mapstructure:"repo" yaml:"repo" json:"repo"`
 	Url              string            `mapstructure:"url" yaml:"url" json:"url"`
 	Revision         int               `mapstructure:"revision" yaml:"revision" json:"revision"`

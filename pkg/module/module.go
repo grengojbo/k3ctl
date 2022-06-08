@@ -34,8 +34,8 @@ func Helm3Upgrade(options *k3sv1alpha1.HelmOptions) (err error) {
 		}
 	}
 
-	chart := fmt.Sprintf("%s/%s", options.Helm.Repo, options.Helm.Name)
-	args := []string{"upgrade", "--install", options.Helm.Name, chart, "--namespace", options.Helm.Namespace, "--kubeconfig", options.KubeconfigPath}
+	// chart := fmt.Sprintf("%s/%s", options.Helm.Repo, options.Helm.Name)
+	args := []string{"upgrade", "--install", options.Helm.Name, options.Helm.Repo, "--namespace", options.Helm.Namespace, "--kubeconfig", options.KubeconfigPath}
 	if len(options.Helm.Version) > 0 {
 		args = append(args, "--version", options.Helm.Version)
 	}
@@ -146,9 +146,10 @@ func AddHelmRepo(repos []k3sv1alpha1.HelmInterfaces, kubeconfigPath string, upda
 	}
 	lines := strings.Split(string(stdOut), "\n")
 	for _, repo := range repos {
-		if _, ok := util.Find(lines, repo.Repo); !ok {
-			log.Infof("Add Helm Repo: %s for %s", repo.Repo, repo.Name)
-			command := fmt.Sprintf("helm repo add %s %s --kubeconfig %s", repo.Repo, repo.Url, kubeconfigPath)
+		// log.Warnf("repo: %v", repo)
+		if _, ok := util.Find(lines, repo.RepoName); !ok {
+			log.Infof("Add Helm Repo: %s for %s", repo.RepoName, repo.Name)
+			command := fmt.Sprintf("helm repo add %s %s --kubeconfig %s", repo.RepoName, repo.Url, kubeconfigPath)
 			// log.Warnf("command: %s", command)
 			stdOut, _, err := k3s.RunLocalCommand(command, false, dryRun)
 			if err != nil {
@@ -164,7 +165,9 @@ func AddHelmRepo(repos []k3sv1alpha1.HelmInterfaces, kubeconfigPath string, upda
 		if err != nil {
 			log.Errorf("[RunLocalCommand] %v\n", err.Error())
 		} else {
-			log.Infof("[AddHelmRepo] %s", stdOut)
+			log.Infoln("[AddHelmRepo] start updated...")
+			log.Info(stdOut)
+			log.Infoln("[AddHelmRepo] finish updated")
 		}
 	}
 }
