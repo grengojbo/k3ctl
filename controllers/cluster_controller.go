@@ -195,8 +195,11 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		Url:      types.GrafanaAgentCloudHelmURL,
 		Values:   cfg.Spec.Addons.Monitoring.Values,
 	}
+	if cfg.Spec.Addons.Monitoring.Disabled {
+		HelmMonitoring.Deleted = true
+	}
 
-	//
+	// Cert Manager
 	HelmCertManager := k3sv1alpha1.HelmInterfaces{
 		RepoName: types.CertManagerHelmRepoName,
 		Repo:     types.CertManagerHelmRepo,
@@ -265,9 +268,6 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmIngress)
 
 	// Monitoring
-	if cfg.Spec.Addons.Monitoring.Disabled {
-		HelmMonitoring.Deleted = true
-	}
 	if len(cfg.Spec.Addons.Monitoring.Name) == 0 {
 		cfg.Spec.Addons.Monitoring.Name = types.GrafanaAgentCloudDefaultName
 	}
@@ -287,6 +287,33 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		HelmMonitoring.ValuesFile = cfg.Spec.Addons.Monitoring.ValuesFile
 	}
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmMonitoring)
+
+	// BackUp
+	// Velero
+	HelmBackup := k3sv1alpha1.HelmInterfaces{
+		RepoName: types.VeleroHelmRepoName,
+		Repo:     types.VeleroHelmRepo,
+		Url:      types.VeleroHelmURL,
+		Values:   cfg.Spec.Addons.Backup.Values,
+	}
+	if cfg.Spec.Addons.Backup.Disabled {
+		HelmBackup.Deleted = true
+	}
+	if len(cfg.Spec.Addons.Backup.Name) == 0 {
+		cfg.Spec.Addons.Backup.Name = types.BackupDefaultName
+	}
+	HelmBackup.Name = cfg.Spec.Addons.Backup.Name
+	// Set Cloud Provider
+	if len(cfg.Spec.Addons.Backup.Provider) == 0 {
+		cfg.Spec.Addons.Backup.Provider = types.BackupDefaultProvider
+	}
+	if len(cfg.Spec.Addons.Backup.Region) == 0 {
+		cfg.Spec.Addons.Backup.Region = types.DefaultAwsRegion
+	}
+	if len(cfg.Spec.Addons.Backup.Bucket) == 0 {
+		cfg.Spec.Addons.Backup.Bucket = fmt.Sprintf("velero-%s", cfg.Spec.ClusterName)
+	}
+	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmBackup)
 
 	// Other settings
 	if len(cfg.Spec.Addons.Options.UpdateStrategy) == 0 || cfg.Spec.Addons.Options.UpdateStrategy == "none" {
@@ -1844,8 +1871,14 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 			}
 		}
 
-		if len(addonsName) == 0 || addonsName == "grafana-agent-cloud" {
+		if len(addonsName) == 0 || addonsName == "monitring" {
 			if err := module.MakeInstallGrafanaAgentCloud(&p.Cluster.Spec.Addons.Monitoring, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
+				p.Log.Errorf(err.Error())
+			}
+		}
+
+		if len(addonsName) == 0 || addonsName == "backup" {
+			if err := module.MakeInstallVelero(&p.Cluster.Spec.Addons.Backup, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 				p.Log.Errorf(err.Error())
 			}
 		}

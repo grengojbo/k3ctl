@@ -8,6 +8,23 @@ var HelmAddons = []string{"cert-manager"}
 
 const IngressDefaultName = "ingress-nginx"
 
+const DefaultAwsRegion = "eu-central-1"
+
+// TODO: add Velero
+const VeleroHelmRepoName = "vmware-tanzu"
+const VeleroHelmRepo = "vmware-tanzu/velero"
+const VeleroHelmURL = "https://vmware-tanzu.github.io/helm-charts"
+const VeleroDefaultName = "velero"
+const VeleroDefaultNamespace = "velero"
+
+const BackupDefaultProvider = "aws"
+const BackupDefaultName = "velero"
+
+// const BackupDefault = ""
+// const BackupDefault = ""
+// const BackupDefault = ""
+// const BackupDefault = ""
+
 const CertManagerHelmRepoName = "jetstack"
 const CertManagerHelmRepo = "jetstack/cert-manager"
 const CertManagerHelmURL = "https://charts.jetstack.io"

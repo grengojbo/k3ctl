@@ -105,6 +105,8 @@ func Helm3Upgrade(options *k3sv1alpha1.HelmOptions) (err error) {
 // CreateSecret kubectl create secret
 func CreateSecret(secret k3sv1alpha1.K8sSecret) error {
 	log.Warnln("TODO: CreateSecret :)")
+	// kubectl create secret generic velero-iwisops-aws-creds --from-file=cloud=./variables/iwisops/secret-velero.ini
+	// command := fmt.Sprintf("helm delete %s -n %s --kubeconfig %s", release.Name, release.Namespace, kubeconfigPath)
 	// secretData, err := flattenSecretData(secret.SecretData)
 	// if err != nil {
 	// 	return err

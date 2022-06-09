@@ -262,7 +262,7 @@ type Monitoring struct {
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 }
 
-type BackUp struct {
+type Backup struct {
 	Name       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
 	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
 	Disabled   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
@@ -270,6 +270,9 @@ type BackUp struct {
 	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	Provider   string            `mapstructure:"provider" yaml:"provider" json:"provider,omitempty"` // aws azure s3
+	Bucket     string            `mapstructure:"bucket" yaml:"bucket" json:"bucket,omitempty"`
+	Region     string            `mapstructure:"region" yaml:"region" json:"region,omitempty"`
 }
 
 type Ingress struct {
@@ -301,7 +304,7 @@ type Addons struct {
 	CertManager  CertManager  `mapstructure:"certManager" yaml:"certManager,omitempty" json:"certManager,omitempty"`
 	MetalLB      MetalLB      `mapstructure:"metallb" yaml:"metallb,omitempty" json:"metallb,omitempty"`
 	Monitoring   Monitoring   `mapstructure:"monitoring" yaml:"monitoring,omitempty" json:"monitoring,omitempty"`
-	BackUp       BackUp       `mapstructure:"backup" yaml:"backup,omitempty" json:"backup,omitempty"`
+	Backup       Backup       `mapstructure:"backup" yaml:"backup,omitempty" json:"backup,omitempty"`
 	ExternalDns  ExternalDns  `mapstructure:"externalDns" yaml:"externalDns,omitempty" json:"externalDns,omitempty"`
 	PulumiModule PulumiModule `mapstructure:"pulumi" yaml:"pulumi,omitempty" json:"pulumi,omitempty"`
 	Registries   Registry     `mapstructure:"registries" yaml:"registries,omitempty" json:"registries,omitempty"`
@@ -715,16 +718,22 @@ type HelmOptions struct {
 }
 
 type K8sSecret struct {
-	Type       string
-	Name       string
-	SecretData []SecretsData
-	Namespace  string
+	Type        string
+	Name        string
+	Namespace   string
+	SecretData  []SecretsData
+	SecretsFile []SecretsFile
 }
 
 type SecretsData struct {
 	Type  string // file or literal
 	Key   string
 	Value string
+}
+
+type SecretsFile struct {
+	Name string
+	File string
 }
 
 // GetHelmRelease return installed release

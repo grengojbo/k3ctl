@@ -1,24 +1,86 @@
-@goal downloaded
-@reached_if [[ -f code.tar.gz ]]
-  wget http://domain/code.tar.gz
+# @goal downloaded
+# @reached_if [[ -f code.tar.gz ]]
+#   wget http://domain/code.tar.gz
   
-@goal extracted
-@depends_on downloaded
-  tar xzf code.tar.gz 
+# @goal extracted
+# @depends_on downloaded
+#   tar xzf code.tar.gz 
 
-@goal built
-@depends_on extracted
-  npm install
-  npm run build
+# @goal built
+# @depends_on extracted
+#   npm install
+#   npm run build
 
-@goal deployed
-@depends_on built
-  scp -C -r build/* user@domain:~/www
+# @goal deployed
+# @depends_on built
+#   scp -C -r build/* user@domain:~/www
+
+@goal bucket
+@doc Create Bucket
+  BUCKET=velero-iwisops
+  REGION=eu-central-1
+  echo "Create an S3 bucket,"
+  aws s3api create-bucket \
+    --bucket $BUCKET \
+    --region $REGION \
+    --create-bucket-configuration LocationConstraint=$REGION
+    # https://s3.eu-west-2.amazonaws.com/bk.iwis.io/gitlab-ruuner/
+  echo "Create the IAM user:"
+  aws iam create-user --user-name $BUCKET
+  echo "Attach policies to give velero the necessary permissions:"
+  cat > velero-policy.json <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeVolumes",
+                "ec2:DescribeSnapshots",
+                "ec2:CreateTags",
+                "ec2:CreateVolume",
+                "ec2:CreateSnapshot",
+                "ec2:DeleteSnapshot"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:DeleteObject",
+                "s3:PutObject",
+                "s3:AbortMultipartUpload",
+                "s3:ListMultipartUploadParts"
+            ],
+            "Resource": [
+                "arn:aws:s3:::${BUCKET}/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::${BUCKET}"
+            ]
+        }
+    ]
+}
+EOF
+  aws iam put-user-policy \
+    --user-name $BUCKET \
+    --policy-name ${BUCKET}-police \
+    --policy-document file://velero-policy.json
+  echo "Create an access key for the user:"
+  aws iam create-access-key --user-name ${BUCKET}
+  rm -Rf ./velero-policy.json
 
 @goal help
 @doc список комманд
-echo "hello"
-env
+  ./makesure -l
 
 @goal default
 @depends_on help
+  echo "Show commands:"
