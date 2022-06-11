@@ -1,8 +1,20 @@
 package types
 
+var AddonsList = []string{"cert-manager", "ingress", "monitoring", "backup"}
+
 // const HelmListCommand = "helm list -A -o json"
-const HelmListCommand = "helm list -A -o json --kubeconfig %s"
-const HelmDeleteCommand = "helm del %s -n %s --kubeconfig %s"
+const HelmRepoListCommand = "helm repo list --kubeconfig %s --kube-context %s -o json | jq -r '.[].name'"
+const HelmListCommand = "helm list -A -o json --kubeconfig %s --kube-context %s"
+const HelmRepoAddCommand = "helm repo add %s %s --kubeconfig %s --kube-context %s"
+const HelmRepoUpdateCommand = "helm repo update --kubeconfig %s --kube-context %s"
+const HelmDeleteCommand = "helm delete %s -n %s --kubeconfig %s --kube-context %s"
+
+const SecretCreateCommand = "kubectl create secret %s %s %s --kubeconfig %s --context %s"
+const SecretDeleteCommand = "kubectl delete secret %s -n %s --kubeconfig %s --context %s"
+const SecretListCommand = "kubectl get secret -n %s --kubeconfig %s --context %s -o json | jq -r '.items[].metadata.name'"
+
+const NamespaceGetCommand = "kubectl get ns -o=custom-columns='NAME:.metadata.name' --no-headers --kubeconfig %s --context %s"
+const NamespaceCreateCommand = "kubectl create namespace %s --kubeconfig %s --context %s"
 
 var HelmAddons = []string{"cert-manager"}
 
@@ -16,9 +28,11 @@ const VeleroHelmRepo = "vmware-tanzu/velero"
 const VeleroHelmURL = "https://vmware-tanzu.github.io/helm-charts"
 const VeleroDefaultName = "velero"
 const VeleroDefaultNamespace = "velero"
+const VeleroPluginAwsImage = "velero/velero-plugin-for-aws:v1.4.1"
 
 const BackupDefaultProvider = "aws"
 const BackupDefaultName = "velero"
+const BackupDefaultNamespace = "backup"
 
 // const BackupDefault = ""
 // const BackupDefault = ""

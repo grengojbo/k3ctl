@@ -9,6 +9,42 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// GrafanaAgentCloudSettings
+func GrafanaAgentCloudSettings(addons *k3sv1alpha1.Monitoring, clusterName string) (release k3sv1alpha1.HelmInterfaces) {
+	repo := k3sv1alpha1.HelmRepo{
+		Name: types.GrafanaAgentCloudHelmRepoName,
+		Repo: types.GrafanaAgentCloudHelmRepo,
+		Url:  types.GrafanaAgentCloudHelmURL,
+	}
+
+	if addons.Disabled {
+		release.Deleted = true
+	}
+	if len(addons.Name) == 0 {
+		addons.Name = types.GrafanaAgentCloudDefaultName
+	}
+	if len(addons.Namespace) == 0 {
+		addons.Namespace = types.MonitoringDefaultNamespace
+	}
+	if len(addons.Version) > 0 {
+		release.Version = addons.Version
+	}
+	if len(addons.Values) > 0 {
+		release.Values = addons.Values
+	}
+	if len(addons.ValuesFile) > 0 {
+		release.ValuesFile = addons.ValuesFile
+	}
+
+	//  All Settings
+	release.Name = addons.Name
+	release.Namespace = addons.Namespace
+	release.Repo = repo.Repo
+
+	addons.Repo = repo
+	return release
+}
+
 // MakeInstallGrafanaAgentCloud
 func MakeInstallGrafanaAgentCloud(addons *k3sv1alpha1.Monitoring, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
 	name := "MakeInstallGrafanaAgentCloud"
@@ -25,15 +61,18 @@ func MakeInstallGrafanaAgentCloud(addons *k3sv1alpha1.Monitoring, args *k3sv1alp
 	if len(addons.ValuesFile) == 0 {
 		addons.ValuesFile, err = util.CheckExitValueFile(args.ClusterName, release.Name)
 		if err != nil {
-			log.Errorf("IS NOT SET addons.monitoring.valuesFile OR %s", err.Error())
+			log.Warnf("IS NOT SET addons.monitoring.valuesFile OR %s", err.Error())
+			log.Warnf("TODO: add link to documentation...")
 			return nil
 		}
 	} else {
 		if err = util.CheckExitFile(addons.ValuesFile); err != nil {
-			log.Errorf("IS NOT file: addons.monitoring.valuesFile=%s", addons.ValuesFile)
+			log.Warnf("IS NOT file: addons.monitoring.valuesFile=%s", addons.ValuesFile)
+			log.Warnf("TODO: add link to documentation...")
 			return nil
 		}
 	}
+	// log.Warnf("ValuesFile: %s", addons.ValuesFile)
 	release.ValuesFile = addons.ValuesFile
 	// release.DependencyUpdate = true
 
@@ -53,39 +92,10 @@ func MakeInstallGrafanaAgentCloud(addons *k3sv1alpha1.Monitoring, args *k3sv1alp
 
 	overrides := map[string]string{}
 
-	// if !update {
-	// 	overrides["installCRDs"] = "true"
-	// }
-
-	// if ingress.HostMode {
-	// 	log.Infof("Running in host networking mode")
-	// 	overrides["controller.hostNetwork"] = "true"
-	// 	overrides["controller.hostPort.enabled"] = "true"
-	// 	overrides["controller.service.type"] = "NodePort"
-	// 	overrides["dnsPolicy"] = "ClusterFirstWithHostNet"
-	// 	overrides["controller.kind"] = "DaemonSet"
-	// } else {
-	// 	// overrides["controller.service.externalTrafficPolicy"] = "Cluster"
-	// 	overrides["controller.service.externalTrafficPolicy"] = "Local"
-	// 	overrides["controller.config.use-proxy-protocol"] = "false"
-	// }
-
 	overrides["clusterName"] = args.ClusterName
 
-	// if len(ingress.DefaultBackend.Registry) > 0 {
-	// 	overrides["defaultBackend.image.registry"] = ingress.DefaultBackend.Registry
-	// }
-	// if len(ingress.DefaultBackend.Image) > 0 {
-	// 	overrides["defaultBackend.image.image"] = ingress.DefaultBackend.Image
-	// }
-	// if len(ingress.DefaultBackend.Tag) > 0 {
-	// 	overrides["defaultBackend.image.tag"] = ingress.DefaultBackend.Tag
-	// }
-	// // overrides["defaultBackend.image.registry"] = "k8s.gcr.io"
-	// // overrides["defaultBackend.image.image"] = "defaultbackend-amd64"
-	// // overrides["defaultBackend.image.tag"] = "1.5"
-
 	options := k3sv1alpha1.HelmOptions{
+		ClusterName:     args.ClusterName,
 		CreateNamespace: false,
 		KubeconfigPath:  kubeConfigPath,
 		Overrides:       overrides,

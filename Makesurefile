@@ -24,7 +24,6 @@
     --bucket $BUCKET \
     --region $REGION \
     --create-bucket-configuration LocationConstraint=$REGION
-    # https://s3.eu-west-2.amazonaws.com/bk.iwis.io/gitlab-ruuner/
   echo "Create the IAM user:"
   aws iam create-user --user-name $BUCKET
   echo "Attach policies to give velero the necessary permissions:"

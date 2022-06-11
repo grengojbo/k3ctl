@@ -81,6 +81,7 @@ func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRele
 	}
 
 	options := k3sv1alpha1.HelmOptions{
+		ClusterName:     args.ClusterName,
 		CreateNamespace: false,
 		KubeconfigPath:  kubeConfigPath,
 		Overrides:       overrides,

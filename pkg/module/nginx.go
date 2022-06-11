@@ -70,6 +70,7 @@ func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmReleas
 	// overrides["defaultBackend.image.tag"] = "1.5"
 
 	options := k3sv1alpha1.HelmOptions{
+		ClusterName:     args.ClusterName,
 		CreateNamespace: false,
 		KubeconfigPath:  kubeConfigPath,
 		Overrides:       overrides,

@@ -229,6 +229,7 @@ type ExternalDns struct {
 	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
 }
 
 type MetalLB struct {
@@ -239,6 +240,7 @@ type MetalLB struct {
 	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
 }
 
 type CertManager struct {
@@ -249,6 +251,7 @@ type CertManager struct {
 	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
 }
 
 // observer
@@ -260,6 +263,26 @@ type Monitoring struct {
 	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+}
+
+type VeleroStorage struct {
+	Name    string `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Image   string `mapstructure:"image" yaml:"image" json:"image,omitempty"`
+	Default bool   `mapstructure:"default" yaml:"default" json:"default,omitempty"`
+	Region  string `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Bucket  string `mapstructure:"bucket" yaml:"bucket" json:"bucket,omitempty"`
+}
+
+type ResticBackup struct {
+	DeployRestic bool `mapstructure:"deployRestic" yaml:"deployRestic" json:"deployRestic,omitempty"`
+}
+
+type VeleroBackup struct {
+	Providers []string        `mapstructure:"providers" yaml:"providers" json:"providers,omitempty"` // aws azure s3
+	Storages  []VeleroStorage `mapstructure:"storages" yaml:"storages" json:"storages,omitempty"`
+	Repo      HelmRepo        `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	Restic    ResticBackup    `mapstructure:"restic" yaml:"restic" json:"restic,omitempty"`
 }
 
 type Backup struct {
@@ -270,9 +293,25 @@ type Backup struct {
 	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	Velero     VeleroBackup      `mapstructure:"velero" yaml:"velero" json:"velero,omitempty"`
 	Provider   string            `mapstructure:"provider" yaml:"provider" json:"provider,omitempty"` // aws azure s3
 	Bucket     string            `mapstructure:"bucket" yaml:"bucket" json:"bucket,omitempty"`
 	Region     string            `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	Schedules  []SchedulesBackup `mapstructure:"schedules" yaml:"schedules" json:"schedules,omitempty"`
+}
+type SchedulesBackup struct {
+	Name                       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Disabled                   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Schedule                   string            `mapstructure:"schedule" yaml:"schedule" json:"schedule,omitempty"`
+	Labels                     map[string]string `mapstructure:"labels" yaml:"labels" json:"labels,omitempty"`
+	Annotations                map[string]string `mapstructure:"annotations" yaml:"annotations" json:"annotations,omitempty"`
+	UseOwnerReferencesInBackup bool              `mapstructure:"useOwnerReferencesInBackup" yaml:"useOwnerReferencesInBackup" json:"useOwnerReferencesInBackup,omitempty"`
+	Ttl                        string            `mapstructure:"ttl" yaml:"ttl" json:"ttl,omitempty"`
+	IncludedNamespaces         []string          `mapstructure:"includedNamespaces" yaml:"includedNamespaces" json:"includedNamespaces,omitempty"`
+	// #     template:
+	// #       includedNamespaces:
+	// #       - foo
 }
 
 type Ingress struct {
@@ -285,6 +324,7 @@ type Ingress struct {
 	Values         map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile     string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 	DefaultBackend DefaultBackend    `mapstructure:"defaultBackend" yaml:"defaultBackend" json:"defaultBackend,omitempty"`
+	Repo           HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
 }
 
 type DefaultBackend struct {
@@ -682,9 +722,6 @@ type EnvConfig struct {
 type HelmInterfaces struct {
 	Name             string            `mapstructure:"name" yaml:"name" json:"name"`
 	Namespace        string            `mapstructure:"namespace" yaml:"namespace" json:"namespace"`
-	RepoName         string            `mapstructure:"repoName" yaml:"repoName" json:"repoName"`
-	Repo             string            `mapstructure:"repo" yaml:"repo" json:"repo"`
-	Url              string            `mapstructure:"url" yaml:"url" json:"url"`
 	Revision         int               `mapstructure:"revision" yaml:"revision" json:"revision"`
 	Updated          string            `mapstructure:"updated" yaml:"updated" json:"updated"`
 	Deleted          bool              `mapstructure:"deleted" yaml:"deleted" json:"deleted,omitempty"`
@@ -692,20 +729,27 @@ type HelmInterfaces struct {
 	Status           string            `mapstructure:"status" yaml:"status" json:"status"`
 	Chart            string            `mapstructure:"chart" yaml:"chart" json:"chart"`
 	AppVersion       string            `mapstructure:"appVersion" yaml:"app_version" json:"app_version"`
-	Version          string            `mapstructure:"version" yaml:"version" json:"version"`
 	Values           map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile       string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	// TODO: delete
+	RepoName string `mapstructure:"repoName" yaml:"repoName" json:"repoName"`
+	Repo     string `mapstructure:"repo" yaml:"repo" json:"repo"`
+	Url      string `mapstructure:"url" yaml:"url" json:"url"`
+	Version  string `mapstructure:"version" yaml:"version" json:"version"`
 }
 
 type HelmRelease struct {
 	ClusterName    string           `mapstructure:"clusterName" yaml:"clusterName" json:"clusterName,omitempty"`
+	ServiceMonitor bool             `mapstructure:"serviceMonitor" yaml:"serviceMonitor" json:"serviceMonitor,omitempty"`
 	Verbose        bool             `mapstructure:"verbose" yaml:"verbose" json:"verbose,omitempty"`
 	Wait           bool             `mapstructure:"wait" yaml:"wait" json:"wait,omitempty"`
 	UpdateStrategy string           `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
 	Releases       []HelmInterfaces `mapstructure:"releases" yaml:"releases" json:"releases,omitempty"`
+	Repo           []HelmRepo       `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
 }
 
 type HelmOptions struct {
+	ClusterName     string
 	CreateNamespace bool
 	KubeconfigPath  string
 	Overrides       map[string]string
@@ -717,23 +761,25 @@ type HelmOptions struct {
 	Secrets         []K8sSecret
 }
 
+type HelmRepo struct {
+	Name    string `mapstructure:"name" yaml:"name" json:"name"`
+	Repo    string `mapstructure:"repo" yaml:"repo" json:"repo"`
+	Url     string `mapstructure:"url" yaml:"url" json:"url"`
+	Version string `mapstructure:"version" yaml:"version" json:"version"`
+}
+
 type K8sSecret struct {
 	Type        string
 	Name        string
 	Namespace   string
-	SecretData  []SecretsData
-	SecretsFile []SecretsFile
+	SecretsData []SecretsData
+	// SecretsFiles []SecretsFile
 }
 
 type SecretsData struct {
 	Type  string // file or literal
 	Key   string
 	Value string
-}
-
-type SecretsFile struct {
-	Name string
-	File string
 }
 
 // GetHelmRelease return installed release

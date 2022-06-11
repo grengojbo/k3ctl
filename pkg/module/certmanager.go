@@ -42,6 +42,7 @@ func MakeInstallCertManager(certManager *k3sv1alpha1.CertManager, args *k3sv1alp
 	}
 
 	options := k3sv1alpha1.HelmOptions{
+		ClusterName:     args.ClusterName,
 		CreateNamespace: false,
 		KubeconfigPath:  kubeConfigPath,
 		Overrides:       overrides,

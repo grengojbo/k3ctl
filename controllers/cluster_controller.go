@@ -188,15 +188,15 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	// 	cfg.Spec.Addons.Ingress.Name = "ingress-nginx"
 	// }
 
-	// grafana-agent-cloud
-	HelmMonitoring := k3sv1alpha1.HelmInterfaces{
-		RepoName: types.GrafanaAgentCloudHelmRepoName,
-		Repo:     types.GrafanaAgentCloudHelmRepo,
-		Url:      types.GrafanaAgentCloudHelmURL,
-		Values:   cfg.Spec.Addons.Monitoring.Values,
+	// Monitoring
+	if len(cfg.Spec.Addons.Monitoring.Name) == 0 {
+		cfg.Spec.Addons.Monitoring.Name = types.GrafanaAgentCloudDefaultName
 	}
-	if cfg.Spec.Addons.Monitoring.Disabled {
-		HelmMonitoring.Deleted = true
+	// grafana-agent-cloud
+	if cfg.Spec.Addons.Monitoring.Name == types.GrafanaAgentCloudDefaultName {
+		HelmMonitoring := module.GrafanaAgentCloudSettings(&cfg.Spec.Addons.Monitoring, cfg.Spec.ClusterName)
+		p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmMonitoring)
+		p.HelmRelease.Repo = append(p.HelmRelease.Repo, cfg.Spec.Addons.Monitoring.Repo)
 	}
 
 	// Cert Manager
@@ -267,53 +267,16 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmIngress)
 
-	// Monitoring
-	if len(cfg.Spec.Addons.Monitoring.Name) == 0 {
-		cfg.Spec.Addons.Monitoring.Name = types.GrafanaAgentCloudDefaultName
-	}
-	HelmMonitoring.Name = cfg.Spec.Addons.Monitoring.Name
-	if len(cfg.Spec.Addons.Monitoring.Namespace) == 0 {
-		HelmMonitoring.Namespace = types.MonitoringDefaultNamespace
-	} else {
-		HelmMonitoring.Namespace = cfg.Spec.Addons.Monitoring.Namespace
-	}
-	if len(cfg.Spec.Addons.Monitoring.Version) > 0 {
-		HelmMonitoring.Version = cfg.Spec.Addons.Monitoring.Version
-	}
-	if len(cfg.Spec.Addons.Monitoring.Values) > 0 {
-		HelmMonitoring.Values = cfg.Spec.Addons.Monitoring.Values
-	}
-	if len(cfg.Spec.Addons.Monitoring.ValuesFile) > 0 {
-		HelmMonitoring.ValuesFile = cfg.Spec.Addons.Monitoring.ValuesFile
-	}
-	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmMonitoring)
-
 	// BackUp
 	// Velero
-	HelmBackup := k3sv1alpha1.HelmInterfaces{
-		RepoName: types.VeleroHelmRepoName,
-		Repo:     types.VeleroHelmRepo,
-		Url:      types.VeleroHelmURL,
-		Values:   cfg.Spec.Addons.Backup.Values,
-	}
-	if cfg.Spec.Addons.Backup.Disabled {
-		HelmBackup.Deleted = true
-	}
 	if len(cfg.Spec.Addons.Backup.Name) == 0 {
 		cfg.Spec.Addons.Backup.Name = types.BackupDefaultName
 	}
-	HelmBackup.Name = cfg.Spec.Addons.Backup.Name
-	// Set Cloud Provider
-	if len(cfg.Spec.Addons.Backup.Provider) == 0 {
-		cfg.Spec.Addons.Backup.Provider = types.BackupDefaultProvider
+	if cfg.Spec.Addons.Backup.Name == types.VeleroDefaultName {
+		HelmBackup := module.VeleroSettings(&cfg.Spec.Addons.Backup, cfg.Spec.ClusterName)
+		p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmBackup)
+		p.HelmRelease.Repo = append(p.HelmRelease.Repo, cfg.Spec.Addons.Backup.Repo)
 	}
-	if len(cfg.Spec.Addons.Backup.Region) == 0 {
-		cfg.Spec.Addons.Backup.Region = types.DefaultAwsRegion
-	}
-	if len(cfg.Spec.Addons.Backup.Bucket) == 0 {
-		cfg.Spec.Addons.Backup.Bucket = fmt.Sprintf("velero-%s", cfg.Spec.ClusterName)
-	}
-	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmBackup)
 
 	// Other settings
 	if len(cfg.Spec.Addons.Options.UpdateStrategy) == 0 || cfg.Spec.Addons.Options.UpdateStrategy == "none" {
@@ -1777,7 +1740,7 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 	}
 
 	// helm list
-	command := fmt.Sprintf(types.HelmListCommand, kubeConfigPath)
+	command := fmt.Sprintf(types.HelmListCommand, kubeConfigPath, p.Cluster.Spec.ClusterName)
 	stdOut, _, err := k3s.RunLocalCommand(command, false, p.CmdFlags.DryRun)
 	// stdOut: [{"name":"ingress-nginx","namespace":"ingress-nginx","revision":"5","updated":"2022-06-02 18:09:39.232841792 +0300 EEST","status":"deployed","chart":"ingress-nginx-4.1.3","app_version":"1.2.1"}]
 	if err != nil {
@@ -1837,10 +1800,10 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 		helmDeleteReleases = append(helmDeleteReleases, delIngress)
 	}
 
-	module.CreateNamespace(ns, kubeConfigPath, p.CmdFlags.DryRun)
+	module.CreateNamespace(ns, kubeConfigPath, p.Cluster.Spec.ClusterName, p.CmdFlags.DryRun)
 	updateRepo := true
-	module.AddHelmRepo(p.HelmRelease.Releases, kubeConfigPath, updateRepo, p.CmdFlags.DryRun)
-	module.DeleteHelmReleases(helmDeleteReleases, kubeConfigPath, p.CmdFlags.DryRun)
+	module.AddHelmRepo(p.HelmRelease.Repo, kubeConfigPath, p.Cluster.Spec.ClusterName, updateRepo, p.CmdFlags.DryRun)
+	module.DeleteHelmReleases(helmDeleteReleases, kubeConfigPath, p.Cluster.Spec.ClusterName, p.CmdFlags.DryRun)
 
 	isRun := true
 	if isRun {
@@ -1871,7 +1834,7 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 			}
 		}
 
-		if len(addonsName) == 0 || addonsName == "monitring" {
+		if len(addonsName) == 0 || addonsName == "monitoring" {
 			if err := module.MakeInstallGrafanaAgentCloud(&p.Cluster.Spec.Addons.Monitoring, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 				p.Log.Errorf(err.Error())
 			}

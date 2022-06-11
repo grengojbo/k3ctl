@@ -22,7 +22,10 @@ THE SOFTWARE.
 package app
 
 import (
+	"strings"
+
 	"github.com/grengojbo/k3ctl/pkg/types"
+	"github.com/grengojbo/k3ctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -37,7 +40,7 @@ var ConfigFile string
 var cfgViper = viper.New()
 var ppViper = viper.New()
 
-var clusterName string
+// var clusterName string
 var cmdFlags types.CmdFlags
 
 const GetScript = "curl -sfL https://get.k3s.io"
@@ -65,10 +68,13 @@ func NewCmdApply() *cobra.Command {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			// addonsNameList := []string{"cert-manager", "ingress", "grafana-agent-cloud"}
 			addonsName := ""
 			if len(args) > 0 {
 				addonsName = args[0]
+				if _, ok := util.Find(types.AddonsList, addonsName); !ok {
+					log.Errorf("support addons: %s", strings.Join(types.AddonsList, " "))
+					log.Fatalf("is not support addons: %s", addonsName)
+				}
 			}
 
 			/*************************
@@ -92,7 +98,7 @@ func NewCmdApply() *cobra.Command {
 				automation.EnsurePlugins(&c.Plugins)
 			}
 			// обновляем статус нод
-			c.LoadNodeStatus()
+			// c.LoadNodeStatus()
 
 			c.SetAddons(addonsName)
 
