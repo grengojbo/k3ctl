@@ -769,11 +769,12 @@ type HelmRepo struct {
 }
 
 type K8sSecret struct {
-	Type        string
-	Name        string
-	Namespace   string
-	SecretsData []SecretsData
-	// SecretsFiles []SecretsFile
+	Type        string        `mapstructure:"type" yaml:"type" json:"type"`
+	Name        string        `mapstructure:"name" yaml:"name" json:"name"`
+	Namespace   string        `mapstructure:"namespace" yaml:"namespace" json:"namespace"`
+	SecretsData []SecretsData `mapstructure:"secrets" yaml:"secrets" json:"secrets"`
+	Status      string        `mapstructure:"status" yaml:"status" json:"status"`
+	Updated     bool          `mapstructure:"updated" yaml:"updated" json:"updated"`
 }
 
 type SecretsData struct {

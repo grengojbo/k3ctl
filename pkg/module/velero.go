@@ -43,6 +43,8 @@ func VeleroSettings(addons *k3sv1alpha1.Backup, clusterName string) (release k3s
 	}
 	if len(addons.ValuesFile) > 0 {
 		release.ValuesFile = addons.ValuesFile
+	} else {
+
 	}
 
 	// Settings for Velero
@@ -68,9 +70,6 @@ func VeleroSettings(addons *k3sv1alpha1.Backup, clusterName string) (release k3s
 		Bucket: fmt.Sprintf("velero-%s", clusterName),
 	}
 
-	if len(addons.Velero.Storages) > 0 {
-		log.Errorln("TODO: add default settings to: addons.Velero.Storages")
-	}
 	for _, provider := range addons.Velero.Providers {
 		if provider == "aws" {
 			addons.Velero.Storages = append(addons.Velero.Storages, storageAws)
@@ -106,10 +105,16 @@ func MakeInstallVelero(addons *k3sv1alpha1.Backup, args *k3sv1alpha1.HelmRelease
 			return nil
 		}
 		release.ValuesFile = addons.ValuesFile
+	} else {
+		valuesFile, err := util.CheckExitValueFile(args.ClusterName, release.Name)
+		if err == nil {
+			release.ValuesFile = valuesFile
+		}
 	}
+	log.Warnf("ClusterName: %s release.Name: %s addons.ValuesFile: %s", args.ClusterName, release.Name, release.ValuesFile)
 	// release.DependencyUpdate = true
 	existingSecret := fmt.Sprintf("velero-%s-%s-creds", args.ClusterName, addons.Velero.Providers[0])
-	// secretFile := fmt.Sprintf("./variables/%s/secret-velero.ini", args.ClusterName)
+	secretFile := fmt.Sprintf("./variables/%s/secret-velero.ini", args.ClusterName)
 
 	if addons.Disabled {
 		log.Warnf("%s disabled...", description)
@@ -125,7 +130,7 @@ func MakeInstallVelero(addons *k3sv1alpha1.Backup, args *k3sv1alpha1.HelmRelease
 		log.Infof("Install %s...", description)
 		secretsFile := k3sv1alpha1.SecretsData{
 			Key:   "cloud",
-			Value: fmt.Sprintf("./variables/%s/secret-velero.ini", args.ClusterName),
+			Value: secretFile,
 			Type:  types.FromFileSecret,
 		}
 		secret := k3sv1alpha1.K8sSecret{
