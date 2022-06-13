@@ -284,7 +284,8 @@ InstallArkade() {
   arkade get kustomize
   sudo mv ${HOME}/.arkade/bin/kustomize ${BIN_DIR}/
 
-  arkade get helm  
+  HELM_VERSION=`curl https://api.github.com/repos/helm/helm/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
+  arkade get helm -v ${HELM_VERSION} 
   sudo mv ${HOME}/.arkade/bin/helm ${BIN_DIR}/
 
   arkade get krew
@@ -295,7 +296,18 @@ InstallArkade() {
 
 }
 
+InstallVelero() {
+  # VELERO_VERSION=v1.8.1
+  VELERO_VERSION=`curl https://api.github.com/repos/vmware-tanzu/velero/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
+  wget https://github.com/vmware-tanzu/velero/releases/download/${VELERO_VERSION}/velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
+  tar -xzvf velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
+  rm -f velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
+  chmod 0777 velero-${VELERO_VERSION}-${OS}-${ARCH}/velero
+  sudo mv velero-${VELERO_VERSION}-${OS}-${ARCH}/velero /usr/local/bin/velero
+}
+
 
 setup_env
 InstallArkade
 download_and_verify
+InstallVelero

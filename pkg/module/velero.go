@@ -43,8 +43,6 @@ func VeleroSettings(addons *k3sv1alpha1.Backup, clusterName string) (release k3s
 	}
 	if len(addons.ValuesFile) > 0 {
 		release.ValuesFile = addons.ValuesFile
-	} else {
-
 	}
 
 	// Settings for Velero
@@ -111,7 +109,7 @@ func MakeInstallVelero(addons *k3sv1alpha1.Backup, args *k3sv1alpha1.HelmRelease
 			release.ValuesFile = valuesFile
 		}
 	}
-	log.Warnf("ClusterName: %s release.Name: %s addons.ValuesFile: %s", args.ClusterName, release.Name, release.ValuesFile)
+	// log.Warnf("ClusterName: %s release.Name: %s addons.ValuesFile: %s", args.ClusterName, release.Name, release.ValuesFile)
 	// release.DependencyUpdate = true
 	existingSecret := fmt.Sprintf("velero-%s-%s-creds", args.ClusterName, addons.Velero.Providers[0])
 	secretFile := fmt.Sprintf("./variables/%s/secret-velero.ini", args.ClusterName)
@@ -127,7 +125,14 @@ func MakeInstallVelero(addons *k3sv1alpha1.Backup, args *k3sv1alpha1.HelmRelease
 		log.Infof("Update %s...", description)
 		// update = true
 	} else {
+		if err := util.CheckExitFile(secretFile); err != nil {
+			log.Warnf("IS NOT Secret: %s", secretFile)
+			log.Warnf("Is NOT install \"%s\" :(", description)
+			return nil
+		}
+
 		log.Infof("Install %s...", description)
+
 		secretsFile := k3sv1alpha1.SecretsData{
 			Key:   "cloud",
 			Value: secretFile,
@@ -167,9 +172,9 @@ func MakeInstallVelero(addons *k3sv1alpha1.Backup, args *k3sv1alpha1.HelmRelease
 	overrides["configuration.provider"] = addons.Velero.Providers[0]
 
 	// Is Enabled monitoring
-	// if args.ServiceMonitor {
-	// 	overrides["serviceMonitor.enabled"] = "true"
-	// }
+	if args.ServiceMonitor {
+		overrides["serviceMonitor.enabled"] = "true"
+	}
 
 	for i, v := range addons.Velero.Storages {
 		name := fmt.Sprintf("%s-%s", v.Name, args.ClusterName)
@@ -200,7 +205,8 @@ func MakeInstallVelero(addons *k3sv1alpha1.Backup, args *k3sv1alpha1.HelmRelease
 		for key, value := range v.Annotations {
 			overrides[fmt.Sprintf("schedules.%s.annotations.%s", v.Name, key)] = value
 		}
-		overrides[fmt.Sprintf("schedules.%s.schedule", v.Name)] = fmt.Sprintf("\"%s\"", v.Schedule)
+		overrides[fmt.Sprintf("schedules.%s.schedule", v.Name)] = v.Schedule
+		// overrides[fmt.Sprintf("schedules.%s.schedule", v.Name)] = fmt.Sprintf("\"%s\"", v.Schedule)
 		if v.UseOwnerReferencesInBackup {
 			overrides[fmt.Sprintf("schedules.%s.useOwnerReferencesInBackup", v.Name)] = "true"
 		} else {

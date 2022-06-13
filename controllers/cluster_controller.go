@@ -192,12 +192,14 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	if len(cfg.Spec.Addons.Monitoring.Name) == 0 {
 		cfg.Spec.Addons.Monitoring.Name = types.GrafanaAgentCloudDefaultName
 	}
+	HelmMonitoring := k3sv1alpha1.HelmInterfaces{}
 	// grafana-agent-cloud
 	if cfg.Spec.Addons.Monitoring.Name == types.GrafanaAgentCloudDefaultName {
-		HelmMonitoring := module.GrafanaAgentCloudSettings(&cfg.Spec.Addons.Monitoring, cfg.Spec.ClusterName)
+		HelmMonitoring = module.GrafanaAgentCloudSettings(&cfg.Spec.Addons.Monitoring, cfg.Spec.ClusterName)
 		p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmMonitoring)
 		p.HelmRelease.Repo = append(p.HelmRelease.Repo, cfg.Spec.Addons.Monitoring.Repo)
 	}
+	p.HelmRelease.ServiceMonitor = !HelmMonitoring.Deleted
 
 	// Cert Manager
 	HelmCertManager := k3sv1alpha1.HelmInterfaces{

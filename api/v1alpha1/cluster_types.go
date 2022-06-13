@@ -279,10 +279,11 @@ type ResticBackup struct {
 }
 
 type VeleroBackup struct {
-	Providers []string        `mapstructure:"providers" yaml:"providers" json:"providers,omitempty"` // aws azure s3
-	Storages  []VeleroStorage `mapstructure:"storages" yaml:"storages" json:"storages,omitempty"`
-	Repo      HelmRepo        `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
-	Restic    ResticBackup    `mapstructure:"restic" yaml:"restic" json:"restic,omitempty"`
+	Providers  []string        `mapstructure:"providers" yaml:"providers" json:"providers,omitempty"` // aws azure s3
+	Storages   []VeleroStorage `mapstructure:"storages" yaml:"storages" json:"storages,omitempty"`
+	Repo       HelmRepo        `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	Restic     ResticBackup    `mapstructure:"restic" yaml:"restic" json:"restic,omitempty"`
+	SecretFile string          `mapstructure:"secretFile" yaml:"secretFile" json:"secretFile,omitempty"`
 }
 
 type Backup struct {

@@ -105,6 +105,10 @@ func MakeInstallGrafanaAgentCloud(addons *k3sv1alpha1.Monitoring, args *k3sv1alp
 		DryRun:          dryRun,
 	}
 	err = Helm3Upgrade(&options)
+	if err != nil {
+		log.Warnf("Set serviceMonitor disabled...")
+		args.ServiceMonitor = false
+	}
 
 	return err
 }
