@@ -546,6 +546,8 @@ type Datastore struct {
 }
 
 type LoadBalancer struct {
+	// IP addresse at which the controller services are available
+	ExternalIP string `mapstructure:"externalIPs" yaml:"externalIPs" json:"externalIPs,omitempty"`
 	MetalLb string `mapstructure:"metalLb" yaml:"metalLb" json:"metalLb,omitempty"`
 	KubeVip string `mapstructure:"kubeVip" yaml:"kubeVip" json:"kubeVip,omitempty"`
 }

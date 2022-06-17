@@ -184,10 +184,6 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	}
 
 	// Set default addons
-	// if len(cfg.Spec.Addons.Ingress.Name) == 0 {
-	// 	cfg.Spec.Addons.Ingress.Name = "ingress-nginx"
-	// }
-
 	// Monitoring
 	if len(cfg.Spec.Addons.Monitoring.Name) == 0 {
 		cfg.Spec.Addons.Monitoring.Name = types.GrafanaAgentCloudDefaultName
@@ -207,44 +203,17 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	p.HelmRelease.Repo = append(p.HelmRelease.Repo, cfg.Spec.Addons.CertManager.Repo)
 
 	// Ingress controler
-	HelmIngress := k3sv1alpha1.HelmInterfaces{
-		RepoName:  types.NginxHelmRepoNane,
-		Repo:      types.NginxHelmRepo,
-		Url:       types.NginxHelmURL,
-		Namespace: types.NginxDefaultNamespace,
-		Values:    cfg.Spec.Addons.Ingress.Values,
-	}
-	if cfg.Spec.Addons.Ingress.Disabled {
-		HelmIngress.Deleted = true
-	}
+	HelmIngress := k3sv1alpha1.HelmInterfaces{}
 	if len(cfg.Spec.Addons.Ingress.Name) == 0 {
 		cfg.Spec.Addons.Ingress.Name = types.NginxDefaultName
 	}
-	HelmIngress.Name = cfg.Spec.Addons.Ingress.Name
-	if len(cfg.Spec.Addons.Ingress.Namespace) == 0 {
-		if HelmIngress.Name == types.HaproxyDefaultName {
-			HelmIngress.Namespace = types.HaproxyDefaultNamespace
-		}
-	} else {
-		HelmIngress.Namespace = cfg.Spec.Addons.Ingress.Namespace
-	}
-	if len(cfg.Spec.Addons.Ingress.Version) > 0 {
-		HelmIngress.Version = cfg.Spec.Addons.Ingress.Version
-	}
-	if len(cfg.Spec.Addons.Ingress.Values) > 0 {
-		HelmIngress.Values = cfg.Spec.Addons.Ingress.Values
-	}
-	if len(cfg.Spec.Addons.Ingress.ValuesFile) > 0 {
-		HelmIngress.ValuesFile = cfg.Spec.Addons.Ingress.ValuesFile
-	}
-	// Haproxy https://www.haproxy.com/documentation/kubernetes/latest/installation/community/kubernetes/
-	// https://github.com/haproxytech/helm-charts
-	if HelmIngress.Name == types.HaproxyDefaultName {
-		HelmIngress.RepoName = types.HaproxyHelmRepoName
-		HelmIngress.Repo = types.HaproxyHelmRepo
-		HelmIngress.Url = types.HaproxyHelmURL
+	if cfg.Spec.Addons.Ingress.Name == types.NginxDefaultName {
+		HelmIngress = module.NginxSettings(&cfg.Spec.Addons.Ingress, cfg.Spec.ClusterName)
+	} else if cfg.Spec.Addons.Ingress.Name == types.HaproxyDefaultName {
+		HelmIngress = module.HaproxySettings(&cfg.Spec.Addons.Ingress, cfg.Spec.ClusterName)
 	}
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmIngress)
+	p.HelmRelease.Repo = append(p.HelmRelease.Repo, cfg.Spec.Addons.Ingress.Repo)
 
 	// BackUp
 	// Velero

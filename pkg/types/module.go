@@ -1,6 +1,6 @@
 package types
 
-var AddonsList = []string{"cert-manager", "ingress", "monitoring", "backup"}
+var AddonsList = []string{"cert-manager", "ingress", "external-dns", "monitoring", "backup"}
 
 // const HelmListCommand = "helm list -A -o json"
 const HelmRepoListCommand = "helm repo list --kubeconfig %s --kube-context %s -o json | jq -r '.[].name'"
