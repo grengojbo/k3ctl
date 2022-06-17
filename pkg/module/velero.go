@@ -95,7 +95,7 @@ func MakeInstallVelero(addons *k3sv1alpha1.Backup, args *k3sv1alpha1.HelmRelease
 		return fmt.Errorf("[%s] is not release...", name)
 	}
 
-	log.Debugf("[%s] name: %s disabled: %v status: %v (cluster: %s)", name, addons.Name, addons.Disabled, release.Status, args.ClusterName)
+	// log.Debugf("[%s] name: %s disabled: %v status: %v (cluster: %s)", name, addons.Name, addons.Disabled, release.Status, args.ClusterName)
 
 	if len(addons.ValuesFile) > 0 {
 		if err = util.CheckExitFile(addons.ValuesFile); err != nil {
@@ -172,9 +172,9 @@ func MakeInstallVelero(addons *k3sv1alpha1.Backup, args *k3sv1alpha1.HelmRelease
 	overrides["configuration.provider"] = addons.Velero.Providers[0]
 
 	// Is Enabled monitoring
-	if args.ServiceMonitor {
-		overrides["serviceMonitor.enabled"] = "true"
-	}
+	// if args.ServiceMonitor {
+	// 	overrides["serviceMonitor.enabled"] = "true"
+	// }
 
 	for i, v := range addons.Velero.Storages {
 		name := fmt.Sprintf("%s-%s", v.Name, args.ClusterName)

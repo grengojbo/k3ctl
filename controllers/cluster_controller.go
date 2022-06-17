@@ -202,32 +202,9 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	p.HelmRelease.ServiceMonitor = !HelmMonitoring.Deleted
 
 	// Cert Manager
-	HelmCertManager := k3sv1alpha1.HelmInterfaces{
-		RepoName: types.CertManagerHelmRepoName,
-		Repo:     types.CertManagerHelmRepo,
-		Url:      types.CertManagerHelmURL,
-		Values:   cfg.Spec.Addons.CertManager.Values,
-	}
-	if cfg.Spec.Addons.CertManager.Disabled {
-		HelmCertManager.Deleted = true
-	}
-	HelmCertManager.Name = types.CertManagerDefaultName
-	cfg.Spec.Addons.CertManager.Name = types.CertManagerDefaultName
-	if len(cfg.Spec.Addons.CertManager.Namespace) == 0 {
-		HelmCertManager.Namespace = types.CertManagerDefaultNamespace
-	} else {
-		HelmCertManager.Namespace = cfg.Spec.Addons.CertManager.Namespace
-	}
-	if len(cfg.Spec.Addons.CertManager.Version) > 0 {
-		HelmCertManager.Version = cfg.Spec.Addons.CertManager.Version
-	}
-	if len(cfg.Spec.Addons.CertManager.Values) > 0 {
-		HelmCertManager.Values = cfg.Spec.Addons.CertManager.Values
-	}
-	if len(cfg.Spec.Addons.CertManager.ValuesFile) > 0 {
-		HelmCertManager.ValuesFile = cfg.Spec.Addons.CertManager.ValuesFile
-	}
+	HelmCertManager := module.CertManagerSettings(&cfg.Spec.Addons.CertManager, cfg.Spec.ClusterName)
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmCertManager)
+	p.HelmRelease.Repo = append(p.HelmRelease.Repo, cfg.Spec.Addons.CertManager.Repo)
 
 	// Ingress controler
 	HelmIngress := k3sv1alpha1.HelmInterfaces{
