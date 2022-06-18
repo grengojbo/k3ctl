@@ -130,7 +130,7 @@ func MakeInstallHaproxy(addons *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelea
 
 	if addons.HostMode {
 		log.Infof("Running in host networking mode")
-		overrides["controller.service.enabled"] = "false"
+		// overrides["controller.service.enabled"] = "false"
 		overrides["dnsPolicy"] = "ClusterFirstWithHostNet"
 		overrides["controller.kind"] = "DaemonSet"
 		overrides["controller.daemonset.useHostPort"] = "true"
