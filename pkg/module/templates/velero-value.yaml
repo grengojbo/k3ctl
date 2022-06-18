@@ -1,0 +1,26 @@
+# Tolerations to use for the Velero deployment. Optional.
+# expects input structure as per specification https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#toleration-v1-core
+# for example:
+#   tolerations:
+#   - key: foo.bar.com/role
+#     operator: Equal
+#     value: master
+#     effect: NoSchedule
+tolerations: []
+
+# Affinity to use for the Velero deployment. Optional.
+# expects input structure as per specification https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#affinity-v1-core
+# for example:
+#   affinity:
+#     nodeAffinity:
+#      requiredDuringSchedulingIgnoredDuringExecution:
+#        nodeSelectorTerms:
+#        - matchExpressions:
+#          - key: foo.bar.com/role
+#            operator: In
+#            values:
+#            - master
+affinity: {}
+
+# Node selector to use for the Velero deployment. Optional.
+nodeSelector: {}

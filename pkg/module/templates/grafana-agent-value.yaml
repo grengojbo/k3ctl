@@ -1,0 +1,9 @@
+monitoring:
+  remoteWrite: ${MONITORING_URL:-https://prometheus-prod-01-eu-west-0.grafana.net/api/prom/push}
+  username: ${MONITORING_USERNAME}
+  apiKey: ${MONITORING_APIKEY}
+
+log:
+  remoteWrite: ${LOKI_URL:-https://logs-prod-eu-west-0.grafana.net/loki/api/v1/push}
+  username: ${LOKI_USERNAME}
+  apiKey: ${LOKI_APIKEY}

@@ -80,6 +80,19 @@ func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmReleas
 		log.Infof("Install %s...", description)
 	}
 
+	// if len(addons.ValuesFile) > 0 {
+	// 	if err = util.CheckExitFile(addons.ValuesFile); err != nil {
+	// 		log.Errorf("IS NOT file: addons.certManager.valuesFile=%s", addons.ValuesFile)
+	// 		return nil
+	// 	}
+	// 	release.ValuesFile = addons.ValuesFile
+	// } else {
+	// 	valuesFile, err := util.CheckExitValueFile(args.ClusterName, release.Name)
+	// 	if err == nil {
+	// 		release.ValuesFile = valuesFile
+	// 	}
+	// }
+
 	overrides := map[string]string{}
 
 	if !update {
