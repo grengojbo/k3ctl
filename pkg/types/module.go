@@ -2,6 +2,10 @@ package types
 
 var LoadBalancerList = []string{MetalLb, ServiceLb}
 var AddonsList = []string{"cert-manager", "ingress", "external-dns", "monitoring", "backup"}
+var PresetList = []string{PresetSingle, PresetOneMaster, PresetWorker, PresetMultyMaster}
+
+// var IngressControllers = []string{IngressAmbassador, IngressAmbassadorAPI, IngressContour, IngressHaproxyName, IngressHaproxy, IngressKing, IngressNginx, IngressTraefik}
+var IngressList = []string{IngressHaproxy, IngressNginx}
 
 // const HelmListCommand = "helm list -A -o json"
 const HelmRepoListCommand = "helm repo list --kubeconfig %s --kube-context %s -o json | jq -r '.[].name'"
@@ -58,6 +62,17 @@ const HaproxyHelmRepo = "haproxytech/kubernetes-ingress"
 const HaproxyHelmURL = "https://haproxytech.github.io/helm-charts"
 const HaproxyDefaultNamespace = "haproxy-controller"
 const HaproxyDefaultName = "haproxy"
+
+// https://www.haproxy.com/documentation/kubernetes/latest/configuration/custom-resources/backend/install-backend-crd/
+const HaproxyCrdBackend = "https://cdn.haproxy.com/documentation/kubernetes/1.8/crd/backend.yaml"
+
+// https://www.haproxy.com/documentation/kubernetes/latest/configuration/custom-resources/defaults/install-defaults-crd/
+const HaproxyCrdDefaults = "https://cdn.haproxy.com/documentation/kubernetes/1.8/crd/defaults.yaml"
+
+// https://www.haproxy.com/documentation/kubernetes/latest/configuration/custom-resources/global/install-global-crd/
+const HaproxyCrdGlobal = "https://cdn.haproxy.com/documentation/kubernetes/1.8/crd/global.yaml"
+
+// const HaproxyCrd = ""
 
 const MonitoringDefaultNamespace = "monitoring"
 

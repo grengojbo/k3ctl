@@ -219,6 +219,7 @@ type PulumiModule struct {
 	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	Manifests  []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
 type ExternalDns struct {
@@ -230,6 +231,7 @@ type ExternalDns struct {
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	Manifests  []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
 type MetalLB struct {
@@ -241,6 +243,7 @@ type MetalLB struct {
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	Manifests  []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
 type CertManager struct {
@@ -252,6 +255,7 @@ type CertManager struct {
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	Manifests  []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
 // observer
@@ -264,6 +268,7 @@ type Monitoring struct {
 	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	Manifests  []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
 type VeleroStorage struct {
@@ -284,6 +289,7 @@ type VeleroBackup struct {
 	Repo       HelmRepo        `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
 	Restic     ResticBackup    `mapstructure:"restic" yaml:"restic" json:"restic,omitempty"`
 	SecretFile string          `mapstructure:"secretFile" yaml:"secretFile" json:"secretFile,omitempty"`
+	Manifests  []string        `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
 type Backup struct {
@@ -300,6 +306,7 @@ type Backup struct {
 	Region     string            `mapstructure:"region" yaml:"region" json:"region,omitempty"`
 	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
 	Schedules  []SchedulesBackup `mapstructure:"schedules" yaml:"schedules" json:"schedules,omitempty"`
+	Manifests  []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 type SchedulesBackup struct {
 	Name                       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
@@ -327,6 +334,7 @@ type Ingress struct {
 	DefaultBackend DefaultBackend    `mapstructure:"defaultBackend" yaml:"defaultBackend" json:"defaultBackend,omitempty"`
 	Repo           HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
 	LoadBalancer   *LoadBalancer     `mapstructure:"loadBalancer" yaml:"loadBalancer" json:"loadBalancer,omitempty"`
+	Manifests      []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
 type DefaultBackend struct {
@@ -561,6 +569,7 @@ type ClusterSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Region            string                        `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Preset            string                        `mapstructure:"preset" json:"preset" yaml:"preset"`
 	Provider          string                        `mapstructure:"provider" json:"provider" yaml:"provider"`
 	Operator          bool                          `mapstructure:"operator" yaml:"operator" json:"operator,omitempty"`
 	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"` //nolint:lll    // default 1
@@ -737,10 +746,11 @@ type HelmInterfaces struct {
 	Values           map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
 	ValuesFile       string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 	// TODO: delete
-	RepoName string `mapstructure:"repoName" yaml:"repoName" json:"repoName"`
-	Repo     string `mapstructure:"repo" yaml:"repo" json:"repo"`
-	Url      string `mapstructure:"url" yaml:"url" json:"url"`
-	Version  string `mapstructure:"version" yaml:"version" json:"version"`
+	RepoName  string   `mapstructure:"repoName" yaml:"repoName" json:"repoName"`
+	Repo      string   `mapstructure:"repo" yaml:"repo" json:"repo"`
+	Url       string   `mapstructure:"url" yaml:"url" json:"url"`
+	Version   string   `mapstructure:"version" yaml:"version" json:"version"`
+	Manifests []string `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
 type HelmRelease struct {

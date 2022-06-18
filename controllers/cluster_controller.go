@@ -212,7 +212,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 	if cfg.Spec.Addons.Ingress.Name == types.NginxDefaultName {
 		HelmIngress = module.NginxSettings(&cfg.Spec.Addons.Ingress, &cfg.Spec.LoadBalancer, cfg.Spec.ClusterName)
 	} else if cfg.Spec.Addons.Ingress.Name == types.HaproxyDefaultName {
-		HelmIngress = module.HaproxySettings(&cfg.Spec.Addons.Ingress, cfg.Spec.ClusterName)
+		HelmIngress = module.HaproxySettings(&cfg.Spec.Addons.Ingress, &cfg.Spec.LoadBalancer, cfg.Spec.ClusterName)
 	}
 	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmIngress)
 	p.HelmRelease.Repo = append(p.HelmRelease.Repo, cfg.Spec.Addons.Ingress.Repo)
@@ -1705,7 +1705,7 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 	currentIngress := ""
 	toIngress := ""
 	for _, release := range releases {
-		if _, ok := k3sv1alpha1.Find(types.IngressControllers, release.Name); ok {
+		if _, ok := k3sv1alpha1.Find(types.IngressList, release.Name); ok {
 			currentIngress = release.Name
 		}
 	}
@@ -1726,8 +1726,9 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 				helmDeleteReleases = append(helmDeleteReleases, item)
 			}
 		}
-		if _, ok := k3sv1alpha1.Find(types.IngressControllers, item.Name); ok {
+		if _, ok := k3sv1alpha1.Find(types.IngressList, item.Name); ok {
 			toIngress = item.Name
+			// p.Log.Warnf("3) helmDeleteReleases: %s", item.Name)
 		}
 		ns = append(ns, item.Namespace)
 		p.HelmRelease.Releases[i] = item
@@ -1735,7 +1736,7 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 	}
 
 	if len(currentIngress) > 0 && len(toIngress) > 0 && currentIngress != toIngress {
-		// p.Log.Errorf("TODO: currentIngress: %s toIngress: %s", currentIngress, toIngress)
+		p.Log.Infof("Chenge Ingress controller from \"%s\" to \"%s\"", currentIngress, toIngress)
 		delIngress := k3sv1alpha1.HelmInterfaces{
 			Name: currentIngress,
 		}
@@ -1749,6 +1750,7 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 		p.Log.Warnf("Set to delete ingress: %s", delIngress.Name)
 		helmDeleteReleases = append(helmDeleteReleases, delIngress)
 	}
+	// p.Log.Errorf("TODO: currentIngress: %s toIngress: %s", currentIngress, toIngress)
 
 	module.CreateNamespace(ns, kubeConfigPath, p.Cluster.Spec.ClusterName, p.CmdFlags.DryRun)
 	updateRepo := true
@@ -1769,14 +1771,14 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 		}
 
 		if len(addonsName) == 0 || addonsName == "ingress" {
-			if p.Cluster.Spec.Addons.Ingress.Name == "nginx" {
+			if p.Cluster.Spec.Addons.Ingress.Name == types.NginxDefaultName {
 				// p.Log.Infoln("Install Nginx HELM chart...")
 				if err := module.MakeInstallNginx(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, &p.Cluster.Spec.Addons.Monitoring, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 					p.Log.Errorf(err.Error())
 				}
-			} else if p.Cluster.Spec.Addons.Ingress.Name == "haproxy" {
+			} else if p.Cluster.Spec.Addons.Ingress.Name == types.HaproxyDefaultName {
 				// p.Log.Infoln("Install Haproxy HELM chart...")
-				if err := module.MakeInstallHaproxy(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
+				if err := module.MakeInstallHaproxy(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, &p.Cluster.Spec.Addons.Monitoring, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 					p.Log.Errorf(err.Error())
 				}
 			} else {

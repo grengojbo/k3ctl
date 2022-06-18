@@ -5,11 +5,12 @@ import (
 
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/types"
+	"github.com/grengojbo/k3ctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 )
 
 // HaproxySettings
-func HaproxySettings(addons *k3sv1alpha1.Ingress, clusterName string) (release k3sv1alpha1.HelmInterfaces) {
+func HaproxySettings(addons *k3sv1alpha1.Ingress, lb *k3sv1alpha1.LoadBalancer, clusterName string) (release k3sv1alpha1.HelmInterfaces) {
 	repo := k3sv1alpha1.HelmRepo{
 		Name: types.HaproxyHelmRepoName,
 		Repo: types.HaproxyHelmRepo,
@@ -44,17 +45,26 @@ func HaproxySettings(addons *k3sv1alpha1.Ingress, clusterName string) (release k
 		release.ValuesFile = addons.ValuesFile
 	}
 
+	// Install CRD manifests
+	// if len(addons.Manifests) == 0 {
+	// 	addons.Manifests = append(addons.Manifests, types.HaproxyCrdBackend)
+	// 	addons.Manifests = append(addons.Manifests, types.HaproxyCrdDefaults)
+	// 	addons.Manifests = append(addons.Manifests, types.HaproxyCrdGlobal)
+	// }
+
 	//  All Settings
 	release.Name = addons.Name
 	release.Namespace = addons.Namespace
 	release.Repo = repo.Repo
+	release.Manifests = addons.Manifests
 
 	addons.Repo = repo
+	addons.LoadBalancer = lb
 	return release
 }
 
 // MakeInstallHaproxy
-func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
+func MakeInstallHaproxy(addons *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease, monitoring *k3sv1alpha1.Monitoring, kubeConfigPath string, dryRun bool) (err error) {
 	name := "MakeInstallHaproxy"
 	description := "Ingress Haproxy"
 	// update := false
@@ -64,9 +74,9 @@ func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRele
 		return fmt.Errorf("[%s] is not release...", name)
 	}
 
-	// log.Debugf("[%s] name: %s disabled: %v status: %v", name, ingress.Name, ingress.Disabled, release.Status)
+	// log.Debugf("[%s] name: %s disabled: %v status: %v", name, addons.Name, addons.Disabled, release.Status)
 
-	if ingress.Disabled {
+	if addons.Disabled {
 		log.Warnf("%s disabled...", description)
 		return nil
 	} else if len(release.Status) > 0 {
@@ -80,6 +90,19 @@ func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRele
 		log.Infof("Install %s...", description)
 	}
 
+	if len(addons.ValuesFile) > 0 {
+		if err = util.CheckExitFile(addons.ValuesFile); err != nil {
+			log.Errorf("IS NOT file: addons.ingress.valuesFile=%s", addons.ValuesFile)
+			return nil
+		}
+		release.ValuesFile = addons.ValuesFile
+	} else {
+		valuesFile, err := util.CheckExitValueFile(args.ClusterName, release.Name)
+		if err == nil {
+			release.ValuesFile = valuesFile
+		}
+	}
+
 	// https://github.com/haproxytech/helm-charts/blob/main/kubernetes-ingress/values.yaml
 	overrides := map[string]string{}
 
@@ -87,7 +110,25 @@ func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRele
 	// 	overrides["installCRDs"] = "true"
 	// }
 
-	if ingress.HostMode {
+	//  -- List of IP addresses at which the controller services are available
+	//  Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+	if len(addons.LoadBalancer.ExternalIP) > 0 {
+		overrides["controller.service.externalIPs[0]"] = addons.LoadBalancer.ExternalIP
+	}
+
+	// Is Enabled monitoring
+	// if args.ServiceMonitor {
+	// ServiceMonitor
+	// ref: https://github.com/prometheus-operator/prometheus-operator/blob/master/Documentation/user-guides/getting-started.md
+	// Note: requires Prometheus Operator to be able to work, for example:
+	// helm install prometheus prometheus-community/kube-prometheus-stack \
+	//   --set prometheus.prometheusSpec.podMonitorSelectorNilUsesHelmValues=false \
+	//   --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
+	// overrides["controller.serviceMonitor.enabled"] = "true"
+	// // overrides["controller.metrics."] = ""
+	// }
+
+	if addons.HostMode {
 		log.Infof("Running in host networking mode")
 		overrides["controller.service.enabled"] = "false"
 		overrides["dnsPolicy"] = "ClusterFirstWithHostNet"
@@ -98,7 +139,6 @@ func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRele
 		// overrides["controller."] = ""
 	} else {
 		overrides["controller.service.type"] = "LoadBalancer"
-		// overrides["controller.service.externalIPs[]"] = ""
 		// LoadBalancer IP
 		// ref: https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer
 		// overrides["controller.service.loadBalancerIP"] = ""
@@ -115,14 +155,14 @@ func MakeInstallHaproxy(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRele
 	// overrides["defaultBackend.image.registry"] = "k8s.gcr.io"
 	// overrides["defaultBackend.image.image"] = "defaultbackend-amd64"
 	// overrides["defaultBackend.image.tag"] = "1.5"
-	if len(ingress.DefaultBackend.Registry) > 0 {
-		overrides["defaultBackend.image.registry"] = ingress.DefaultBackend.Registry
+	if len(addons.DefaultBackend.Registry) > 0 {
+		overrides["defaultBackend.image.registry"] = addons.DefaultBackend.Registry
 	}
-	if len(ingress.DefaultBackend.Image) > 0 {
-		overrides["defaultBackend.image.image"] = ingress.DefaultBackend.Image
+	if len(addons.DefaultBackend.Image) > 0 {
+		overrides["defaultBackend.image.image"] = addons.DefaultBackend.Image
 	}
-	if len(ingress.DefaultBackend.Tag) > 0 {
-		overrides["defaultBackend.image.tag"] = ingress.DefaultBackend.Tag
+	if len(addons.DefaultBackend.Tag) > 0 {
+		overrides["defaultBackend.image.tag"] = addons.DefaultBackend.Tag
 	}
 
 	options := k3sv1alpha1.HelmOptions{

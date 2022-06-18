@@ -174,7 +174,8 @@ const (
 	IngressHaproxy       string = "haproxy"
 	IngressHaproxyName   string = "kubernetes-ingress"
 	IngressContour       string = "contour"
-	IngressNginx         string = "ingress-nginx"
+	IngressNginx         string = "nginx"
+	IngressNginxNmae     string = "ingress-nginx"
 	IngressKing          string = "king"
 	IngressTraefik       string = "traefik"
 	Flannel              string = "flannel"
@@ -187,6 +188,11 @@ const (
 	WireGuard            string = "wireguard"
 	IpIp                 string = "ipip"
 	Bgp                  string = "bgp"
+	PresetSingle         string = "single"
+	PresetOneMaster      string = "one-master"
+	PresetWorker         string = "worker"
+	PresetMultyMaster    string = "multy-master"
+	// Preset                  string = ""
 )
 
 // List of k3d technical label name
@@ -224,7 +230,6 @@ var DefaultRoleCmds = map[Role][]string{
 // 	WireGuard: {"wireguard"},
 // }
 
-var IngressControllers = []string{IngressAmbassador, IngressAmbassadorAPI, IngressContour, IngressHaproxyName, IngressHaproxy, IngressKing, IngressNginx, IngressTraefik}
 var FlannelBackends = []string{Vxlan, None, IpSec, HostGw, WireGuard}
 var CalicoBackends = []string{Vxlan, IpIp, WireGuard, Bgp}
 var CiliumBackends = []string{Vxlan, IpIp, WireGuard}
