@@ -548,8 +548,8 @@ type Datastore struct {
 type LoadBalancer struct {
 	// IP addresse at which the controller services are available
 	ExternalIP string `mapstructure:"externalIPs" yaml:"externalIPs" json:"externalIPs,omitempty"`
-	MetalLb string `mapstructure:"metalLb" yaml:"metalLb" json:"metalLb,omitempty"`
-	KubeVip string `mapstructure:"kubeVip" yaml:"kubeVip" json:"kubeVip,omitempty"`
+	MetalLb    string `mapstructure:"metalLb" yaml:"metalLb" json:"metalLb,omitempty"`
+	KubeVip    string `mapstructure:"kubeVip" yaml:"kubeVip" json:"kubeVip,omitempty"`
 }
 
 // ClusterSpec defines the desired state of Cluster
@@ -749,6 +749,7 @@ type HelmRelease struct {
 	UpdateStrategy string           `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
 	Releases       []HelmInterfaces `mapstructure:"releases" yaml:"releases" json:"releases,omitempty"`
 	Repo           []HelmRepo       `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	LoadBalancer   LoadBalancer       `mapstructure:"loadBalancer" yaml:"loadBalancer" json:"loadBalancer,omitempty"`
 }
 
 type HelmOptions struct {

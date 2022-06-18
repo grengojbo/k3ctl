@@ -5,6 +5,7 @@ import (
 
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/types"
+	"github.com/grengojbo/k3ctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -54,7 +55,7 @@ func NginxSettings(addons *k3sv1alpha1.Ingress, clusterName string) (release k3s
 }
 
 // MakeInstallNginx
-func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
+func MakeInstallNginx(addons *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
 	name := "MakeInstallNginx"
 	description := "Ingress Nginx"
 	update := false
@@ -64,9 +65,9 @@ func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmReleas
 		return fmt.Errorf("[%s] is not release...", name)
 	}
 
-	// log.Debugf("[%s] name: %s disabled: %v status: %v", name, ingress.Name, ingress.Disabled, release.Status)
+	// log.Debugf("[%s] name: %s disabled: %v status: %v (cluster: %s)", name, addons.Name, addons.Disabled, release.Status, args.ClusterName)
 
-	if ingress.Disabled {
+	if addons.Disabled {
 		log.Warnf("%s disabled...", description)
 		return nil
 	} else if len(release.Status) > 0 {
@@ -80,17 +81,22 @@ func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmReleas
 		log.Infof("Install %s...", description)
 	}
 
-	// if len(addons.ValuesFile) > 0 {
-	// 	if err = util.CheckExitFile(addons.ValuesFile); err != nil {
-	// 		log.Errorf("IS NOT file: addons.certManager.valuesFile=%s", addons.ValuesFile)
-	// 		return nil
-	// 	}
-	// 	release.ValuesFile = addons.ValuesFile
-	// } else {
-	// 	valuesFile, err := util.CheckExitValueFile(args.ClusterName, release.Name)
-	// 	if err == nil {
-	// 		release.ValuesFile = valuesFile
-	// 	}
+	if len(addons.ValuesFile) > 0 {
+		if err = util.CheckExitFile(addons.ValuesFile); err != nil {
+			log.Errorf("IS NOT file: addons.ingress.valuesFile=%s", addons.ValuesFile)
+			return nil
+		}
+		release.ValuesFile = addons.ValuesFile
+	} else {
+		valuesFile, err := util.CheckExitValueFile(args.ClusterName, release.Name)
+		if err == nil {
+			release.ValuesFile = valuesFile
+		}
+	}
+
+	// Is Enabled monitoring
+	// if args.ServiceMonitor {
+	// 	overrides["prometheus.servicemonitor.enabled"] = "true"
 	// }
 
 	overrides := map[string]string{}
@@ -99,7 +105,7 @@ func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmReleas
 		overrides["installCRDs"] = "true"
 	}
 
-	if ingress.HostMode {
+	if addons.HostMode {
 		log.Infof("Running in host networking mode")
 		overrides["controller.hostNetwork"] = "true"
 		overrides["controller.hostPort.enabled"] = "true"
@@ -114,14 +120,14 @@ func MakeInstallNginx(ingress *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmReleas
 
 	overrides["defaultBackend.enabled"] = "true"
 
-	if len(ingress.DefaultBackend.Registry) > 0 {
-		overrides["defaultBackend.image.registry"] = ingress.DefaultBackend.Registry
+	if len(addons.DefaultBackend.Registry) > 0 {
+		overrides["defaultBackend.image.registry"] = addons.DefaultBackend.Registry
 	}
-	if len(ingress.DefaultBackend.Image) > 0 {
-		overrides["defaultBackend.image.image"] = ingress.DefaultBackend.Image
+	if len(addons.DefaultBackend.Image) > 0 {
+		overrides["defaultBackend.image.image"] = addons.DefaultBackend.Image
 	}
-	if len(ingress.DefaultBackend.Tag) > 0 {
-		overrides["defaultBackend.image.tag"] = ingress.DefaultBackend.Tag
+	if len(addons.DefaultBackend.Tag) > 0 {
+		overrides["defaultBackend.image.tag"] = addons.DefaultBackend.Tag
 	}
 	// overrides["defaultBackend.image.registry"] = "k8s.gcr.io"
 	// overrides["defaultBackend.image.image"] = "defaultbackend-amd64"
