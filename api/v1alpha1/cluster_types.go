@@ -326,6 +326,7 @@ type Ingress struct {
 	ValuesFile     string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 	DefaultBackend DefaultBackend    `mapstructure:"defaultBackend" yaml:"defaultBackend" json:"defaultBackend,omitempty"`
 	Repo           HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	LoadBalancer   *LoadBalancer     `mapstructure:"loadBalancer" yaml:"loadBalancer" json:"loadBalancer,omitempty"`
 }
 
 type DefaultBackend struct {
@@ -548,7 +549,7 @@ type Datastore struct {
 type LoadBalancer struct {
 	Name string `mapstructure:"name" yaml:"name" json:"name"`
 	// IP addresse at which the controller services are available
-	ExternalIP string `mapstructure:"externalIPs" yaml:"externalIPs" json:"externalIPs,omitempty"`
+	ExternalIP string `mapstructure:"externalIP" yaml:"externalIP" json:"externalIP,omitempty"`
 	MetalLb    string `mapstructure:"metalLb" yaml:"metalLb" json:"metalLb,omitempty"`
 	KubeVip    string `mapstructure:"kubeVip" yaml:"kubeVip" json:"kubeVip,omitempty"`
 }
@@ -750,7 +751,6 @@ type HelmRelease struct {
 	UpdateStrategy string           `mapstructure:"updateStrategy" yaml:"updateStrategy" json:"updateStrategy,omitempty"` // none, latest
 	Releases       []HelmInterfaces `mapstructure:"releases" yaml:"releases" json:"releases,omitempty"`
 	Repo           []HelmRepo       `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
-	// LoadBalancer   LoadBalancer       `mapstructure:"loadBalancer" yaml:"loadBalancer" json:"loadBalancer,omitempty"`
 }
 
 type HelmOptions struct {

@@ -102,6 +102,11 @@ func NewCmdApply() *cobra.Command {
 
 			c.SetAddons(addonsName)
 
+			// dev, _ := yaml.Marshal(c.Cluster.Spec.LoadBalancer)
+			// log.Debugf("---------- [LoadBalancer] ----------\n%s\n", dev)
+			// dev, _ = yaml.Marshal(c.Cluster.Spec.Addons.Monitoring)
+			// log.Debugf("---------- [Monitoring] ----------\n%s\n", dev)
+
 			// isModuleRun := false
 			// if isModuleRun {
 			// 	kubeConfigPath, err := k3s.KubeconfigTmpWrite(c.Config)

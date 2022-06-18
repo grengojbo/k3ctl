@@ -1,5 +1,6 @@
 package types
 
+var LoadBalancerList = []string{MetalLb, ServiceLb}
 var AddonsList = []string{"cert-manager", "ingress", "external-dns", "monitoring", "backup"}
 
 // const HelmListCommand = "helm list -A -o json"

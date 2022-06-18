@@ -6,14 +6,17 @@ import (
 	// "fmt"
 
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
-	// "github.com/grengojbo/k3ctl/pkg/types"
+	"github.com/grengojbo/k3ctl/pkg/types"
 	// "github.com/grengojbo/k3ctl/pkg/util"
-	log "github.com/sirupsen/logrus"
+	// log "github.com/sirupsen/logrus"
 )
 
 // LoadBalancerSettings
-func LoadBalancerSettings(addons *k3sv1alpha1.CertManager, clusterName string) (release k3sv1alpha1.HelmInterfaces) {
-	log.Warnln("TODO: LoadBalancerSettings")
+func LoadBalancerSettings(lb *k3sv1alpha1.LoadBalancer, clusterName string) {
+	if len(lb.Name) == 0 {
+		lb.Name = types.ServiceLb
+	}
+	// log.Warnln("TODO: LoadBalancerSettings")
 	// repo := k3sv1alpha1.HelmRepo{
 	// 	Name: types.CertManagerHelmRepoName,
 	// 	Repo: types.CertManagerHelmRepo,
@@ -54,5 +57,5 @@ func LoadBalancerSettings(addons *k3sv1alpha1.CertManager, clusterName string) (
 	// release.Repo = repo.Repo
 
 	// addons.Repo = repo
-	return release
+	// return release
 }

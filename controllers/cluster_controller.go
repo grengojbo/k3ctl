@@ -183,6 +183,8 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		cfg.Spec.AgentToken = util.GenerateRandomString(32)
 	}
 
+	module.LoadBalancerSettings(&cfg.Spec.LoadBalancer, cfg.Spec.ClusterName)
+
 	// Set default addons
 	// Monitoring
 	if len(cfg.Spec.Addons.Monitoring.Name) == 0 {
@@ -208,7 +210,7 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		cfg.Spec.Addons.Ingress.Name = types.NginxDefaultName
 	}
 	if cfg.Spec.Addons.Ingress.Name == types.NginxDefaultName {
-		HelmIngress = module.NginxSettings(&cfg.Spec.Addons.Ingress, cfg.Spec.ClusterName)
+		HelmIngress = module.NginxSettings(&cfg.Spec.Addons.Ingress, &cfg.Spec.LoadBalancer, cfg.Spec.ClusterName)
 	} else if cfg.Spec.Addons.Ingress.Name == types.HaproxyDefaultName {
 		HelmIngress = module.HaproxySettings(&cfg.Spec.Addons.Ingress, cfg.Spec.ClusterName)
 	}
@@ -1769,7 +1771,7 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 		if len(addonsName) == 0 || addonsName == "ingress" {
 			if p.Cluster.Spec.Addons.Ingress.Name == "nginx" {
 				// p.Log.Infoln("Install Nginx HELM chart...")
-				if err := module.MakeInstallNginx(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
+				if err := module.MakeInstallNginx(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, &p.Cluster.Spec.Addons.Monitoring, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 					p.Log.Errorf(err.Error())
 				}
 			} else if p.Cluster.Spec.Addons.Ingress.Name == "haproxy" {

@@ -10,7 +10,7 @@ import (
 )
 
 // NginxSettings
-func NginxSettings(addons *k3sv1alpha1.Ingress, clusterName string) (release k3sv1alpha1.HelmInterfaces) {
+func NginxSettings(addons *k3sv1alpha1.Ingress, lb *k3sv1alpha1.LoadBalancer, clusterName string) (release k3sv1alpha1.HelmInterfaces) {
 	repo := k3sv1alpha1.HelmRepo{
 		Name: types.NginxHelmRepoNane,
 		Repo: types.NginxHelmRepo,
@@ -51,11 +51,12 @@ func NginxSettings(addons *k3sv1alpha1.Ingress, clusterName string) (release k3s
 	release.Repo = repo.Repo
 
 	addons.Repo = repo
+	addons.LoadBalancer = lb
 	return release
 }
 
 // MakeInstallNginx
-func MakeInstallNginx(addons *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
+func MakeInstallNginx(addons *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease, monitoring *k3sv1alpha1.Monitoring, kubeConfigPath string, dryRun bool) (err error) {
 	name := "MakeInstallNginx"
 	description := "Ingress Nginx"
 	update := false
@@ -102,11 +103,21 @@ func MakeInstallNginx(addons *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease
 
 	//  -- List of IP addresses at which the controller services are available
 	//  Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
-	// overrides["controller.service.externalIPs[0]"] = "<IP>"
+	if len(addons.LoadBalancer.ExternalIP) > 0 {
+		overrides["controller.service.externalIPs[0]"] = addons.LoadBalancer.ExternalIP
+	}
 
-	overrides["controller.metrics.enabled"] = "true"
+	if !monitoring.Disabled {
+		overrides["controller.metrics.enabled"] = "true"
+	}
 	// Is Enabled monitoring
 	// if args.ServiceMonitor {
+	// Prometheus Metrics
+	// The Nginx ingress controller can export Prometheus metrics, by setting controller.metrics.enabled to true.
+	// You can add Prometheus annotations to the metrics service using controller.metrics.service.annotations.
+	// Alternatively, if you use the Prometheus Operator, you can enable ServiceMonitor creation using controller.metrics.serviceMonitor.enabled.
+	// And set controller.metrics.serviceMonitor.additionalLabels.release="prometheus". "release=prometheus" should match the label configured in
+	// the prometheus servicemonitor ( see kubectl get servicemonitor prometheus-kube-prom-prometheus -oyaml -n prometheus )
 	// overrides["controller.metrics.serviceMonitor.enabled"] = "true"
 	// // overrides["controller.metrics."] = ""
 	// }
