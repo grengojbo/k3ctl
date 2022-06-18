@@ -94,16 +94,22 @@ func MakeInstallNginx(addons *k3sv1alpha1.Ingress, args *k3sv1alpha1.HelmRelease
 		}
 	}
 
-	// Is Enabled monitoring
-	// if args.ServiceMonitor {
-	// 	overrides["prometheus.servicemonitor.enabled"] = "true"
-	// }
-
 	overrides := map[string]string{}
 
 	if !update {
 		overrides["installCRDs"] = "true"
 	}
+
+	//  -- List of IP addresses at which the controller services are available
+	//  Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+	// overrides["controller.service.externalIPs[0]"] = "<IP>"
+
+	overrides["controller.metrics.enabled"] = "true"
+	// Is Enabled monitoring
+	// if args.ServiceMonitor {
+	// overrides["controller.metrics.serviceMonitor.enabled"] = "true"
+	// // overrides["controller.metrics."] = ""
+	// }
 
 	if addons.HostMode {
 		log.Infof("Running in host networking mode")
