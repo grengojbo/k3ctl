@@ -192,7 +192,18 @@ const (
 	PresetOneMaster      string = "one-master"
 	PresetWorker         string = "worker"
 	PresetMultyMaster    string = "multy-master"
-	// Preset                  string = ""
+	ProviderDefault      string = "native"
+	ProviderNative       string = "native"
+	ProviderAws          string = "aws"
+	ProviderAzure        string = "azure"
+	ProviderHetzner      string = "hetzner"
+	ProviderGoogle       string = "google"
+	ProviderCloudflare   string = "cloudflare"
+	AddonCertManager     string = "cert-manager"
+	AddonIngress         string = "ingress"
+	AddonExternalDns     string = "external-dns"
+	AddonMonitoring      string = "monitoring"
+	AddonBackup          string = "backup"
 )
 
 // List of k3d technical label name

@@ -170,9 +170,10 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		cfg.Spec.Networking.Backend = "host-gw"
 	}
 
-	if len(cfg.GetProvider()) == 0 {
-		cfg.Spec.Provider = "native"
-	}
+	// if len(cfg.GetProvider()) == 0 {
+	// 	cfg.Spec.Provider = "native"
+	// }
+	p.SetProviders(&cfg)
 
 	if len(cfg.Spec.ClusterToken) == 0 {
 		// p.Log.Errorf("ClusterToken: %s", cfg.Spec.ClusterToken)
@@ -227,6 +228,11 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmBackup)
 		p.HelmRelease.Repo = append(p.HelmRelease.Repo, cfg.Spec.Addons.Backup.Repo)
 	}
+
+	// External DNS
+	HelmExternalDns := module.ExternalDnsSettings(&cfg.Spec)
+	p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmExternalDns)
+	p.HelmRelease.Repo = append(p.HelmRelease.Repo, cfg.Spec.Addons.ExternalDns.Repo)
 
 	// Other settings
 	if len(cfg.Spec.Addons.Options.UpdateStrategy) == 0 || cfg.Spec.Addons.Options.UpdateStrategy == "none" {
@@ -1764,13 +1770,13 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 		}
 
 		// Install HELM Release
-		if len(addonsName) == 0 || addonsName == "cert-manager" {
+		if len(addonsName) == 0 || addonsName == types.AddonCertManager {
 			if err := module.MakeInstallCertManager(&p.Cluster.Spec.Addons.CertManager, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 				p.Log.Errorf(err.Error())
 			}
 		}
 
-		if len(addonsName) == 0 || addonsName == "ingress" {
+		if len(addonsName) == 0 || addonsName == types.AddonIngress {
 			if p.Cluster.Spec.Addons.Ingress.Name == types.NginxDefaultName {
 				// p.Log.Infoln("Install Nginx HELM chart...")
 				if err := module.MakeInstallNginx(&p.Cluster.Spec.Addons.Ingress, &p.HelmRelease, &p.Cluster.Spec.Addons.Monitoring, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
@@ -1786,14 +1792,20 @@ func (p *ProviderBase) SetAddons(addonsName string) {
 			}
 		}
 
-		if len(addonsName) == 0 || addonsName == "monitoring" {
+		if len(addonsName) == 0 || addonsName == types.AddonMonitoring {
 			if err := module.MakeInstallGrafanaAgentCloud(&p.Cluster.Spec.Addons.Monitoring, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 				p.Log.Errorf(err.Error())
 			}
 		}
 
-		if len(addonsName) == 0 || addonsName == "backup" {
+		if len(addonsName) == 0 || addonsName == types.AddonBackup {
 			if err := module.MakeInstallVelero(&p.Cluster.Spec.Addons.Backup, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
+				p.Log.Errorf(err.Error())
+			}
+		}
+
+		if len(addonsName) == 0 || addonsName == types.AddonExternalDns {
+			if err := module.MakeInstallExternalDns(&p.Cluster.Spec, &p.HelmRelease, kubeConfigPath, p.CmdFlags.DryRun); err != nil {
 				p.Log.Errorf(err.Error())
 			}
 		}
@@ -1870,6 +1882,32 @@ func (p *ProviderBase) LoadEnv() {
 
 	// p.Log.Warnf("DB_PASSWORD: %v", e.DBPassword)
 	// p.Log.Warnf("HCLOUD_TOKEN: %v", e.HcloudToken)
+}
+
+func (p *ProviderBase) SetProviders(cfg *k3sv1alpha1.Cluster) {
+	if len(cfg.Spec.Provider) == 0 {
+		cfg.Spec.Provider = types.ProviderDefault
+	}
+
+	cfg.Spec.Providers.AWS.Enabled, _ = util.CheckСredentials(cfg.Spec.ClusterName, types.ProviderAws)
+
+	if cfg.Spec.Providers.AWS.Enabled {
+		cfg.Spec.Providers.Default = types.ProviderAws
+	} else if cfg.Spec.Providers.Azure.Enabled {
+		cfg.Spec.Providers.Default = types.ProviderAzure
+	} else if cfg.Spec.Providers.Hetzner.Enabled {
+		cfg.Spec.Providers.Default = types.ProviderHetzner
+	} else if cfg.Spec.Providers.Google.Enabled {
+		cfg.Spec.Providers.Default = types.ProviderGoogle
+	}
+
+	if len(cfg.Spec.Providers.AWS.Region) == 0 {
+		if cfg.Spec.Provider == types.ProviderAws && len(cfg.Spec.Region) > 0 {
+			cfg.Spec.Providers.AWS.Region = cfg.Spec.Region
+		} else {
+			cfg.Spec.Providers.AWS.Region = types.DefaultAwsRegion
+		}
+	}
 }
 
 // +kubebuilder:rbac:groups=k3s.bbox.kiev.ua,resources=clusters,verbs=get;list;watch;create;update;patch;delete

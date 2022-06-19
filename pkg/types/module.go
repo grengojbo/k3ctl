@@ -1,8 +1,10 @@
 package types
 
 var LoadBalancerList = []string{MetalLb, ServiceLb}
-var AddonsList = []string{"cert-manager", "ingress", "external-dns", "monitoring", "backup"}
+var AddonsList = []string{AddonCertManager, AddonIngress, AddonMonitoring, AddonMonitoring, AddonExternalDns}
 var PresetList = []string{PresetSingle, PresetOneMaster, PresetWorker, PresetMultyMaster}
+var ProviderList = []string{ProviderNative, ProviderAws, ProviderAzure, ProviderHetzner}
+var DnsProviderList = []string{ProviderCloudflare, ProviderAws, ProviderAzure, ProviderHetzner}
 
 // var IngressControllers = []string{IngressAmbassador, IngressAmbassadorAPI, IngressContour, IngressHaproxyName, IngressHaproxy, IngressKing, IngressNginx, IngressTraefik}
 var IngressList = []string{IngressHaproxy, IngressNginx}
@@ -85,8 +87,8 @@ const GrafanaAgentCloudDefaultName = "grafana-agent"
 const ExternalDnsHelmRepoName = "bitnami"
 const ExternalDnsHelmRepo = "bitnami/external-dns"
 const ExternalDnsHelmURL = "https://charts.bitnami.com/bitnami"
-const ExternalDnsDefaultNamespace = "external-dns"
-const ExternalDnsDefaultName = "dns-public"
+const ExternalDnsDefaultNamespace = "kube-system"
+const ExternalDnsDefaultName = "external-dns"
 
 // const HelmRepoName = "" // bitnami
 // const HelmRepo = "" // bitnami/external-dns

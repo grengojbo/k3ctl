@@ -15,6 +15,60 @@
 # @depends_on built
 #   scp -C -r build/* user@domain:~/www
 
+@goal route53
+@doc Add Route53 police
+  BUCKET=velero-iwisops
+  if [[ -z "$HOSTED_ZONE_IDENTIFIER" ]]; then
+    echo "[ERROR] is not set \"Hosted zone ID\""
+    echo "./makesure route53 -D \"HOSTED_ZONE_IDENTIFIER=Z07***ZM6\""
+    exit 1;
+  fi
+  if [[ -z "$CLUSTER_NAME" ]]; then
+    echo "[ERROR] is not set \"Hosted zone ID\""
+    echo "./makesure route53 -D \"HOSTED_ZONE_IDENTIFIER=Z07***ZM6\" -D \"CLUSTER_NAME=myname\""
+    exit 1;
+  fi
+  echo "Add Route53 police Hosted zone ID: $HOSTED_ZONE_IDENTIFIER CLUSTER_NAME: $CLUSTER_NAME"
+#   aws s3api create-bucket \
+#     --bucket $BUCKET \
+#     --region $REGION \
+#     --create-bucket-configuration LocationConstraint=$REGION
+#   echo "Create the IAM user:"
+#   aws iam create-user --user-name $BUCKET
+#   echo "Attach policies to give velero the necessary permissions:"
+  cat > ${CLUSTER_NAME}-route53-police.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "route53:ChangeResourceRecordSets"
+      ],
+      "Resource": [
+        "arn:aws:route53:::hostedzone/${HOSTED_ZONE_IDENTIFIER}"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "route53:ListHostedZones",
+        "route53:ListResourceRecordSets"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+}
+EOF
+  aws iam put-user-policy \
+    --user-name $BUCKET \
+    --policy-name ${CLUSTER_NAME}-route53-police \
+    --policy-document file://${CLUSTER_NAME}-route53-police.json \
+    --output json
+  rm -Rf .${CLUSTER_NAME}-route53-police.json
+
 @goal bucket
 @doc Create Bucket
   BUCKET=velero-iwisops
@@ -23,9 +77,10 @@
   aws s3api create-bucket \
     --bucket $BUCKET \
     --region $REGION \
-    --create-bucket-configuration LocationConstraint=$REGION
+    --create-bucket-configuration LocationConstraint=$REGION \
+    --output json
   echo "Create the IAM user:"
-  aws iam create-user --user-name $BUCKET
+  aws iam create-user --user-name $BUCKET --output json
   echo "Attach policies to give velero the necessary permissions:"
   cat > velero-policy.json <<EOF
 {
@@ -71,9 +126,10 @@ EOF
   aws iam put-user-policy \
     --user-name $BUCKET \
     --policy-name ${BUCKET}-police \
-    --policy-document file://velero-policy.json
+    --policy-document file://velero-policy.json \
+    --output json
   echo "Create an access key for the user:"
-  aws iam create-access-key --user-name ${BUCKET}
+  aws iam create-access-key --user-name ${BUCKET} --output json
   rm -Rf ./velero-policy.json
 
 @goal help

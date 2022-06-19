@@ -169,3 +169,12 @@ func CheckExitFile(file string) (err error) {
 	_, err = os.Stat(file)
 	return err
 }
+
+// CheckСredentials - проверяем естьли файл с credentials
+func CheckСredentials(clusterName string, provider string) (ok bool, secretFile string) {
+	secretFile = fmt.Sprintf("./variables/%s/secret-%s.ini", clusterName, provider)
+	if err := CheckExitFile(secretFile); err != nil {
+		return false, secretFile
+	}
+	return true, secretFile
+}

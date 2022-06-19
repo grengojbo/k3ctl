@@ -12,7 +12,11 @@ import (
 )
 
 // ExternalDnsSettings
-func ExternalDnsSettings(addons *k3sv1alpha1.ExternalDns, lb *k3sv1alpha1.LoadBalancer, clusterName string) (release k3sv1alpha1.HelmInterfaces) {
+// func ExternalDnsSettings(addons *k3sv1alpha1.ExternalDns, lb *k3sv1alpha1.LoadBalancer, clusterName string) (release k3sv1alpha1.HelmInterfaces) {
+func ExternalDnsSettings(spec *k3sv1alpha1.ClusterSpec) (release k3sv1alpha1.HelmInterfaces) {
+	addons := &spec.Addons.ExternalDns
+	// lb := &spec.LoadBalancer
+
 	repo := k3sv1alpha1.HelmRepo{
 		Name: types.ExternalDnsHelmRepoName,
 		Repo: types.ExternalDnsHelmRepo,
@@ -30,14 +34,44 @@ func ExternalDnsSettings(addons *k3sv1alpha1.ExternalDns, lb *k3sv1alpha1.LoadBa
 
 	if addons.Disabled {
 		release.Deleted = true
-	} else {
-		if len(lb.Domain) == 0 {
-			log.Warnf("IS NOT Set loadBalancer.domain")
-			if len(addons.Domains) == 0 {
-				log.Warnf("IS NOT Set addons.externalDns.domains")
-			}
-		}
 	}
+
+	if len(addons.Provider) == 0 {
+		if len(spec.Providers.Default) > 0 {
+			addons.Provider = spec.Providers.Default
+		}
+
+	}
+	// DNS provider where the DNS records will be created.
+	// provider
+
+	// aws.credentials.secretKey	When using the AWS provider, set aws_secret_access_key in the AWS credentials (optional)	""
+	// aws.credentials.accessKey	When using the AWS provider, set aws_access_key_id in the AWS credentials (optional)
+	// Use an existing secret with key "credentials" defined.
+	// aws.credentials.secretName
+	// When using the AWS provider, AWS_DEFAULT_REGION to set in the environment (optional)
+	// aws.region
+
+	// When using the Azure provider, set the secret containing the azure.json file
+	// azure.secretName
+
+	// cloudflare.apiToken	When using the Cloudflare provider, CF_API_TOKEN to set (optional)	""
+	// cloudflare.apiKey	When using the Cloudflare provider, CF_API_KEY to set (optional)	""
+	// cloudflare.secretName	When using the Cloudflare provider, it's the name of the secret containing cloudflare_api_token or cloudflare_api_key.	""
+	// cloudflare.email	When using the Cloudflare provider, CF_API_EMAIL to set (optional). Needed when using CF_API_KEY	""
+	// cloudflare.proxied	When using the Cloudflare provider, enable the proxy feature (DDOS protection, CDN...) (optional)	true
+
+	// domainFilters	Limit possible target zones by domain suffixes (optional)	[]
+	// excludeDomains	Exclude subdomains (optional)	[]
+	// regexDomainFilter	Limit possible target zones by regex domain suffixes (optional)	""
+	// regexDomainExclusion	Exclude subdomains by using regex pattern (optional)	""
+	// zoneNameFilters	Filter target zones by zone domain (optional)	[]
+	// zoneIdFilters	Limit possible target zones by zone id (optional)	[]
+	// annotationFilter	Filter sources managed by external-dns via annotation using label selector (optional)	""
+	// labelFilter	Select sources managed by external-dns using label selector (optional)	""
+	// crd.create	Install and use the integrated DNSEndpoint CRD	false
+
+	// txtOwnerId	A name that identifies this instance of ExternalDNS. Currently used by registry types: txt & aws-sd (optional)
 
 	if len(addons.Name) == 0 {
 		addons.Name = types.ExternalDnsDefaultName
@@ -65,10 +99,13 @@ func ExternalDnsSettings(addons *k3sv1alpha1.ExternalDns, lb *k3sv1alpha1.LoadBa
 }
 
 // MakeInstallExternalDns
-func MakeInstallExternalDns(addons *k3sv1alpha1.ExternalDns, lb *k3sv1alpha1.LoadBalancer, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
+func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.HelmRelease, kubeConfigPath string, dryRun bool) (err error) {
+	addons := &spec.Addons.ExternalDns
 	name := "MakeInstallExternalDns"
 	description := "External DNS"
 	// update := false
+
+	overrides := map[string]string{}
 
 	release, ok := k3sv1alpha1.FindRelease(args.Releases, addons.Name)
 	if !ok {
@@ -76,6 +113,15 @@ func MakeInstallExternalDns(addons *k3sv1alpha1.ExternalDns, lb *k3sv1alpha1.Loa
 	}
 
 	// log.Debugf("[%s] name: %s disabled: %v status: %v (cluster: %s)", name, addons.Name, addons.Disabled, release.Status, args.ClusterName)
+
+	if len(spec.LoadBalancer.Domain) == 0 {
+		log.Warnf("IS NOT Set \"spec.loadBalancer.domain\" %s disabled...", description)
+		return nil
+	}
+	if len(addons.Provider) == 0 {
+		log.Warnf("IS NOT Set \"spec.externalDns.provider\" %s disabled...", description)
+		return nil
+	}
 
 	if addons.Disabled {
 		log.Warnf("%s disabled...", description)
@@ -91,6 +137,12 @@ func MakeInstallExternalDns(addons *k3sv1alpha1.ExternalDns, lb *k3sv1alpha1.Loa
 		log.Infof("Install %s...", description)
 	}
 
+	// if addons.Provider == types.ProviderAws {
+	// 	if ok, secretFile := util.CheckСredentials(spec.ClusterName, types.ProviderAws); ok {
+
+	// 	}
+	// }
+
 	if len(addons.ValuesFile) > 0 {
 		if err = util.CheckExitFile(addons.ValuesFile); err != nil {
 			log.Errorf("IS NOT file: addons.externalDns.valuesFile=%s", addons.ValuesFile)
@@ -104,7 +156,9 @@ func MakeInstallExternalDns(addons *k3sv1alpha1.ExternalDns, lb *k3sv1alpha1.Loa
 		}
 	}
 
-	overrides := map[string]string{}
+	if len(spec.LoadBalancer.ExternalIP) == 0 {
+		log.Warnln("IS NOT Set \"spec.loadBalancer.externalIP\", is used private ip disabled...")
+	}
 
 	// if !update {
 	// 	overrides["installCRDs"] = "true"
@@ -117,9 +171,18 @@ func MakeInstallExternalDns(addons *k3sv1alpha1.ExternalDns, lb *k3sv1alpha1.Loa
 	// }
 
 	// Is Enabled monitoring
+	// metrics.enabled	Enable prometheus to access external-dns metrics endpoint	false
+	// metrics.serviceMonitor.enabled	Create ServiceMonitor object	false
 	// if args.ServiceMonitor {
 	// 	overrides["prometheus.servicemonitor.enabled"] = "true"
 	// }
+
+	// helm install my-release \
+	// --set provider=aws \
+	// --set aws.zoneType=public \
+	// --set txtOwnerId=HOSTED_ZONE_IDENTIFIER \
+	// --set domainFilters[0]=HOSTED_ZONE_NAME \
+	// bitnami/external-dns
 
 	options := k3sv1alpha1.HelmOptions{
 		ClusterName:     args.ClusterName,
@@ -135,11 +198,3 @@ func MakeInstallExternalDns(addons *k3sv1alpha1.ExternalDns, lb *k3sv1alpha1.Loa
 
 	return err
 }
-
-// const CertManagerInfoMsg = `# Get started with cert-manager here:
-// # https://docs.cert-manager.io/en/latest/tutorials/acme/http-validation.html`
-
-// const certManagerInstallMsg = `=======================================================================
-// = cert-manager  has been installed.                                   =
-// =======================================================================` +
-// 	"\n\n" + CertManagerInfoMsg + "\n\n"

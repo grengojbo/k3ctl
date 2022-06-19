@@ -106,6 +106,11 @@ func NewCmdApply() *cobra.Command {
 			// log.Debugf("---------- [LoadBalancer] ----------\n%s\n", dev)
 			// dev, _ = yaml.Marshal(c.Cluster.Spec.Addons.Monitoring)
 			// log.Debugf("---------- [Monitoring] ----------\n%s\n", dev)
+			devP, _ := yaml.Marshal(c.Cluster.Spec.Providers)
+			log.Debugf("---------- [Providers] ----------\n%s\n", devP)
+			devENV, _ := yaml.Marshal(c.ENV)
+			log.Debugf("---------- [ENV] ----------\n%s\n", devENV)
+			log.Debugf("Provider: %s", c.Cluster.GetProvider())
 
 			// isModuleRun := false
 			// if isModuleRun {
