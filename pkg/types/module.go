@@ -82,6 +82,18 @@ const GrafanaAgentCloudHelmURL = "https://grengojbo.github.io/charts/"
 const GrafanaAgentCloudDefaultNamespace = "monitoring"
 const GrafanaAgentCloudDefaultName = "grafana-agent"
 
+const ExternalDnsHelmRepoName = "bitnami"
+const ExternalDnsHelmRepo = "bitnami/external-dns"
+const ExternalDnsHelmURL = "https://charts.bitnami.com/bitnami"
+const ExternalDnsDefaultNamespace = "external-dns"
+const ExternalDnsDefaultName = "dns-public"
+
+// const HelmRepoName = "" // bitnami
+// const HelmRepo = "" // bitnami/external-dns
+// const HelmURL = "" // https://charts.bitnami.com/bitnami
+// const DefaultNamespace = "external-dns" // grengojbo/grafana-agent-cloud
+// const DefaultName = "external-dns" // grafana-agent
+
 const (
 	MetalLBVersion           = "v0.12.1"
 	MetalLBNamespaceManifest = "https://raw.githubusercontent.com/metallb/metallb/%s/manifests/namespace.yaml"

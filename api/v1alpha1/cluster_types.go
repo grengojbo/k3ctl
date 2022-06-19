@@ -232,6 +232,9 @@ type ExternalDns struct {
 	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
 	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
 	Manifests  []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
+	Provider  string          `mapstructure:"provider" yaml:"provider" json:"provider"`
+	Domains  []string          `mapstructure:"domains" yaml:"domains" json:"domains"`
+	
 }
 
 type MetalLB struct {
@@ -558,8 +561,19 @@ type LoadBalancer struct {
 	Name string `mapstructure:"name" yaml:"name" json:"name"`
 	// IP addresse at which the controller services are available
 	ExternalIP string `mapstructure:"externalIP" yaml:"externalIP" json:"externalIP,omitempty"`
+	Domain string `mapstructure:"domain" yaml:"domain" json:"domain,omitempty"`
 	MetalLb    string `mapstructure:"metalLb" yaml:"metalLb" json:"metalLb,omitempty"`
 	KubeVip    string `mapstructure:"kubeVip" yaml:"kubeVip" json:"kubeVip,omitempty"`
+}
+
+type Provider struct {
+	Default  string `mapstructure:"default" yaml:"default" json:"default"`
+	AWA ProviderAWS  `mapstructure:"aws" yaml:"aws" json:"aws"`
+}
+
+type ProviderAWS struct {
+	Name string `mapstructure:"name" yaml:"name" json:"name"`
+	Region            string                        `mapstructure:"region" yaml:"region" json:"region,omitempty"`
 }
 
 // ClusterSpec defines the desired state of Cluster
@@ -571,6 +585,7 @@ type ClusterSpec struct {
 	Region            string                        `mapstructure:"region" yaml:"region" json:"region,omitempty"`
 	Preset            string                        `mapstructure:"preset" json:"preset" yaml:"preset"`
 	Provider          string                        `mapstructure:"provider" json:"provider" yaml:"provider"`
+	Providers          Provider                        `mapstructure:"providers" json:"providers" yaml:"providers"`
 	Operator          bool                          `mapstructure:"operator" yaml:"operator" json:"operator,omitempty"`
 	Servers           int                           `mapstructure:"servers" yaml:"servers" json:"servers,omitempty"` //nolint:lll    // default 1
 	Agents            int                           `mapstructure:"agents" yaml:"agents" json:"agents,omitempty"`    //nolint:lll    // default 0
