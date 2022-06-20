@@ -40,18 +40,13 @@ func ExternalDnsSettings(spec *k3sv1alpha1.ClusterSpec) (release k3sv1alpha1.Hel
 		if len(spec.Providers.Default) > 0 {
 			addons.Provider = spec.Providers.Default
 		}
-
 	}
-	// DNS provider where the DNS records will be created.
-	// provider
 
-	// aws.credentials.secretKey	When using the AWS provider, set aws_secret_access_key in the AWS credentials (optional)	""
-	// aws.credentials.accessKey	When using the AWS provider, set aws_access_key_id in the AWS credentials (optional)
-	// Use an existing secret with key "credentials" defined.
-	// aws.credentials.secretName
-	// When using the AWS provider, AWS_DEFAULT_REGION to set in the environment (optional)
-	// aws.region
-
+	if len(addons.Region) == 0 {
+		if addons.Provider == types.ProviderAws {
+			addons.Region = spec.Providers.AWS.Region
+		}
+	}
 	// When using the Azure provider, set the secret containing the azure.json file
 	// azure.secretName
 
@@ -60,18 +55,6 @@ func ExternalDnsSettings(spec *k3sv1alpha1.ClusterSpec) (release k3sv1alpha1.Hel
 	// cloudflare.secretName	When using the Cloudflare provider, it's the name of the secret containing cloudflare_api_token or cloudflare_api_key.	""
 	// cloudflare.email	When using the Cloudflare provider, CF_API_EMAIL to set (optional). Needed when using CF_API_KEY	""
 	// cloudflare.proxied	When using the Cloudflare provider, enable the proxy feature (DDOS protection, CDN...) (optional)	true
-
-	// domainFilters	Limit possible target zones by domain suffixes (optional)	[]
-	// excludeDomains	Exclude subdomains (optional)	[]
-	// regexDomainFilter	Limit possible target zones by regex domain suffixes (optional)	""
-	// regexDomainExclusion	Exclude subdomains by using regex pattern (optional)	""
-	// zoneNameFilters	Filter target zones by zone domain (optional)	[]
-	// zoneIdFilters	Limit possible target zones by zone id (optional)	[]
-	// annotationFilter	Filter sources managed by external-dns via annotation using label selector (optional)	""
-	// labelFilter	Select sources managed by external-dns using label selector (optional)	""
-	// crd.create	Install and use the integrated DNSEndpoint CRD	false
-
-	// txtOwnerId	A name that identifies this instance of ExternalDNS. Currently used by registry types: txt & aws-sd (optional)
 
 	if len(addons.Name) == 0 {
 		addons.Name = types.ExternalDnsDefaultName
@@ -122,6 +105,7 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 		log.Warnf("IS NOT Set \"spec.externalDns.provider\" %s disabled...", description)
 		return nil
 	}
+	existingSecret := fmt.Sprintf("exrernal-dns-%s-%s-creds", args.ClusterName, addons.Provider)
 
 	if addons.Disabled {
 		log.Warnf("%s disabled...", description)
@@ -135,13 +119,36 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 		// update = true
 	} else {
 		log.Infof("Install %s...", description)
+		overrides["crd.create"] = "true"
+
+		secret := k3sv1alpha1.K8sSecret{
+			Name:      existingSecret,
+			Type:      "generic",
+			Namespace: release.Namespace,
+		}
+
+		if addons.Provider == types.ProviderAws {
+			// aws.credentials.secretKey	When using the AWS provider, set aws_secret_access_key in the AWS credentials (optional)	""
+			// aws.credentials.accessKey	When using the AWS provider, set aws_access_key_id in the AWS credentials (optional)
+			if ok, secretFile := util.CheckСredentials(spec.ClusterName, types.ProviderAws); ok {
+				fileSecret := k3sv1alpha1.SecretsData{
+					Key:   "credentials",
+					Value: secretFile,
+					Type:  types.FromFileSecret,
+				}
+				secret.SecretsData = append(secret.SecretsData, fileSecret)
+				// Use an existing secret with key "credentials" defined.
+				overrides["aws.credentials.secretName"] = existingSecret
+			}
+		}
+
+		if len(secret.SecretsData) > 0 {
+			if err := CreateSecret(secret, kubeConfigPath, args.ClusterName, dryRun); err != nil {
+				log.Errorf("Is NOT install \"%s\" (%s)", description, err.Error())
+				return nil
+			}
+		}
 	}
-
-	// if addons.Provider == types.ProviderAws {
-	// 	if ok, secretFile := util.CheckСredentials(spec.ClusterName, types.ProviderAws); ok {
-
-	// 	}
-	// }
 
 	if len(addons.ValuesFile) > 0 {
 		if err = util.CheckExitFile(addons.ValuesFile); err != nil {
@@ -160,22 +167,46 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 		log.Warnln("IS NOT Set \"spec.loadBalancer.externalIP\", is used private ip disabled...")
 	}
 
-	// if !update {
-	// 	overrides["installCRDs"] = "true"
-	// }
-
-	//  -- List of IP addresses at which the controller services are available
-	//  Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
-	// if len(lb.ExternalIP) > 0 {
-	// 	overrides["controller.service.externalIPs[0]"] = lb.ExternalIP
-	// }
-
 	// Is Enabled monitoring
-	// metrics.enabled	Enable prometheus to access external-dns metrics endpoint	false
-	// metrics.serviceMonitor.enabled	Create ServiceMonitor object	false
-	// if args.ServiceMonitor {
-	// 	overrides["prometheus.servicemonitor.enabled"] = "true"
-	// }
+	if !spec.Addons.Monitoring.Disabled {
+		// 	Enable prometheus to access external-dns metrics endpoint	false
+		overrides["metrics.enabled"] = "true"
+	}
+	// Create ServiceMonitor object
+	if args.ServiceMonitor {
+		overrides["metrics.serviceMonitor.enabled"] = "true"
+	}
+
+	overrides["provider"] = addons.Provider
+
+	if addons.Provider == types.ProviderAws {
+		// When using the AWS provider, AWS_DEFAULT_REGION to set in the environment (optional)
+		overrides["aws.region"] = addons.Region
+		overrides["aws.zoneType"] = "public"
+	}
+
+	if len(addons.HostedZoneIdentifier) > 0 {
+		// txtOwnerId	A name that identifies this instance of ExternalDNS. Currently used by registry types: txt & aws-sd (optional)
+		overrides["txtOwnerId"] = addons.HostedZoneIdentifier
+	}
+
+	addons.Domains = append(addons.Domains, spec.LoadBalancer.Domain)
+	for i, v := range addons.Domains {
+		// domainFilters	Limit possible target zones by domain suffixes (optional)	[]
+		k := fmt.Sprintf("domainFilters[%d]", i)
+		overrides[k] = v
+	}
+
+	// excludeDomains	Exclude subdomains (optional)	[]
+	// regexDomainFilter	Limit possible target zones by regex domain suffixes (optional)	""
+	// regexDomainExclusion	Exclude subdomains by using regex pattern (optional)	""
+	// zoneNameFilters	Filter target zones by zone domain (optional)	[]
+	// zoneIdFilters	Limit possible target zones by zone id (optional)	[]
+	// annotationFilter	Filter sources managed by external-dns via annotation using label selector (optional)	""
+	// labelFilter	Select sources managed by external-dns using label selector (optional)	""
+	// crd.create	Install and use the integrated DNSEndpoint CRD	false
+
+	// 	overrides[""] = ""
 
 	// helm install my-release \
 	// --set provider=aws \

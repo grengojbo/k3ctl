@@ -104,8 +104,8 @@ func NewCmdApply() *cobra.Command {
 
 			// dev, _ := yaml.Marshal(c.Cluster.Spec.LoadBalancer)
 			// log.Debugf("---------- [LoadBalancer] ----------\n%s\n", dev)
-			// dev, _ = yaml.Marshal(c.Cluster.Spec.Addons.Monitoring)
-			// log.Debugf("---------- [Monitoring] ----------\n%s\n", dev)
+			devM, _ := yaml.Marshal(c.Cluster.Spec.Addons.Monitoring)
+			log.Debugf("---------- [Monitoring] ----------\n%s\n", devM)
 			devP, _ := yaml.Marshal(c.Cluster.Spec.Providers)
 			log.Debugf("---------- [Providers] ----------\n%s\n", devP)
 			devENV, _ := yaml.Marshal(c.ENV)

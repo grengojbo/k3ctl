@@ -198,7 +198,13 @@ func (p *ProviderBase) FromViperSimple(config *viper.Viper) error {
 		p.HelmRelease.Releases = append(p.HelmRelease.Releases, HelmMonitoring)
 		p.HelmRelease.Repo = append(p.HelmRelease.Repo, cfg.Spec.Addons.Monitoring.Repo)
 	}
-	p.HelmRelease.ServiceMonitor = !HelmMonitoring.Deleted
+
+	// TODO: добавить создание prometheus CRD
+	if cfg.Spec.Addons.Monitoring.Name == types.GrafanaAgentCloudDefaultName {
+		p.HelmRelease.ServiceMonitor = false
+	} else {
+		p.HelmRelease.ServiceMonitor = !HelmMonitoring.Deleted
+	}
 
 	// Cert Manager
 	HelmCertManager := module.CertManagerSettings(&cfg.Spec.Addons.CertManager, cfg.Spec.ClusterName)
@@ -1861,6 +1867,12 @@ func (p *ProviderBase) LoadEnv() {
 	appViper.BindEnv("ARM_CLIENT_SECRET")
 	appViper.BindEnv("ARM_TENANT_ID")
 	appViper.BindEnv("ARM_SUBSCRIPTION_ID")
+	appViper.BindEnv("CF_API_TOKEN")
+	appViper.BindEnv("CF_API_KEY")
+	appViper.BindEnv("CF_API_EMAIL")
+	// appViper.BindEnv("")
+	// appViper.BindEnv("")
+	// appViper.BindEnv("")
 
 	e := k3sv1alpha1.EnvConfig{}
 	if envPath := util.GetEnvDir(p.Cluster.GetName()); len(envPath) > 0 {
