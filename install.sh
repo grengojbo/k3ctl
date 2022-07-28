@@ -239,7 +239,7 @@ download_and_verify() {
   setup_verify_arch
 	GetOS
 	echo "ARCH: ${ARCH} OS: ${OS}"
-  verify_downloader curl1 || verify_downloader wget || fatal 'Can not find curl or wget for downloading files'
+  verify_downloader curl || verify_downloader wget || fatal 'Can not find curl or wget for downloading files'
   setup_tmp
   get_release_version
   download_hash
@@ -279,7 +279,21 @@ setup_env() {
 InstallArkade() {
   echo "install arkade..."
   rm -rf ${HOME}/.arkade
-  curl -SLfs https://get.arkade.dev | $SUDO sh
+  
+  verify_downloader curl || verify_downloader wget || fatal 'Can not find curl or wget for downloading files'
+  
+  case $DOWNLOADER in
+    curl)
+      curl -SLfs https://get.arkade.dev | $SUDO sh
+      ;;
+    wget)
+      wget -q -O - https://get.arkade.dev | $SUDO sh
+      ;;
+    *)
+      fatal "Incorrect downloader executable '$DOWNLOADER'"
+      ;;
+  esac
+  
 
   # arkade --help
   # ark --help  # a handy alias
