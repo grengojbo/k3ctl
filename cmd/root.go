@@ -47,7 +47,7 @@ import (
 	// "github.com/rancher/k3d/v4/cmd/registry"
 	cliutil "github.com/grengojbo/k3ctl/cmd/util"
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
-	"github.com/grengojbo/k3ctl/version"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/writer"
 )
@@ -61,6 +61,7 @@ type RootFlags struct {
 }
 
 var flags = RootFlags{}
+var version string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -83,7 +84,8 @@ k3ctl is a wrapper CLI that helps you to easily create k3s clusters.
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(ver string) {
+	version = ver
 	if len(os.Args) > 1 {
 		parts := os.Args[1:]
 		// Check if it's a built-in command, else try to execute it as a plugin
@@ -206,8 +208,8 @@ func initLogging() {
 // }
 
 func printVersion() {
-	fmt.Printf("k3ctl version %s\n", version.GetVersion())
-	fmt.Printf("k3s version %s (default)\n", version.K3sVersion)
+	fmt.Printf("k3ctl version %s\n", version)
+	// fmt.Printf("k3s version %s (default)\n", version.K3sVersion)
 }
 
 func generateFishCompletion(writer io.Writer) error {
@@ -237,7 +239,45 @@ func NewCmdCompletion() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "completion SHELL",
 		Short: "Generate completion scripts for [bash, zsh, fish, powershell | psh]",
-		Long:  `Generate completion scripts for [bash, zsh, fish, powershell | psh]`,
+		Long: fmt.Sprintf(`To load completions:
+
+Bash:
+
+  $ source <(%[1]s completion bash)
+
+  # To load completions for each session, execute once:
+  # Linux:
+  $ %[1]s completion bash > /etc/bash_completion.d/%[1]s
+  # macOS:
+  $ %[1]s completion bash > $(brew --prefix)/etc/bash_completion.d/%[1]s
+
+Zsh:
+
+  # If shell completion is not already enabled in your environment,
+  # you will need to enable it.  You can execute the following once:
+
+  $ echo "autoload -U compinit; compinit" >> ~/.zshrc
+
+  # To load completions for each session, execute once:
+  $ %[1]s completion zsh > "${fpath[1]}/_%[1]s"
+
+  # You will need to start a new shell for this setup to take effect.
+
+fish:
+
+  $ %[1]s completion fish | source
+
+  # To load completions for each session, execute once:
+  $ %[1]s completion fish > ~/.config/fish/completions/%[1]s.fish
+
+PowerShell:
+
+  PS> %[1]s completion powershell | Out-String | Invoke-Expression
+
+  # To load completions for every new session, run:
+  PS> %[1]s completion powershell > %[1]s.ps1
+  # and source this file from your PowerShell profile.
+`,rootCmd.Name()),
 		Args:  cobra.ExactArgs(1), // TODO: NewCmdCompletion: add support for 0 args = auto detection
 		Run: func(cmd *cobra.Command, args []string) {
 			if completionFunc, ok := completionFunctions[args[0]]; ok {

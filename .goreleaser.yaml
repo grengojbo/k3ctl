@@ -54,8 +54,8 @@ builds:
     #   - darwin_arm64
     # Custom ldflags templates.
     # Default is `-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser`.
-    ldflags:
-      - "-s -w -X github.com/grengojbo/k3ctl/cmd/version.Version={{.Version}} -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser"
+    # ldflags:
+    #   - "-s -w -X 'github.com/grengojbo/k3ctl/cmd/version.Version={{.Version}}' -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser"
     #   - ./usemsan=-msan
 archives:
   - 

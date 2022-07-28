@@ -53,7 +53,7 @@ func main() {
 	// isCli = true
 
 	if isCli == "yes" {
-		cmd.Execute()
+		cmd.Execute(version)
 		// if err := cmd.Execute(); err != nil {
 		// 	os.Exit(1)
 		// }
