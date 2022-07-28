@@ -44,7 +44,7 @@ import (
 
 	// "github.com/rancher/k3d/v4/pkg/runtimes"
 
-	// "github.com/grengojbo/k3ctl/version"
+	"github.com/grengojbo/k3ctl/version"
 
 	log "github.com/sirupsen/logrus"
 )
