@@ -194,7 +194,18 @@ download_binary() {
 # --- verify downloaded binary hash ---
 verify_binary() {
   info "Verifying binary download"
-  HASH_BIN=$(sha256sum ${TMP_BIN})
+  SHASUM_BIN=$(command -v sha256sum 2> /dev/null)
+  if [[ "${SHASUM_BIN}" == "" ]]; then
+    SHASUM_BIN=$(command -v shasum 2> /dev/null)
+    if [[ "${SHASUM_BIN}" == "" ]]; then
+      fatal "sha256sum or shasum not found"
+    else
+      HASH_BIN=$(shasum -a 256 ${TMP_BIN})
+    fi
+  else
+    HASH_BIN=$(sha256sum ${TMP_BIN})
+  fi
+  # SHASUM_BIN=$(sha256sum ${TMP_BIN} | awk '{print $1}')
   HASH_BIN=${HASH_BIN%%[[:blank:]]*}
   if [ "${HASH_EXPECTED}" != "${HASH_BIN}" ]; then
     fatal "Download sha256 does not match ${HASH_EXPECTED}, got ${HASH_BIN}"
@@ -224,7 +235,7 @@ download_and_verify() {
   download_hash
 
   if installed_hash_matches; then
-    info 'Skipping binary downloaded, installed k3s matches hash'
+    info 'Skipping binary downloaded, installed k3ctl matches hash'
     return
   fi
 
@@ -308,6 +319,6 @@ InstallVelero() {
 
 
 setup_env
-InstallArkade
+# InstallArkade
 download_and_verify
-InstallVelero
+# InstallVelero
