@@ -56,7 +56,7 @@ vendor: dep ## Create vendor directory
 
 build: # Build k3ctl binary
 	@#go build -o k3ctl cli/main.go
-	go build -o k3ctl main.go
+	@#go build -o k3ctl main.go
 	goreleaser build --single-target
 
 manager: generate fmt vet
