@@ -319,6 +319,6 @@ InstallVelero() {
 
 
 setup_env
-# InstallArkade
+InstallArkade
 download_and_verify
-# InstallVelero
+InstallVelero
