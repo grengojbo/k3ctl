@@ -269,7 +269,7 @@ setup_env() {
 InstallArkade() {
   echo "install arkade..."
   rm -rf ${HOME}/.arkade
-  curl -SLfs https://get.arkade.dev | sudo sh
+  curl -SLfs https://get.arkade.dev | $SUDO sh
 
   # arkade --help
   # ark --help  # a handy alias
@@ -278,32 +278,32 @@ InstallArkade() {
   # curl -sLS https://get.arkade.dev | sh
 
   #arkade get porter
-  #sudo mv ${HOME}/.arkade/bin/porter ${BIN_DIR}/
+  #$SUDO mv ${HOME}/.arkade/bin/porter ${BIN_DIR}/
 
   arkade get jq
-  sudo mv ${HOME}/.arkade/bin/jq ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/jq ${BIN_DIR}/
 
   arkade get yq
-  sudo mv ${HOME}/.arkade/bin/yq ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/yq ${BIN_DIR}/
 
   #arkade get k3d
-  #sudo mv ${HOME}/.arkade/bin/k3d ${BIN_DIR}/
+  #$SUDO mv ${HOME}/.arkade/bin/k3d ${BIN_DIR}/
 
   arkade get kubectl
-  sudo mv ${HOME}/.arkade/bin/kubectl ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/kubectl ${BIN_DIR}/
   
   arkade get kustomize
-  sudo mv ${HOME}/.arkade/bin/kustomize ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/kustomize ${BIN_DIR}/
 
   HELM_VERSION=`curl https://api.github.com/repos/helm/helm/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
   arkade get helm -v ${HELM_VERSION} 
-  sudo mv ${HOME}/.arkade/bin/helm ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/helm ${BIN_DIR}/
 
   arkade get krew
-  sudo mv ${HOME}/.arkade/bin/krew ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/krew ${BIN_DIR}/
 
   arkade get stern
-  sudo mv ${HOME}/.arkade/bin/stern ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/stern ${BIN_DIR}/
 
 }
 
@@ -314,7 +314,7 @@ InstallVelero() {
   tar -xzvf velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
   rm -f velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
   chmod 0777 velero-${VELERO_VERSION}-${OS}-${ARCH}/velero
-  sudo mv velero-${VELERO_VERSION}-${OS}-${ARCH}/velero /usr/local/bin/velero
+  $SUDO mv velero-${VELERO_VERSION}-${OS}-${ARCH}/velero /usr/local/bin/velero
 }
 
 
