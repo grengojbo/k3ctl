@@ -170,7 +170,17 @@ download_hash() {
 # --- check hash against installed version ---
 installed_hash_matches() {
   if [ -x ${BIN_DIR}/${PROJECT_NAME} ]; then
-    HASH_INSTALLED=$(sha256sum ${BIN_DIR}/${PROJECT_NAME})
+    SHASUM_BIN=$(command -v sha256sum 2> /dev/null)
+    if [[ "${SHASUM_BIN}" == "" ]]; then
+      SHASUM_BIN=$(command -v shasum 2> /dev/null)
+      if [[ "${SHASUM_BIN}" == "" ]]; then
+        fatal "sha256sum or shasum not found"
+      else
+        HASH_INSTALLED=$(shasum -a 256 ${BIN_DIR}/${PROJECT_NAME})
+      fi
+    else
+      HASH_INSTALLED=$(sha256sum ${BIN_DIR}/${PROJECT_NAME})
+    fi
     HASH_INSTALLED=${HASH_INSTALLED%%[[:blank:]]*}
     if [ "${HASH_EXPECTED}" = "${HASH_INSTALLED}" ]; then
       return
@@ -295,7 +305,19 @@ InstallArkade() {
   arkade get kustomize
   $SUDO mv ${HOME}/.arkade/bin/kustomize ${BIN_DIR}/
 
-  HELM_VERSION=`curl https://api.github.com/repos/helm/helm/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
+  # HELM_VERSION=`curl https://api.github.com/repos/helm/helm/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
+  case $DOWNLOADER in
+    curl)
+      HELM_VERSION=`curl -L -s https://api.github.com/repos/helm/helm/releases/latest | jq -r .tag_name`
+      ;;
+    wget)
+      HELM_VERSION=`wget -q -O - https://api.github.com/repos/helm/helm/releases/latest | jq -r .tag_name`
+      ;;
+    *)
+      fatal "Incorrect downloader executable '$DOWNLOADER'"
+      ;;
+  esac
+
   arkade get helm -v ${HELM_VERSION} 
   $SUDO mv ${HOME}/.arkade/bin/helm ${BIN_DIR}/
 
@@ -309,8 +331,20 @@ InstallArkade() {
 
 InstallVelero() {
   # VELERO_VERSION=v1.8.1
-  VELERO_VERSION=`curl https://api.github.com/repos/vmware-tanzu/velero/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
-  wget https://github.com/vmware-tanzu/velero/releases/download/${VELERO_VERSION}/velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
+  # VELERO_VERSION=`curl https://api.github.com/repos/vmware-tanzu/velero/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
+  case $DOWNLOADER in
+    curl)
+      VELERO_VERSION=`curl -L -s https://api.github.com/repos/vmware-tanzu/velero/releases/latest | jq -r .tag_name`
+      curl https://github.com/vmware-tanzu/velero/releases/download/${VELERO_VERSION}/velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz -o ./velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
+      ;;
+    wget)
+      VELERO_VERSION=`wget -q -O - https://api.github.com/repos/vmware-tanzu/velero/releases/latest | jq -r .tag_name`
+      wget https://github.com/vmware-tanzu/velero/releases/download/${VELERO_VERSION}/velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
+      ;;
+    *)
+      fatal "Incorrect downloader executable '$DOWNLOADER'"
+      ;;
+  esac
   tar -xzvf velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
   rm -f velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
   chmod 0777 velero-${VELERO_VERSION}-${OS}-${ARCH}/velero
