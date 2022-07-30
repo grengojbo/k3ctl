@@ -1,3 +1,8 @@
+# vim: syntax=bash ts=2 sw=2 sts=2 sr noet
+@options timing
+
+@define HOST_NAME='kuard.a.iwis.io'
+
 # @goal downloaded
 # @reached_if [[ -f code.tar.gz ]]
 #   wget http://domain/code.tar.gz
@@ -70,6 +75,14 @@ EOF
     --policy-document file://${CLUSTER_NAME}-route53-police.json \
     --output json
   rm -Rf .${CLUSTER_NAME}-route53-police.json
+
+@goal kuard
+@doc Install kuard app
+  helm upgrade -i kuard grengojbo/kuard -n default --set ingress.host._default.name=${HOST_NAME}
+
+@goal delete-kuard
+@doc Delete kuard app
+  helm delete kuard -n default
 
 @goal bucket
 @doc Create Bucket
