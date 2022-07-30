@@ -223,19 +223,20 @@ type PulumiModule struct {
 }
 
 type ExternalDns struct {
-	Name                 string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Provider             string            `mapstructure:"provider" yaml:"provider" json:"provider"`
-	Region               string            `mapstructure:"region" yaml:"region" json:"region,omitempty"`
-	Domains              []string          `mapstructure:"domains" yaml:"domains" json:"domains"`
-	HostedZoneIdentifier string            `mapstructure:"hostedZoneIdentifier" yaml:"hostedZoneIdentifier" json:"hostedZoneIdentifier,omitempty"`
-	Namespace            string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
-	Disabled             bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
-	Version              string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
-	URL                  string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
-	Values               map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
-	ValuesFile           string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
-	Repo                 HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
-	Manifests            []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
+	Name          string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Provider      string   `mapstructure:"provider" yaml:"provider" json:"provider"`
+	Region        string   `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Domains       []string `mapstructure:"domains" yaml:"domains" json:"domains"`
+	HostedZoneIds []string `mapstructure:"HostedZoneIds" yaml:"HostedZoneIds" json:"HostedZoneIds,omitempty"`
+	// HostedZoneIdentifier string            `mapstructure:"hostedZoneIdentifier" yaml:"hostedZoneIdentifier" json:"hostedZoneIdentifier,omitempty"`
+	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version    string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	Manifests  []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
 type MetalLB struct {

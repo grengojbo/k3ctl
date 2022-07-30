@@ -57,6 +57,8 @@ vendor: dep ## Create vendor directory
 build: # Build k3ctl binary
 	@#go build -o k3ctl cli/main.go
 	go build -o k3ctl main.go
+	# go build -o k3ctl -ldflags="-X main.version=0.0.2" main.go
+	@#goreleaser build --single-target
 
 manager: generate fmt vet
 	go build -ldflags "-X main.isCli=no" -o bin/manager main.go

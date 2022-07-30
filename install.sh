@@ -170,7 +170,17 @@ download_hash() {
 # --- check hash against installed version ---
 installed_hash_matches() {
   if [ -x ${BIN_DIR}/${PROJECT_NAME} ]; then
-    HASH_INSTALLED=$(sha256sum ${BIN_DIR}/${PROJECT_NAME})
+    SHASUM_BIN=$(command -v sha256sum 2> /dev/null)
+    if [[ "${SHASUM_BIN}" == "" ]]; then
+      SHASUM_BIN=$(command -v shasum 2> /dev/null)
+      if [[ "${SHASUM_BIN}" == "" ]]; then
+        fatal "sha256sum or shasum not found"
+      else
+        HASH_INSTALLED=$(shasum -a 256 ${BIN_DIR}/${PROJECT_NAME})
+      fi
+    else
+      HASH_INSTALLED=$(sha256sum ${BIN_DIR}/${PROJECT_NAME})
+    fi
     HASH_INSTALLED=${HASH_INSTALLED%%[[:blank:]]*}
     if [ "${HASH_EXPECTED}" = "${HASH_INSTALLED}" ]; then
       return
@@ -194,7 +204,18 @@ download_binary() {
 # --- verify downloaded binary hash ---
 verify_binary() {
   info "Verifying binary download"
-  HASH_BIN=$(sha256sum ${TMP_BIN})
+  SHASUM_BIN=$(command -v sha256sum 2> /dev/null)
+  if [[ "${SHASUM_BIN}" == "" ]]; then
+    SHASUM_BIN=$(command -v shasum 2> /dev/null)
+    if [[ "${SHASUM_BIN}" == "" ]]; then
+      fatal "sha256sum or shasum not found"
+    else
+      HASH_BIN=$(shasum -a 256 ${TMP_BIN})
+    fi
+  else
+    HASH_BIN=$(sha256sum ${TMP_BIN})
+  fi
+  # SHASUM_BIN=$(sha256sum ${TMP_BIN} | awk '{print $1}')
   HASH_BIN=${HASH_BIN%%[[:blank:]]*}
   if [ "${HASH_EXPECTED}" != "${HASH_BIN}" ]; then
     fatal "Download sha256 does not match ${HASH_EXPECTED}, got ${HASH_BIN}"
@@ -218,13 +239,13 @@ download_and_verify() {
   setup_verify_arch
 	GetOS
 	echo "ARCH: ${ARCH} OS: ${OS}"
-  verify_downloader curl1 || verify_downloader wget || fatal 'Can not find curl or wget for downloading files'
+  verify_downloader curl || verify_downloader wget || fatal 'Can not find curl or wget for downloading files'
   setup_tmp
   get_release_version
   download_hash
 
   if installed_hash_matches; then
-    info 'Skipping binary downloaded, installed k3s matches hash'
+    info 'Skipping binary downloaded, installed k3ctl matches hash'
     return
   fi
 
@@ -258,7 +279,21 @@ setup_env() {
 InstallArkade() {
   echo "install arkade..."
   rm -rf ${HOME}/.arkade
-  curl -SLfs https://get.arkade.dev | sudo sh
+  
+  verify_downloader curl || verify_downloader wget || fatal 'Can not find curl or wget for downloading files'
+  
+  case $DOWNLOADER in
+    curl)
+      curl -SLfs https://get.arkade.dev | $SUDO sh
+      ;;
+    wget)
+      wget -q -O - https://get.arkade.dev | $SUDO sh
+      ;;
+    *)
+      fatal "Incorrect downloader executable '$DOWNLOADER'"
+      ;;
+  esac
+  
 
   # arkade --help
   # ark --help  # a handy alias
@@ -267,43 +302,67 @@ InstallArkade() {
   # curl -sLS https://get.arkade.dev | sh
 
   #arkade get porter
-  #sudo mv ${HOME}/.arkade/bin/porter ${BIN_DIR}/
+  #$SUDO mv ${HOME}/.arkade/bin/porter ${BIN_DIR}/
 
   arkade get jq
-  sudo mv ${HOME}/.arkade/bin/jq ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/jq ${BIN_DIR}/
 
   arkade get yq
-  sudo mv ${HOME}/.arkade/bin/yq ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/yq ${BIN_DIR}/
 
   #arkade get k3d
-  #sudo mv ${HOME}/.arkade/bin/k3d ${BIN_DIR}/
+  #$SUDO mv ${HOME}/.arkade/bin/k3d ${BIN_DIR}/
 
   arkade get kubectl
-  sudo mv ${HOME}/.arkade/bin/kubectl ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/kubectl ${BIN_DIR}/
   
   arkade get kustomize
-  sudo mv ${HOME}/.arkade/bin/kustomize ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/kustomize ${BIN_DIR}/
 
-  HELM_VERSION=`curl https://api.github.com/repos/helm/helm/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
+  # HELM_VERSION=`curl https://api.github.com/repos/helm/helm/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
+  case $DOWNLOADER in
+    curl)
+      HELM_VERSION=`curl -L -s https://api.github.com/repos/helm/helm/releases/latest | jq -r .tag_name`
+      ;;
+    wget)
+      HELM_VERSION=`wget -q -O - https://api.github.com/repos/helm/helm/releases/latest | jq -r .tag_name`
+      ;;
+    *)
+      fatal "Incorrect downloader executable '$DOWNLOADER'"
+      ;;
+  esac
+
   arkade get helm -v ${HELM_VERSION} 
-  sudo mv ${HOME}/.arkade/bin/helm ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/helm ${BIN_DIR}/
 
   arkade get krew
-  sudo mv ${HOME}/.arkade/bin/krew ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/krew ${BIN_DIR}/
 
   arkade get stern
-  sudo mv ${HOME}/.arkade/bin/stern ${BIN_DIR}/
+  $SUDO mv ${HOME}/.arkade/bin/stern ${BIN_DIR}/
 
 }
 
 InstallVelero() {
   # VELERO_VERSION=v1.8.1
-  VELERO_VERSION=`curl https://api.github.com/repos/vmware-tanzu/velero/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
-  wget https://github.com/vmware-tanzu/velero/releases/download/${VELERO_VERSION}/velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
+  # VELERO_VERSION=`curl https://api.github.com/repos/vmware-tanzu/velero/releases -s | grep -Po '"tag_name": "\K.*?(?=")' -m1`
+  case $DOWNLOADER in
+    curl)
+      VELERO_VERSION=`curl -L -s https://api.github.com/repos/vmware-tanzu/velero/releases/latest | jq -r .tag_name`
+      curl https://github.com/vmware-tanzu/velero/releases/download/${VELERO_VERSION}/velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz -o ./velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
+      ;;
+    wget)
+      VELERO_VERSION=`wget -q -O - https://api.github.com/repos/vmware-tanzu/velero/releases/latest | jq -r .tag_name`
+      wget https://github.com/vmware-tanzu/velero/releases/download/${VELERO_VERSION}/velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
+      ;;
+    *)
+      fatal "Incorrect downloader executable '$DOWNLOADER'"
+      ;;
+  esac
   tar -xzvf velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
   rm -f velero-${VELERO_VERSION}-${OS}-${ARCH}.tar.gz
   chmod 0777 velero-${VELERO_VERSION}-${OS}-${ARCH}/velero
-  sudo mv velero-${VELERO_VERSION}-${OS}-${ARCH}/velero /usr/local/bin/velero
+  $SUDO mv velero-${VELERO_VERSION}-${OS}-${ARCH}/velero /usr/local/bin/velero
 }
 
 

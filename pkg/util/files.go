@@ -23,8 +23,12 @@ package util
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/grengojbo/k3ctl/pkg/types"
 	homedir "github.com/mitchellh/go-homedir"
@@ -106,6 +110,46 @@ func GetEnvDir(clusterName string) (envPath string) {
 	return ""
 }
 
+// ListClusterName
+func ListClusterName() (clusterNames []string) {
+	clusterNames, dirs, _ := ShowFilesInDirectory("./variables", ".yaml")
+	for _, dir := range dirs {
+		configFileHomeDir := fmt.Sprintf("./variables/%s/cluster.yaml", dir)
+		if _, err := os.Stat(configFileHomeDir); err == nil {
+			clusterNames = append(clusterNames, dir)
+		}
+	}
+	defPathName, dirs, _ := ShowFilesInDirectory(fmt.Sprintf("~/%s", types.DefaultConfigDirName), ".yaml")
+	for _, dir := range dirs {
+		configFileHomeDir := fmt.Sprintf("~/%s/%s/cluster.yaml", types.DefaultConfigDirName, dir)
+		if _, err := os.Stat(configFileHomeDir); err == nil {
+			defPathName = append(defPathName, dir)
+		}
+	}
+	clusterNames = append(clusterNames, defPathName...)
+	return clusterNames
+}
+
+// ShowFilesInDirectory show files in directory filter extension
+func ShowFilesInDirectory(dir string, extension string) ([]string, []string, error) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, nil, err
+	}
+	var filteredFiles []string
+	var filteredDirs []string
+	for _, file := range files {
+		if file.IsDir() {
+			filteredDirs = append(filteredDirs, file.Name())
+			continue
+		}
+		if path.Ext(file.Name()) == extension {
+			filteredFiles = append(filteredFiles, strings.TrimSuffix(file.Name(), filepath.Ext(file.Name())))
+		}
+	}
+	return filteredFiles, filteredDirs, nil
+}
+
 // GetConfigFileName load config from file
 // seach path <clusterName>.yaml, ./variables/<clusterName>.yaml, ~/<clusterName>/cluster.yaml, ~/.k3s/<clusterName>.yaml, ~/.k3s/<clusterName>/cluster.yaml
 func GetConfigFileName(configFile string) (configFilePath string) {
@@ -178,3 +222,28 @@ func CheckСredentials(clusterName string, provider string) (ok bool, secretFile
 	}
 	return true, secretFile
 }
+
+// LoadTemplate - load template from url
+func LoadTemplate(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
+	// byte to string
+	// return string(byte), nil
+}
+
+// embed template
+// func embedTemplate(template string, data interface{}) (string, error) {
+// 	t, err := template.New("").Parse(template)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	var buf bytes.Buffer
+// 	if err := t.Execute(&buf, data); err != nil {
+// 		return "", err
+// 	}
+// 	return buf.String(), nil
+// }

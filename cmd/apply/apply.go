@@ -67,6 +67,8 @@ func NewCmdApply() *cobra.Command {
 			ConfigFile = config.InitConfig(clusterName, cfgViper, ppViper)
 			return nil
 		},
+		ValidArgs: types.AddonsList,
+		// Args:      cobra.ExactValidArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			addonsName := ""
 			if len(args) > 0 {
@@ -137,7 +139,21 @@ func NewCmdApply() *cobra.Command {
 	// cmd.AddCommand(NewCmdClusterList())
 
 	// add flags
+	// https://chromium.googlesource.com/external/github.com/spf13/cobra/+/2ccf9e982a3e3eb21eba9c9ad8e546529fd74c71/bash_completions.md
+	// annotation := make(map[string][]string)
+	// annotation[cobra.BashCompFilenameExt] = util.ListClusterName()
+	// // annotation[cobra.Zsh] = util.ListClusterName()
+	// flag := &pflag.Flag{
+	// 	Name:      "cluster",
+	// 	Shorthand: "c",
+	// 	Usage:     "Cluster URL or k3s cluster name to connect to.",
+	// 	// Value:       value,
+	// 	DefValue:    types.DefaultClusterName,
+	// 	Annotations: annotation,
+	// }
+	// cmd.Flags().AddFlag(flag)
 	cmd.Flags().StringP("cluster", "c", types.DefaultClusterName, "Cluster URL or k3s cluster name to connect to.")
+	cmd.MarkFlagRequired("cluster")
 
 	// done
 	return cmd

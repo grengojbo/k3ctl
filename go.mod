@@ -5,7 +5,6 @@ go 1.17
 // replace github.com/grengojbo/pulumi-modules => /Users/jbo/go/src/github.com/grengojbo/pulumi-modules
 
 require (
-	github.com/alexellis/arkade v0.0.0-20220212153158-a5ab3168867c
 	github.com/alexellis/go-execute v0.5.0
 	github.com/alexellis/k3sup v0.0.0-20210413182206-de10fc701f46
 	github.com/appleboy/easyssh-proxy v1.3.9
@@ -34,13 +33,11 @@ require (
 	cloud.google.com/go v0.99.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5 // indirect
-	github.com/VividCortex/ewma v1.1.1 // indirect
 	github.com/aws/aws-sdk-go v1.40.32 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cheggaaa/pb v1.0.18 // indirect
-	github.com/cheggaaa/pb/v3 v3.0.8 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dchest/bcrypt_pbkdf v0.0.0-20150205184540-83f37f9c154a // indirect
 	github.com/djherbis/times v1.2.0 // indirect
