@@ -36,6 +36,7 @@ import (
 
 	cliutil "github.com/grengojbo/k3ctl/cmd/util"
 	"github.com/grengojbo/k3ctl/controllers"
+	"github.com/grengojbo/k3ctl/pkg/util"
 
 	// k3dCluster "github.com/rancher/k3d/v4/pkg/client"
 	conf "github.com/grengojbo/k3ctl/api/v1alpha1"
@@ -64,11 +65,14 @@ func NewCmdClusterCreate() *cobra.Command {
 
 	// create new command
 	cmd := &cobra.Command{
-		Use:   "create NAME",
-		Short: "Create a new cluster",
-		Long:  clusterCreateDescription,
+		Use:       "create NAME",
+		Aliases:   []string{"apply"},
+		Short:     "Create a new cluster",
+		Long:      clusterCreateDescription,
+		ValidArgs: util.ListClusterName(),
 		// Args:  cobra.RangeArgs(0, 1), // exactly one cluster name can be set (default: k3d.DefaultClusterName)
-		Args: cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
+		Args: cobra.ExactValidArgs(1),
+		// Args: cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 
 			cmdFlags.DryRun = viper.GetBool("dry-run")

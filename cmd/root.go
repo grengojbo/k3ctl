@@ -54,8 +54,8 @@ import (
 
 // RootFlags describes a struct that holds flags that can be set on root level of the command
 type RootFlags struct {
-	debugLogging       bool
-	traceLogging       bool
+	// debugLogging       bool
+	// traceLogging       bool
 	timestampedLogging bool
 	version            bool
 }
@@ -278,7 +278,8 @@ PowerShell:
   PS> %[1]s completion powershell > %[1]s.ps1
   # and source this file from your PowerShell profile.
 `, rootCmd.Name()),
-		Args: cobra.ExactArgs(1), // TODO: NewCmdCompletion: add support for 0 args = auto detection
+		ValidArgs: []string{"bash", "zsh", "fish", "psh", "powershell"},
+		Args:      cobra.ExactValidArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if completionFunc, ok := completionFunctions[args[0]]; ok {
 				if err := completionFunc(os.Stdout); err != nil {

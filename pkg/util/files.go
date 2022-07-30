@@ -23,8 +23,11 @@ package util
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/grengojbo/k3ctl/pkg/types"
 	homedir "github.com/mitchellh/go-homedir"
@@ -104,6 +107,46 @@ func GetEnvDir(clusterName string) (envPath string) {
 		return envFileVariablesDir
 	}
 	return ""
+}
+
+// ListClusterName
+func ListClusterName() (clusterNames []string) {
+	clusterNames, dirs, _ := ShowFilesInDirectory("./variables", ".yaml")
+	for _, dir := range dirs {
+		configFileHomeDir := fmt.Sprintf("./variables/%s/cluster.yaml", dir)
+		if _, err := os.Stat(configFileHomeDir); err == nil {
+			clusterNames = append(clusterNames, dir)
+		}
+	}
+	defPathName, dirs, _ := ShowFilesInDirectory(fmt.Sprintf("~/%s", types.DefaultConfigDirName), ".yaml")
+	for _, dir := range dirs {
+		configFileHomeDir := fmt.Sprintf("~/%s/%s/cluster.yaml", types.DefaultConfigDirName, dir)
+		if _, err := os.Stat(configFileHomeDir); err == nil {
+			defPathName = append(defPathName, dir)
+		}
+	}
+	clusterNames = append(clusterNames, defPathName...)
+	return clusterNames
+}
+
+// ShowFilesInDirectory show files in directory filter extension
+func ShowFilesInDirectory(dir string, extension string) ([]string, []string, error) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, nil, err
+	}
+	var filteredFiles []string
+	var filteredDirs []string
+	for _, file := range files {
+		if file.IsDir() {
+			filteredDirs = append(filteredDirs, file.Name())
+			continue
+		}
+		if path.Ext(file.Name()) == extension {
+			filteredFiles = append(filteredFiles, strings.TrimSuffix(file.Name(), filepath.Ext(file.Name())))
+		}
+	}
+	return filteredFiles, filteredDirs, nil
 }
 
 // GetConfigFileName load config from file

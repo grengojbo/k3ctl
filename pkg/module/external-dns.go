@@ -185,9 +185,19 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 		overrides["aws.zoneType"] = "public"
 	}
 
-	if len(addons.HostedZoneIdentifier) > 0 {
-		// txtOwnerId	A name that identifies this instance of ExternalDNS. Currently used by registry types: txt & aws-sd (optional)
-		overrides["txtOwnerId"] = addons.HostedZoneIdentifier
+	// if len(addons.HostedZoneIdentifier) > 0 {
+	// 	// txtOwnerId	A name that identifies this instance of ExternalDNS. Currently used by registry types: txt & aws-sd (optional)
+	// 	overrides["txtOwnerId"] = addons.HostedZoneIdentifier
+	// } else {
+	overrides["txtOwnerId"] = spec.ClusterName
+	// }
+
+	for i, v := range addons.HostedZoneIds {
+		k := fmt.Sprintf("zoneIdFilters[%d]", i)
+		overrides[k] = v
+		// if i == 0 {
+		// 	overrides["txtOwnerId"] = v
+		// }
 	}
 
 	addons.Domains = append(addons.Domains, spec.LoadBalancer.Domain)
@@ -205,6 +215,16 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 	// annotationFilter	Filter sources managed by external-dns via annotation using label selector (optional)	""
 	// labelFilter	Select sources managed by external-dns using label selector (optional)	""
 	// crd.create	Install and use the integrated DNSEndpoint CRD	false
+
+	// Modify how DNS records are synchronized between sources and providers (options: sync, upsert-only )
+	overrides["policy"] = "sync"
+	// When enabled, triggers run loop on create/update/delete events in addition to regular interval (optional)
+	overrides["triggerLoopOnEvent"] = "true"
+	// Interval update period to use default value (optional)	"1m"
+	overrides["interval"] = "5m"
+
+	// When using the TXT registry, a suffix for ownership records that avoids collision with CNAME entries (optional).suffix (Mutual exclusive with txt-prefix)
+	// overrides["txtSuffix"] = spec.ClusterName
 
 	// 	overrides[""] = ""
 
