@@ -24,6 +24,7 @@ package util
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -221,3 +222,28 @@ func CheckСredentials(clusterName string, provider string) (ok bool, secretFile
 	}
 	return true, secretFile
 }
+
+// LoadTemplate - load template from url
+func LoadTemplate(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
+	// byte to string
+	// return string(byte), nil
+}
+
+// embed template
+// func embedTemplate(template string, data interface{}) (string, error) {
+// 	t, err := template.New("").Parse(template)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	var buf bytes.Buffer
+// 	if err := t.Execute(&buf, data); err != nil {
+// 		return "", err
+// 	}
+// 	return buf.String(), nil
+// }
