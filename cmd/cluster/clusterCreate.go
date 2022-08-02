@@ -163,6 +163,19 @@ func NewCmdClusterCreate() *cobra.Command {
 				log.Fatalln(err)
 			}
 
+			r, _ := yaml.Marshal(c.Cluster)
+			log.Tracef("c.Cluster:\n%s", r)
+
+			if c.Cluster.Spec.Agents > 0 {
+				workers := c.GetWorkerNodes()
+				for _, worker := range workers {
+					log.Infof("worker: %s", worker.Name)
+					if err := c.AddNodeToCluster(worker); err != nil {
+						log.Errorf("Failed to add node %s to cluster: %s", worker.Name, err.Error())
+					}
+				}
+			}
+
 			// nodes, err := c.ListNodes()
 			// if err != nil {
 			// 	log.Errorf(err.Error())
@@ -181,7 +194,7 @@ func NewCmdClusterCreate() *cobra.Command {
 			// 	log.Debugf("========== Node Info ==========\n%s\n==========================\n", y)
 			// }
 
-			log.Infoln("Creating initializing server node")
+			// log.Infoln("Creating initializing server node")
 			// masters := []conf.ContrelPlanNodes{}
 			// for _, node := range servers {
 			// 		if err := k3s.RunK3sCommand(bastion, &installk3sExec, dryRun); err != nil {

@@ -71,7 +71,6 @@ func NewCmdNodeAdd() *cobra.Command {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			// isAddNode := false
 			/*************************
 			 * Compute Configuration *
 			 *************************/
@@ -87,7 +86,8 @@ func NewCmdNodeAdd() *cobra.Command {
 				log.Fatalln("Is Not Nodes to install k3s cluster")
 			}
 
-			// if ok := c.AddNode(NodeName); ok {
+			// // isAddNode := false
+			// if ok := c.AddNodeToCluster(NodeName); ok {
 			// 	isAddNode = true
 			// }
 			// if !isAddNode {
