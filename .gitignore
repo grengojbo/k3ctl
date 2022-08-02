@@ -30,3 +30,6 @@ k3ctl
 dist/
 
 dist/
+templates/master-userdata-3.sh
+templates/master-userdata-4.sh
+templates/master-userdata.sh
