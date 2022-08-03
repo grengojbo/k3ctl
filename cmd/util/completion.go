@@ -27,15 +27,19 @@ import (
 
 	// 	k3dcluster "github.com/rancher/k3d/v4/pkg/client"
 	// 	"github.com/rancher/k3d/v4/pkg/runtimes"
-	// 	k3d "github.com/rancher/k3d/v4/pkg/types"
-	log "github.com/sirupsen/logrus"
+
+	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
+	"github.com/grengojbo/k3ctl/pkg/config"
+	pkgutil "github.com/grengojbo/k3ctl/pkg/util"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 // ValidArgsAvailableClusters is used for shell completion: proposes the list of existing clusters
 func ValidArgsAvailableClusters(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 
-	var completions []string
+	// var completions []string
 	// 	var clusters []*k3d.Cluster
 	// 	clusters, err := k3dcluster.ClusterList(context.Background(), runtimes.SelectedRuntime)
 	// 	if err != nil {
@@ -54,34 +58,54 @@ func ValidArgsAvailableClusters(cmd *cobra.Command, args []string, toComplete st
 	// 			completions = append(completions, cluster.Name)
 	// 		}
 	// 	}
-	log.Errorln("TODO: сделать автодополнение")
-	return completions, cobra.ShellCompDirectiveDefault
+	// log.Errorln("TODO: сделать автодополнение")
+	// return completions, cobra.ShellCompDirectiveDefault
+	return pkgutil.ListClusterName(), cobra.ShellCompDirectiveDefault
 }
 
-// // ValidArgsAvailableNodes is used for shell completion: proposes the list of existing nodes
-// func ValidArgsAvailableNodes(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+// ValidArgsAvailableNodes is used for shell completion: proposes the list of existing nodes
+func ValidArgsAvailableNodes(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 
-// 	var completions []string
-// 	var nodes []*k3d.Node
-// 	nodes, err := k3dcluster.NodeList(context.Background(), runtimes.SelectedRuntime)
-// 	if err != nil {
-// 		log.Errorln("Failed to get list of nodes for shell completion")
-// 		return nil, cobra.ShellCompDirectiveError
-// 	}
+	var completions []string
+	var cfg k3sv1alpha1.Cluster
 
-// nodeLoop:
-// 	for _, node := range nodes {
-// 		for _, arg := range args {
-// 			if arg == node.Name { // only nodes, that are not in the args yet
-// 				continue nodeLoop
-// 			}
-// 		}
-// 		if strings.HasPrefix(node.Name, toComplete) {
-// 			completions = append(completions, node.Name)
-// 		}
-// 	}
-// 	return completions, cobra.ShellCompDirectiveDefault
-// }
+	var cfgViper = viper.New()
+	var ppViper = viper.New()
+
+	// var cmdFlags types.CmdFlags
+
+	// 	var nodes []*k3d.Node
+	// 	nodes, err := k3dcluster.NodeList(context.Background(), runtimes.SelectedRuntime)
+	// 	if err != nil {
+	// 		log.Errorln("Failed to get list of nodes for shell completion")
+	// 		return nil, cobra.ShellCompDirectiveError
+	// 	}
+
+	// nodeLoop:
+	// 	for _, node := range nodes {
+	// 		for _, arg := range args {
+	// 			if arg == node.Name { // only nodes, that are not in the args yet
+	// 				continue nodeLoop
+	// 			}
+	// 		}
+	// 		if strings.HasPrefix(node.Name, toComplete) {
+	// 			completions = append(completions, node.Name)
+	// 		}
+	// 	}
+	// completions = append(completions, "node1")
+	clusterName, err := cmd.Flags().GetString("cluster")
+	if err == nil {
+		_ = config.InitConfig(clusterName, cfgViper, ppViper)
+		cfgShow, _ := yaml.Marshal(cfgViper.AllSettings())
+		_ = yaml.Unmarshal(cfgShow, &cfg)
+		for _, n := range cfg.Spec.Nodes {
+			// log.Warnf("cfg: %s", n.Name)
+			completions = append(completions, n.Name)
+		}
+		// completions = append(completions, clusterName)
+	}
+	return completions, cobra.ShellCompDirectiveDefault
+}
 
 // // ValidArgsAvailableRegistries is used for shell completions: proposes the list of existing registries
 // func ValidArgsAvailableRegistries(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
