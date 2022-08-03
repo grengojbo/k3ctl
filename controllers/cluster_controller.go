@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -32,6 +33,7 @@ import (
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/k3s"
 	"github.com/grengojbo/k3ctl/pkg/module"
+	"github.com/grengojbo/k3ctl/pkg/templates"
 	"github.com/grengojbo/k3ctl/pkg/types"
 	"github.com/grengojbo/k3ctl/pkg/util"
 	"github.com/sirupsen/logrus"
@@ -970,6 +972,23 @@ func (p *ProviderBase) ShutDownWithDrain(node *k3sv1alpha1.Node) {
 	// }
 }
 
+// SetNodeLabel set label to node (TODO: move to label operator)
+func (p *ProviderBase) SetNodeLabel(nodeName string, labels []string) {
+	for _, l := range labels {
+		command := fmt.Sprintf(types.SetLabel, nodeName, l)
+		// p.Log.Warnf("command: %s", command)
+		for _, master := range p.GetMasterNodes() {
+			stdOut, err := p.Execute(command, master, false)
+			if err != nil {
+				p.Log.Errorf(err.Error())
+			} else {
+				p.Log.Debugf("[setDrain] stdOut: %v", stdOut)
+				break
+			}
+		}
+	}
+}
+
 // setDrain execute drain command in master node
 func (p *ProviderBase) setDrain(node *k3sv1alpha1.Node) {
 	command := fmt.Sprintf(types.DrainCommand, node.Name)
@@ -1005,11 +1024,13 @@ func (p *ProviderBase) shutdown(node *k3sv1alpha1.Node) {
 		command = fmt.Sprintf("sh %s", types.MasterUninstallCommand)
 	}
 	_, _ = p.Execute(command, node, true)
+	_, _ = p.Execute(types.DeleteEtcRancher, node, true)
 
 	// stdOut, err := p.Execute(command, node, true)
 	// if err != nil {
 	// 	p.Log.Errorf(err.Error())
 	// }
+
 	// p.Log.Debugf("[shutdown] stdOut: %v", stdOut)
 }
 
@@ -1228,11 +1249,13 @@ func (p *ProviderBase) joinWorker(node *k3sv1alpha1.Node) {
 	token := ""
 	// TODO: [ERROR]  Defaulted k3s exec command to 'agent' because K3S_URL is defined, but K3S_TOKEN, K3S_TOKEN_FILE or K3S_CLUSTER_SECRET is not defined.
 	if len(p.EnvServer.K3sAgentToken) > 0 {
+		// TODO: not works K3S_AGENT_TOKEN
 		// token = fmt.Sprintf("K3S_AGENT_TOKEN='%s'", p.EnvServer.K3sAgentToken)
-		token = fmt.Sprintf("K3S_TOKEN='%s'", p.EnvServer.K3sAgentToken)
+		token = fmt.Sprintf("K3S_TOKEN=%s", p.EnvServer.K3sAgentToken)
+		// token = fmt.Sprintf("K3S_TOKEN=%s", p.EnvServer.K3sToken)
 	} else if len(p.EnvServer.K3sToken) > 0 {
 		// if len(p.EnvServer.K3sToken) > 0 {
-		token = fmt.Sprintf("K3S_TOKEN='%s'", p.EnvServer.K3sToken)
+		token = fmt.Sprintf("K3S_TOKEN=%s", p.EnvServer.K3sToken)
 	}
 
 	opts := &k3sv1alpha1.K3sWorkerOptions{
@@ -1248,22 +1271,61 @@ func (p *ProviderBase) joinWorker(node *k3sv1alpha1.Node) {
 
 	configValues := k3sv1alpha1.K3sConfigAgent{
 		// Server:    p.APIServerAddresses,
-		NodeLabel: []string{"k3s_upgrade=true"},
+		NodeLabel: []string{"!k3s_upgrade=true"},
 	}
+	nodeRoleLabel := []string{}
 	if len(node.Labels) > 0 {
-		configValues.NodeLabel = append(configValues.NodeLabel, node.Labels...)
+		// configValues.NodeLabel = append(configValues.NodeLabel, node.Labels...)
+		for k, v := range node.Labels {
+			if strings.Contains(k, "node-role.kubernetes.io") {
+				nodeRoleLabel = append(nodeRoleLabel, fmt.Sprintf("%s=%s", k, v))
+			} else {
+				configValues.NodeLabel = append(configValues.NodeLabel, fmt.Sprintf("!%s=%s", k, v))
+			}
+		}
 	}
 	// configValues.KubeletArg = append(configValues.KubeletArg, "cloud-provider=external")
 	// configValues.KubeletArg = append(configValues.KubeletArg, "volume-plugin-dir=/var/lib/kubelet/volumeplugins")
-	res, _ := yaml.Marshal(configValues)
-	p.Log.Warnf("configValues:\n%s", res)
-	// // _, _ = p.Execute(command, node, true)
+	configK3s, _ := yaml.Marshal(configValues)
+	// p.Log.Warnf("configValues:\n%s", configK3s)
+
+	data := map[string]interface{}{
+		"noShow":    true,
+		"role":      node.Role,
+		"command":   command,
+		"configK3s": strings.ReplaceAll(string(configK3s), `'!`, `'`),
+	}
+	tplConfigK3s, err := templates.GenerateUserData("data/k3s-userdata.sh.tpl", data)
+	if err != nil {
+		p.Log.Errorf("Error generate userdata: %s", err.Error())
+		return
+	}
+	p.Log.Debugln(tplConfigK3s)
+	f := base64.StdEncoding.EncodeToString([]byte(tplConfigK3s))
+
+	_, _ = p.Execute(fmt.Sprintf(types.SshRemoteFileCommand, f, "/tmp/user-data.sh"), node, true)
+	_, _ = p.Execute(fmt.Sprintf("chmod +x %s", "/tmp/user-data.sh"), node, true)
+	_, _ = p.Execute("/tmp/user-data.sh", node, true)
+	_, _ = p.Execute(fmt.Sprintf("rm %s", "/tmp/user-data.sh"), node, true)
+
+	if len(nodeRoleLabel) == 0 {
+		nodeRoleLabel = append(nodeRoleLabel, "node-role.kubernetes.io/worker=true")
+	}
+	stdOut, err := p.Execute(types.GetHostnameCommand, node, false)
+	if err != nil {
+		p.Log.Errorf("Error execute command: \n%s", err.Error())
+		return
+	} else {
+		p.Log.Infof("Execute command %s: %s)", types.GetHostnameCommand, stdOut)
+		p.SetNodeLabel(strings.TrimSpace(stdOut), nodeRoleLabel)
+	}
+
 	// // stdOut, err := p.Execute(command, node, true)
 	// // if err != nil {
 	// // 	p.Log.Errorf(err.Error())
 	// // }
 	// _, _ = p.Execute(command, node, true)
-	// p.Log.Debugf("[joinWorker] stdOut: %v", stdOut)
+	p.Log.Infof("join Worker node: %s", node.Name)
 }
 
 // GetAgentToken возвращает токен агента

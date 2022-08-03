@@ -169,7 +169,7 @@ func NewCmdClusterCreate() *cobra.Command {
 			if c.Cluster.Spec.Agents > 0 {
 				workers := c.GetWorkerNodes()
 				for _, worker := range workers {
-					log.Infof("worker: %s", worker.Name)
+					log.Infof("Start add worker: %s...", worker.Name)
 					if err := c.AddNodeToCluster(worker); err != nil {
 						log.Errorf("Failed to add node %s to cluster: %s", worker.Name, err.Error())
 					}

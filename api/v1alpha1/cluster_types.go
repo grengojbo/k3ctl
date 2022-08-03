@@ -437,25 +437,25 @@ type BastionNode struct {
 
 // Node describes a k3d node
 type Node struct {
-	Name       string      `yaml:"name" json:"name,omitempty"`
-	User       string      `yaml:"user" json:"user,omitempty"`
-	Role       Role        `yaml:"role" json:"role,omitempty"`
-	Image      string      `yaml:"image" json:"image,omitempty"`
-	Volumes    []string    `yaml:"volumes" json:"volumes,omitempty"`
-	Env        []string    `yaml:"env" json:"env,omitempty"`
-	Cmd        []string    // filled automatically based on role
-	Args       []string    `yaml:"extraArgs" json:"extraArgs,omitempty"`
-	Ports      nat.PortMap `yaml:"portMappings" json:"portMappings,omitempty"`
-	Restart    bool        `yaml:"restart" json:"restart,omitempty"`
-	Created    string      `yaml:"created" json:"created,omitempty"`
-	Labels     []string    // filled automatically
-	Networks   []string    // filled automatically
-	ExtraHosts []string    // filled automatically
-	ServerOpts ServerOpts  `yaml:"serverOpts" json:"serverOpts,omitempty"`
-	AgentOpts  AgentOpts   `yaml:"agentOpts" json:"agentOpts,omitempty"`
-	GPURequest string      // filled automatically
-	Memory     string      // filled automatically
-	State      NodeState   // filled automatically
+	Name       string            `yaml:"name" json:"name,omitempty"`
+	User       string            `yaml:"user" json:"user,omitempty"`
+	Role       Role              `yaml:"role" json:"role,omitempty"`
+	Image      string            `yaml:"image" json:"image,omitempty"`
+	Volumes    []string          `yaml:"volumes" json:"volumes,omitempty"`
+	Env        []string          `yaml:"env" json:"env,omitempty"`
+	Cmd        []string          // filled automatically based on role
+	Args       []string          `yaml:"extraArgs" json:"extraArgs,omitempty"`
+	Ports      nat.PortMap       `yaml:"portMappings" json:"portMappings,omitempty"`
+	Restart    bool              `yaml:"restart" json:"restart,omitempty"`
+	Created    string            `yaml:"created" json:"created,omitempty"`
+	Labels     map[string]string // filled automatically
+	Networks   []string          // filled automatically
+	ExtraHosts []string          // filled automatically
+	ServerOpts ServerOpts        `yaml:"serverOpts" json:"serverOpts,omitempty"`
+	AgentOpts  AgentOpts         `yaml:"agentOpts" json:"agentOpts,omitempty"`
+	GPURequest string            // filled automatically
+	Memory     string            // filled automatically
+	State      NodeState         // filled automatically
 	// Bastion имя ssh bastion сервера если local то запускается на локальном хосте
 	// +optional
 	Bastion string `yaml:"bastion" json:"bastion,omitempty"`

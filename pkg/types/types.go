@@ -68,21 +68,24 @@ var (
 	JoinMasterCommand = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
 	// curl -sfL https://get.k3s.io | K3S_URL='https://<IP>6443' K3S_TOKEN='<TOKEN>' INSTALL_K3S_CHANNEL='stable' sh -s - --node-label node-role.kubernetes.io/master=true --node-taint key=value:NoExecute
 	// curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_START=true INSTALL_K3S_SKIP_SELINUX_RPM=true INSTALL_K3S_CHANNEL=${var.initial_k3s_channel} INSTALL_K3S_EXEC=agent sh -
-	JoinAgentCommand = "curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_START=true K3S_URL='%s' %s %s INSTALL_K3S_EXEC=agent sh -s -"
+	JoinAgentCommand = "curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_START=true K3S_URL=%s %s %s INSTALL_K3S_EXEC=agent sh -s -"
 	FileClusterToken = "/var/lib/rancher/k3s/server/node-token"
 	FileEnvServer    = "/etc/systemd/system/k3s.service.env"
 	// CatTokenCommand        = "cat /var/lib/rancher/k3s/server/node-token"
-	CatCfgCommand   = "cat /etc/rancher/k3s/k3s.yaml"
-	DockerCommand   = "if ! type docker; then curl -sSL %s | sh - %s; fi"
-	DeployUICommand = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
-
-	SshRemoteFileCommand   = "echo \"%s\" | base64 -d | sudo tee \"%s\""
+	CatCfgCommand          = "cat /etc/rancher/k3s/k3s.yaml"
+	DockerCommand          = "if ! type docker; then curl -sSL %s | sh - %s; fi"
+	DeployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
+	SshRemoteFileCommand   = "echo \"%s\" | base64 -d | sudo tee %s  >/dev/null 2>&1"
 	CurlRemoteFileCommand  = "curl -sSL %s | base64 -d | sudo tee \"%s\""
 	MasterUninstallCommand = "/usr/local/bin/k3s-uninstall.sh"
 	WorkerUninstallCommand = "/usr/local/bin/k3s-agent-uninstall.sh"
 	DrainCommand           = "kubectl drain %s --ignore-daemonsets --delete-local-data --grace-period=30 --timeout=120s"
 	DeleteNodeCommand      = "kubectl delete node %s"
+	DeleteEtcRancher       = "rm -rf /etc/rancher"
 	SetWorkerLabel         = "kubectl label --overwrite node %s node-role.kubernetes.io/worker=true"
+	SetLabel               = "kubectl label --overwrite node %s %s"
+	GetHostnameCommand     = "hostname"
+	GetHostnameFullCommand = "hostname -f"
 	TestExitFile           = "test -f %s || echo noFile"
 )
 
