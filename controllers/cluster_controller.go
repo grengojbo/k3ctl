@@ -486,6 +486,32 @@ func (p *ProviderBase) InitK3sCluster() error {
 	return nil
 }
 
+// GetAPIServerPort get api server port
+func (p *ProviderBase) GetAPIServerPort() int32 {
+	port := p.Cluster.Spec.Networking.APIServerPort
+	return port
+}
+
+// GetAPIServerAddress get kubernetes api server address.
+func (p *ProviderBase) GetAPIServerAddress() (servers []string, err error) {
+	for _, item := range p.Cluster.Spec.Networking.APIServerAddresses {
+		servers = append(servers, item.Address)
+	}
+	if len(servers) == 0 {
+		for _, item := range p.Cluster.Spec.Nodes {
+			if item.Role == "master" {
+				for _, item := range item.Addresses {
+					servers = append(servers, item.Address)
+				}
+			}
+		}
+	}
+	if len(servers) == 0 {
+		return nil, fmt.Errorf("no api server address found")
+	}
+	return servers, nil
+}
+
 // GetAPIServerUrl url для подключения к API серверу
 // сперва проверяется InternalDNS, InternalIP, ExternalDNS, ExternalIP
 // если isExternal=true то сперва ExternalDNS, ExternalIP, InternalDNS, InternalIP
