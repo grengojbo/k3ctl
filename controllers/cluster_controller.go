@@ -1080,17 +1080,17 @@ func (p *ProviderBase) MakeInstallExec() (k3sIstallOptions k3sv1alpha1.K3sIstall
 	}
 
 	if p.Cluster.Spec.Options.DisableLoadbalancer {
-		extraArgs = append(extraArgs, "--no-deploy servicelb")
+		extraArgs = append(extraArgs, "--disable servicelb")
 	} else {
 		if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
 			// TODO: #3 добавить проверку на ip adress
 			p.Log.Infof("LoadBalancer MetalLB: %v", p.Cluster.Spec.LoadBalancer.MetalLb)
-			extraArgs = append(extraArgs, "--no-deploy servicelb")
+			extraArgs = append(extraArgs, "--disable servicelb")
 			k3sIstallOptions.LoadBalancer = types.MetalLb
 		} else if len(p.Cluster.Spec.LoadBalancer.KubeVip) > 0 {
 			// TODO: добавить проверку на ip adress
 			p.Log.Infof("LoadBalancer kube-vip: %v", p.Cluster.Spec.LoadBalancer.KubeVip)
-			extraArgs = append(extraArgs, "--no-deploy servicelb")
+			extraArgs = append(extraArgs, "--disable servicelb")
 			k3sIstallOptions.LoadBalancer = types.KubeVip
 		}
 	}
@@ -1098,12 +1098,12 @@ func (p *ProviderBase) MakeInstallExec() (k3sIstallOptions k3sv1alpha1.K3sIstall
 	// if options.Options.DisableIngress || len(options.Ingress) > 0 {
 	// 	if ingress, isset := util.Find(types.IngressControllers, options.Ingress); isset {
 	// 		k3sIstallOptions.Ingress = ingress
-	// 		extraArgs = append(extraArgs, "--no-deploy traefik")
+	// 		extraArgs = append(extraArgs, "--disable traefik")
 	// 	} else {
 	// 		p.Log.Fatalf("Ingress Controllers %s not support :(", options.Ingress)
 	// 	}
 	// }
-	extraArgs = append(extraArgs, "--no-deploy traefik")
+	extraArgs = append(extraArgs, "--disable traefik")
 
 	if len(p.Cluster.Spec.Networking.ServiceSubnet) > 0 {
 		p.Log.Debugln("ServiceSubnet: ", p.Cluster.Spec.Networking.ServiceSubnet)
