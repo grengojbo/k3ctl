@@ -67,3 +67,22 @@ Example create cluster
 ```bash
 ./k3ctl node delete <node name> -c <cluster name> 
 ```
+
+
+## проблемы
+
+При подключении узла
+
+```bash
+kubectl -n kube-system delete secrets <agent-node-name>.node-password.rke2
+kubectl -n kube-system delete secrets <agent-node-name>.node-password.k3s
+```
+
+
+```bash
+/var/lib/rancher/k3s/server/cred/passwd newer than datastore and could cause a cluster outage. Remove the file(s) from disk and restart to be recreated from datastore.
+```
+
+```bash
+
+```

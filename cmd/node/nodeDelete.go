@@ -31,6 +31,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	// conf "github.com/grengojbo/k3ctl/api/v1alpha1"
+	"github.com/grengojbo/k3ctl/cmd/util"
 	"github.com/grengojbo/k3ctl/controllers"
 	"github.com/grengojbo/k3ctl/pkg/config"
 
@@ -58,9 +59,11 @@ func NewCmdNodeDelete() *cobra.Command {
 
 	// create new command
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Delete k3s node",
-		Long:  `Delete k3s node from cluster.`,
+		Use:               "delete",
+		Short:             "Delete k3s node",
+		Long:              `Delete k3s node from cluster.`,
+		ValidArgsFunction: util.ValidArgsAvailableNodes,
+		Args:              cobra.ExactValidArgs(1),
 		// Args:  cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// DryRun = viper.GetBool("dry-run")
@@ -110,6 +113,10 @@ func NewCmdNodeDelete() *cobra.Command {
 	// 	l.Log().Fatalln("Failed to register flag completion for '--role'", err)
 	// }
 	cmd.Flags().StringVarP(&clusterName, "cluster", "c", types.DefaultClusterName, "Cluster URL or k3s cluster name to connect to.")
+	cmd.MarkFlagRequired("cluster")
+	if err := cmd.RegisterFlagCompletionFunc("cluster", util.ValidArgsAvailableClusters); err != nil {
+		log.Fatalln("Failed to register flag completion for '--cluster'", err)
+	}
 	// cmd.Flags().StringP("cluster", "c", types.DefaultClusterName, "Cluster URL or k3s cluster name to connect to.")
 	// if err := cmd.RegisterFlagCompletionFunc("cluster", util.ValidArgsAvailableClusters); err != nil {
 	// 	log.Fatalln("Failed to register flag completion for '--cluster'", err)

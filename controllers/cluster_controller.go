@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -32,6 +33,7 @@ import (
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/k3s"
 	"github.com/grengojbo/k3ctl/pkg/module"
+	"github.com/grengojbo/k3ctl/pkg/templates"
 	"github.com/grengojbo/k3ctl/pkg/types"
 	"github.com/grengojbo/k3ctl/pkg/util"
 	"github.com/sirupsen/logrus"
@@ -331,17 +333,6 @@ func (p *ProviderBase) InitK3sCluster() error {
 	// p.Log.Errorf("K3S_AGENT_TOKEN=%s", p.EnvViper.GetString("K3S_AGENT_TOKEN"))
 	// p.Log.Errorf("K3S_AGENT_TOKEN=%s", p.EnvServer.K3sAgentToken)
 
-	workers := p.GetWorkerNodes()
-	for i, node := range workers {
-		if node.State.Status == types.StatusMissing {
-			masters[i].State.Status = types.StatusCreating
-			p.Log.Infof("Install worker node: %s", node.Name)
-			p.joinWorker(node)
-		}
-
-		p.LoadNodeStatus()
-	}
-
 	// // append tls-sans to k3s install script:
 	// // 1. appends from --tls-sans flags.
 	// // 2. appends all master nodes' first public address.
@@ -493,6 +484,32 @@ func (p *ProviderBase) InitK3sCluster() error {
 	// p.Logger.Infof("[%s] successfully deployed additional manifests", p.Provider)
 	// p.Logger.Infof("[%s] successfully executed init k3s cluster logic", p.Provider)
 	return nil
+}
+
+// GetAPIServerPort get api server port
+func (p *ProviderBase) GetAPIServerPort() int32 {
+	port := p.Cluster.Spec.Networking.APIServerPort
+	return port
+}
+
+// GetAPIServerAddress get kubernetes api server address.
+func (p *ProviderBase) GetAPIServerAddress() (servers []string, err error) {
+	for _, item := range p.Cluster.Spec.Networking.APIServerAddresses {
+		servers = append(servers, item.Address)
+	}
+	if len(servers) == 0 {
+		for _, item := range p.Cluster.Spec.Nodes {
+			if item.Role == "master" {
+				for _, item := range item.Addresses {
+					servers = append(servers, item.Address)
+				}
+			}
+		}
+	}
+	if len(servers) == 0 {
+		return nil, fmt.Errorf("no api server address found")
+	}
+	return servers, nil
 }
 
 // GetAPIServerUrl url для подключения к API серверу
@@ -838,6 +855,47 @@ func (p *ProviderBase) LoadNodeStatus() {
 			}
 		}
 	}
+
+	workers := p.Cluster.Status.WorkerNodes
+	for i, node := range workers {
+		if len(node.State.Status) == 0 {
+			workers[i].State.Status = types.ClusterStatusUnknown
+		}
+
+		// проверяем есть ли у нас подключение к API кубера
+		if p.Clientset == nil {
+			if p.CmdFlags.DryRun {
+				workers[i].State.Status = types.StatusMissing
+			} else {
+				workers[i].State.Status = types.StatusMissing
+				// _, err := p.ListNodes()
+				// if err != nil {
+				// 	p.Log.Errorf("[LoadNodeStatus] %v", err.Error())
+				// }
+				// 		workers[i].State.Status = types.StatusRunning
+				// p.Log.Infof("[LoadNodeStatus] Cluster STATUS: %s", nodes)
+			}
+			// } else {
+			// 	// p.Log.Warnln("9 ) stop point ----------------")
+			// 	clusterStatus := types.ClusterStatusStopped
+			// 	if !p.CmdFlags.DryRun {
+			// 		clusterStatus = p.GetClusterStatus()
+			// 	}
+			// 	workers[i].State.Status = types.StatusRunning
+			// 	p.Log.Infof("[LoadNodeStatus] Cluster STATUS: %s", clusterStatus)
+		}
+
+		// if len(p.APIServerAddresses) == 0 && workers[i].State.Status == types.StatusRunning {
+		// 	isExternal := false
+		// 	if p.Cluster.Spec.KubeconfigOptions.ConnectType == "ExternalIP" {
+		// 		isExternal = true
+		// 	}
+		// 	// проверка доступности хоста
+		// 	retry := 1
+		// 	// if p.CmdFlags.DryRun
+		// }
+	}
+
 }
 
 // GetMasterNodes return master nodes
@@ -940,6 +998,23 @@ func (p *ProviderBase) ShutDownWithDrain(node *k3sv1alpha1.Node) {
 	// }
 }
 
+// SetNodeLabel set label to node (TODO: move to label operator)
+func (p *ProviderBase) SetNodeLabel(nodeName string, labels []string) {
+	for _, l := range labels {
+		command := fmt.Sprintf(types.SetLabel, nodeName, l)
+		// p.Log.Warnf("command: %s", command)
+		for _, master := range p.GetMasterNodes() {
+			stdOut, err := p.Execute(command, master, false)
+			if err != nil {
+				p.Log.Errorf(err.Error())
+			} else {
+				p.Log.Debugf("[setDrain] stdOut: %v", stdOut)
+				break
+			}
+		}
+	}
+}
+
 // setDrain execute drain command in master node
 func (p *ProviderBase) setDrain(node *k3sv1alpha1.Node) {
 	command := fmt.Sprintf(types.DrainCommand, node.Name)
@@ -975,11 +1050,13 @@ func (p *ProviderBase) shutdown(node *k3sv1alpha1.Node) {
 		command = fmt.Sprintf("sh %s", types.MasterUninstallCommand)
 	}
 	_, _ = p.Execute(command, node, true)
+	_, _ = p.Execute(types.DeleteEtcRancher, node, true)
 
 	// stdOut, err := p.Execute(command, node, true)
 	// if err != nil {
 	// 	p.Log.Errorf(err.Error())
 	// }
+
 	// p.Log.Debugf("[shutdown] stdOut: %v", stdOut)
 }
 
@@ -1195,17 +1272,16 @@ func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.N
 func (p *ProviderBase) joinWorker(node *k3sv1alpha1.Node) {
 	p.Log.Debugf("apiServerAddresses: %s", p.APIServerAddresses)
 
-	// TODO: add lavels to node
-	cnt := p.Cluster.GetNodeLabels(node)
-	p.Log.Warnf("TODO: add lavels to node =-> cnt: %d", cnt)
-
 	token := ""
 	// TODO: [ERROR]  Defaulted k3s exec command to 'agent' because K3S_URL is defined, but K3S_TOKEN, K3S_TOKEN_FILE or K3S_CLUSTER_SECRET is not defined.
-	// if len(p.EnvServer.K3sAgentToken) > 0 {
-	// 	token = fmt.Sprintf("K3S_AGENT_TOKEN='%s'", p.EnvServer.K3sAgentToken)
-	// } else if len(p.EnvServer.K3sToken) > 0 {
-	if len(p.EnvServer.K3sToken) > 0 {
-		token = fmt.Sprintf("K3S_TOKEN='%s'", p.EnvServer.K3sToken)
+	if len(p.EnvServer.K3sAgentToken) > 0 {
+		// TODO: not works K3S_AGENT_TOKEN
+		// token = fmt.Sprintf("K3S_AGENT_TOKEN='%s'", p.EnvServer.K3sAgentToken)
+		token = fmt.Sprintf("K3S_TOKEN=%s", p.EnvServer.K3sAgentToken)
+		// token = fmt.Sprintf("K3S_TOKEN=%s", p.EnvServer.K3sToken)
+	} else if len(p.EnvServer.K3sToken) > 0 {
+		// if len(p.EnvServer.K3sToken) > 0 {
+		token = fmt.Sprintf("K3S_TOKEN=%s", p.EnvServer.K3sToken)
 	}
 
 	opts := &k3sv1alpha1.K3sWorkerOptions{
@@ -1219,13 +1295,63 @@ func (p *ProviderBase) joinWorker(node *k3sv1alpha1.Node) {
 	command := p.MakeAgentInstallExec(opts)
 	p.Log.Debugf("Exec command: %s", command)
 
-	// // _, _ = p.Execute(command, node, true)
+	configValues := k3sv1alpha1.K3sConfigAgent{
+		// Server:    p.APIServerAddresses,
+		NodeLabel: []string{"!k3s_upgrade=true"},
+	}
+	nodeRoleLabel := []string{}
+	if len(node.Labels) > 0 {
+		// configValues.NodeLabel = append(configValues.NodeLabel, node.Labels...)
+		for k, v := range node.Labels {
+			if strings.Contains(k, "node-role.kubernetes.io") {
+				nodeRoleLabel = append(nodeRoleLabel, fmt.Sprintf("%s=%s", k, v))
+			} else {
+				configValues.NodeLabel = append(configValues.NodeLabel, fmt.Sprintf("!%s=%s", k, v))
+			}
+		}
+	}
+	// configValues.KubeletArg = append(configValues.KubeletArg, "cloud-provider=external")
+	// configValues.KubeletArg = append(configValues.KubeletArg, "volume-plugin-dir=/var/lib/kubelet/volumeplugins")
+	configK3s, _ := yaml.Marshal(configValues)
+	// p.Log.Warnf("configValues:\n%s", configK3s)
+
+	data := map[string]interface{}{
+		"noShow":    true,
+		"role":      node.Role,
+		"command":   command,
+		"configK3s": strings.ReplaceAll(string(configK3s), `'!`, `'`),
+	}
+	tplConfigK3s, err := templates.GenerateUserData("data/k3s-userdata.sh.tpl", data)
+	if err != nil {
+		p.Log.Errorf("Error generate userdata: %s", err.Error())
+		return
+	}
+	p.Log.Debugln(tplConfigK3s)
+	f := base64.StdEncoding.EncodeToString([]byte(tplConfigK3s))
+
+	_, _ = p.Execute(fmt.Sprintf(types.SshRemoteFileCommand, f, "/tmp/user-data.sh"), node, true)
+	_, _ = p.Execute(fmt.Sprintf("chmod +x %s", "/tmp/user-data.sh"), node, true)
+	_, _ = p.Execute("/tmp/user-data.sh", node, true)
+	_, _ = p.Execute(fmt.Sprintf("rm %s", "/tmp/user-data.sh"), node, true)
+
+	if len(nodeRoleLabel) == 0 {
+		nodeRoleLabel = append(nodeRoleLabel, "node-role.kubernetes.io/worker=true")
+	}
+	stdOut, err := p.Execute(types.GetHostnameCommand, node, false)
+	if err != nil {
+		p.Log.Errorf("Error execute command: \n%s", err.Error())
+		return
+	} else {
+		p.Log.Infof("Execute command %s: %s)", types.GetHostnameCommand, stdOut)
+		p.SetNodeLabel(strings.TrimSpace(stdOut), nodeRoleLabel)
+	}
+
 	// // stdOut, err := p.Execute(command, node, true)
 	// // if err != nil {
 	// // 	p.Log.Errorf(err.Error())
 	// // }
-	_, _ = p.Execute(command, node, true)
-	// p.Log.Debugf("[joinWorker] stdOut: %v", stdOut)
+	// _, _ = p.Execute(command, node, true)
+	p.Log.Infof("join Worker node: %s", node.Name)
 }
 
 // GetAgentToken возвращает токен агента
@@ -1334,7 +1460,26 @@ func (p *ProviderBase) CreateK3sCluster() (err error) {
 	return nil
 }
 
-// DeleteNode delete node from cluster
+//  AddNodeToCluster add worker node to cluster.
+func (p *ProviderBase) AddNodeToCluster(node *k3sv1alpha1.Node) (err error) {
+	// TODO: перенести добавление новых нод в отдельную функцию
+	// 	p.Log.Errorf("[InitK3sCluster] присоединение worker node (%s) к первому мастеру", node.Name)
+	// 	mval, _ := yaml.Marshal(node)
+	// 	p.Log.Tracef("Show Node:\n%s", mval)
+
+	if node.State.Status == types.StatusMissing || node.State.Status == types.ClusterStatusUnknown {
+		// 		masters[i].State.Status = types.StatusCreating
+		// p.Log.Infof("Install StatusMissing: %s | status: %s", types.StatusMissing, node.State.Status)
+		p.joinWorker(node)
+	}
+
+	// 	p.LoadNodeStatus()
+	// }
+
+	return err
+}
+
+// AddNode add node to cluster.
 func (p *ProviderBase) AddNode(nodeName string) (ok bool) {
 	// var err error
 	// var token string
@@ -1435,7 +1580,7 @@ func (p *ProviderBase) DeleteNode(nodeName string, allNodes bool) (cnt int) {
 		context := p.Cluster.GetName()
 		p.Log.Infof("Remove context: %s", context)
 		if err := k3s.RemoveCfg(context); err != nil {
-			p.Log.Error("[RemoveCfg] %v", err.Error())
+			p.Log.Errorf("[RemoveCfg] %s", err.Error())
 		}
 	}
 	return cnt

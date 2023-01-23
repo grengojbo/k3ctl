@@ -27,7 +27,6 @@ import (
 
 	"github.com/grengojbo/k3ctl/pkg/util"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 
 	"github.com/spf13/viper"
 
@@ -93,19 +92,19 @@ func InitConfig(clusterName string, cfgViper *viper.Viper, ppViper *viper.Viper)
 		log.Fatalf("Failed to read config file %s: %+v", configFile, err)
 	}
 
-	log.Infof("Using config file %s", cfgViper.ConfigFileUsed())
+	// log.Infof("Using config file %s", cfgViper.ConfigFileUsed())
 	// }
 
 	// TODO: Default Configs
 	cfgViper.SetDefault("spec.kubeconfig.updateDefaultKubeconfig", true)
 	cfgViper.SetDefault("spec.kubeconfig.switchCurrentContext", true)
 
-	if log.GetLevel() >= log.DebugLevel {
-		c, _ := yaml.Marshal(cfgViper.AllSettings())
-		log.Debugf("Configuration:\n%s", c)
+	// if log.GetLevel() >= log.DebugLevel {
+	// 	c, _ := yaml.Marshal(cfgViper.AllSettings())
+	// 	log.Debugf("Configuration:\n%s", c)
 
-		c, _ = yaml.Marshal(ppViper.AllSettings())
-		log.Debugf("Additional CLI Configuration:\n%s", c)
-	}
+	// 	c, _ = yaml.Marshal(ppViper.AllSettings())
+	// 	log.Debugf("Additional CLI Configuration:\n%s", c)
+	// }
 	return configFile
 }

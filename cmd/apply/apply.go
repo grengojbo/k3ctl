@@ -24,6 +24,7 @@ package app
 import (
 	"strings"
 
+	cliutil "github.com/grengojbo/k3ctl/cmd/util"
 	"github.com/grengojbo/k3ctl/pkg/types"
 	"github.com/grengojbo/k3ctl/pkg/util"
 	log "github.com/sirupsen/logrus"
@@ -154,6 +155,9 @@ func NewCmdApply() *cobra.Command {
 	// cmd.Flags().AddFlag(flag)
 	cmd.Flags().StringP("cluster", "c", types.DefaultClusterName, "Cluster URL or k3s cluster name to connect to.")
 	cmd.MarkFlagRequired("cluster")
+	if err := cmd.RegisterFlagCompletionFunc("cluster", cliutil.ValidArgsAvailableClusters); err != nil {
+		log.Fatalln("Failed to register flag completion for '--cluster'", err)
+	}
 
 	// done
 	return cmd

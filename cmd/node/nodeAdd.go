@@ -32,6 +32,7 @@ import (
 
 	// "github.com/spf13/viper"
 
+	"github.com/grengojbo/k3ctl/cmd/util"
 	"github.com/grengojbo/k3ctl/controllers"
 	"github.com/grengojbo/k3ctl/pkg/config"
 	"github.com/grengojbo/k3ctl/pkg/types"
@@ -51,10 +52,12 @@ func NewCmdNodeAdd() *cobra.Command {
 
 	// create new command
 	cmd := &cobra.Command{
-		Use:   "add",
-		Short: "Add a new k3s node",
-		Long:  `Add a new containerized k3s node.`,
-		Args:  cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
+		Use:               "add",
+		Short:             "Add a new k3s node",
+		Long:              `Add a new containerized k3s node.`,
+		ValidArgsFunction: util.ValidArgsAvailableNodes,
+		// Args:              cobra.ExactArgs(1), // exactly one name accepted // TODO: if not specified, inherit from cluster that the node shall belong to, if that is specified
+		Args: cobra.ExactValidArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 
 			cmdFlags.DryRun = viper.GetBool("dry-run")
@@ -71,7 +74,6 @@ func NewCmdNodeAdd() *cobra.Command {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			// isAddNode := false
 			/*************************
 			 * Compute Configuration *
 			 *************************/
@@ -87,7 +89,8 @@ func NewCmdNodeAdd() *cobra.Command {
 				log.Fatalln("Is Not Nodes to install k3s cluster")
 			}
 
-			// if ok := c.AddNode(NodeName); ok {
+			// // isAddNode := false
+			// if ok := c.AddNodeToCluster(NodeName); ok {
 			// 	isAddNode = true
 			// }
 			// if !isAddNode {
@@ -105,9 +108,11 @@ func NewCmdNodeAdd() *cobra.Command {
 	// 	l.Log().Fatalln("Failed to register flag completion for '--role'", err)
 	// }
 	cmd.Flags().StringP("cluster", "c", types.DefaultClusterName, "Cluster URL or k3s cluster name to connect to.")
+	cmd.MarkFlagRequired("cluster")
 	// if err := cmd.RegisterFlagCompletionFunc("cluster", util.ValidArgsAvailableClusters); err != nil {
-	// 	log.Fatalln("Failed to register flag completion for '--cluster'", err)
-	// }
+	if err := cmd.RegisterFlagCompletionFunc("cluster", util.ValidArgsAvailableClusters); err != nil {
+		log.Fatalln("Failed to register flag completion for '--cluster'", err)
+	}
 
 	// cmd.Flags().StringP("image", "i", fmt.Sprintf("%s:%s", k3d.DefaultK3sImageRepo, version.K3sVersion), "Specify k3s image used for the node(s)")
 	// cmd.Flags().String("memory", "", "Memory limit imposed on the node [From docker]")

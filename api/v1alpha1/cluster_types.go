@@ -842,6 +842,46 @@ type SecretsData struct {
 	Value string
 }
 
+// K3sConfigServer returns the k3s Server config
+// destination = "/tmp/config.yaml" /etc/rancher/k3s/config.yaml
+type K3sConfigServer struct {
+	NodeName               string `mapstructure:"nodeName" yaml:"node-name,omitempty" json:"nodeName,omitempty"`
+	Server                 string `mapstructure:"server" yaml:"server,omitempty" json:"serve,omitemptyr"`
+	Token                  string `mapstructure:"token" yaml:"token,omitempty" json:"token,omitempty"`
+	DisableCloudController bool   `mapstructure:"disableCloudController" yaml:"disable-cloud-controller,omitempty" json:"disableCloudController,omitempty"`
+	// disable_extras = concat(["local-storage"], local.using_klipper_lb ? [] : ["servicelb"], var.traefik_enabled ? [] : ["traefik"], var.metrics_server_enabled ? [] : ["metrics-server"])
+	Disable string `mapstructure:"disable" yaml:"disable,omitempty" json:"disable,omitempty"`
+	// kubelet-arg                 = ["cloud-provider=external", "volume-plugin-dir=/var/lib/kubelet/volumeplugins"]
+	KubeletArg []string `mapstructure:"kubeletArg" yaml:"kubelet-arg,omitempty" json:"kubeletArg,omitempty"`
+	// kube-controller-manager-arg = "flex-volume-plugin-dir=/var/lib/kubelet/volumeplugins"
+	KubeControllerManagerArg string `mapstructure:"kubeControllerManagerArg" yaml:"kube-controller-manager-arg,omitempty" json:"kubeControllerManagerArg,omitempty"`
+	FlannelIface             string `mapstructure:"flannelIface" yaml:"flannel-iface,omitempty" json:"flannelIface,omitempty"`
+	// advertise-address           = module.control_planes[each.key].private_ipv4_address
+	AdvertiseAddress string            `mapstructure:"advertiseAddress" yaml:"advertise-address,omitempty" json:"advertiseAddress,omitempty"`
+	NodeIp           string            `mapstructure:"nodeIp" yaml:"node-ip,omitempty" json:"nodeIp,omitempty"`
+	NodeLabel        []string          `mapstructure:"nodeLabel" yaml:"node-label,omitempty" json:"nodeLabel,omitempty"`
+	NodeTaint        map[string]string `mapstructure:"nodeTaint" yaml:"node-taint,omitempty" json:"nodeTaint,omitempty"`
+	// disable-network-policy      = var.cni_plugin == "calico" ? true : var.disable_network_policy
+	DisableNetworkPolicy bool `mapstructure:"disableNetworkPolicy" yaml:"disable-network-policy,omitempty" json:"disableNetworkPolicy,omitempty"`
+	// write-kubeconfig-mode       = "0644" # needed for import into rancher
+	WriteKubeconfigMode string `mapstructure:"writeKubeconfigMode" yaml:"write-kubeconfig-mode,omitempty" json:"writeKubeconfigMode,omitempty"`
+	// flannel-backend = "none"
+	FlannelBackend string `mapstructure:"flannelBackend" yaml:"flannel-backend,omitempty" json:"flannelBackend,omitempty"`
+}
+
+// K3sConfigAgent returns the k3s Agent config
+// destination = "/tmp/config.yaml" /etc/rancher/k3s/config.yaml
+type K3sConfigAgent struct {
+	NodeName     string            `mapstructure:"nodeName" yaml:"node-name,omitempty" json:"nodeName,omitempty"`
+	Server       string            `mapstructure:"server" yaml:"server,omitempty" json:"server,omitempty"`
+	Token        string            `mapstructure:"token" yaml:"token,omitempty" json:"token,omitempty"`
+	KubeletArg   []string          `mapstructure:"kubeletArg" yaml:"kubelet-arg,omitempty" json:"kubeletArg,omitempty"`
+	FlannelIface string            `mapstructure:"flannelIface" yaml:"flannel-iface,omitempty" json:"flannelIface,omitempty"`
+	NodeIp       string            `mapstructure:"nodeIp" yaml:"node-ip,omitempty" json:"nodeIp,omitempty"`
+	NodeLabel    []string          `mapstructure:"nodeLabel" yaml:"node-label,omitempty" json:"nodeLabel,omitempty"`
+	NodeTaint    map[string]string `mapstructure:"nodeTaint" yaml:"node-taint,omitempty" json:"nodeTaint,omitempty"`
+}
+
 // GetHelmRelease return installed release
 func GetHelmRelease(name string, releases []HelmInterfaces) (ok bool, result HelmInterfaces) {
 	for _, item := range releases {
@@ -1074,16 +1114,16 @@ func FindRelease(slice []HelmInterfaces, val string) (HelmInterfaces, bool) {
 	return HelmInterfaces{}, false
 }
 
-func (r *Cluster) GetNodeLabels(node *Node) (cnt int) {
-	labels := []string{}
-	if len(node.Labels) > 0 {
-		if node.Role != "master" {
-			labels = append(labels, "")
-		}
-		return len(node.Labels)
-	}
-	return 0
-}
+// func (r *Cluster) GetNodeLabels(node *Node) (cnt int) {
+// 	labels := []string{}
+// 	if len(node.Labels) > 0 {
+// 		if node.Role != "master" {
+// 			labels = append(labels, "")
+// 		}
+// 		return len(node.Labels)
+// 	}
+// 	return 0
+// }
 
 // GetNodeAddress возращает hostnamr или ip в зависимости от valType (internal|external)
 func (r *Cluster) GetNodeAddress(node *Node, valType string) (string, bool) {
