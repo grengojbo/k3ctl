@@ -459,6 +459,9 @@ type Node struct {
 	// Bastion имя ssh bastion сервера если local то запускается на локальном хосте
 	// +optional
 	Bastion string `yaml:"bastion" json:"bastion,omitempty"`
+	// SSHAuthorizedKey specifies a list of ssh authorized keys for the user
+	// +optional
+	SSHAuthorizedKey string `yaml:"sshAuthorizedKey" json:"sshAuthorizedKey,omitempty"`
 	// Addresses is a list of addresses assigned to the machine.
 	// This field is copied from the infrastructure provider reference.
 	// https://github.com/kubernetes-sigs/cluster-api/blob/2cbeb175b243da6953c4edf9e7ec99eac4e2a4a2/api/v1alpha3/common_types.go
@@ -1066,6 +1069,10 @@ func (r *Cluster) GetBastion(name string, node *Node) (bastion *BastionNode, err
 		bastion.Address = node.Addresses[0].Address
 		bastion.Name = string(node.Addresses[0].Type)
 		bastion.User = node.User
+		if len(node.SSHAuthorizedKey) > 0 {
+			// log.Warnf("[GetBastion] 4.0) ssh key file: %s", node.SSHAuthorizedKey)
+			bastion.SSHAuthorizedKey = node.SSHAuthorizedKey
+		}
 		log.Debugf("[GetBastion] 4) connect address: %s, remote address: %s", bastion.Address, bastion.RemoteAddress)
 		return bastion, nil
 	}

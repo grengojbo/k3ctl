@@ -1742,12 +1742,13 @@ func (p *ProviderBase) NewSSH(bastion *k3sv1alpha1.BastionNode) {
 		p.SSH.Server = bastion.Address
 	}
 
+	// p.SSH.Proxy.KeyPath = util.ExpandPath("/home/jbo/.ssh/id_ed25519")
 	if len(bastion.SSHAuthorizedKey) > 0 {
 		p.SSH.KeyPath = util.ExpandPath(bastion.SSHAuthorizedKey)
 		p.SSH.Proxy.KeyPath = p.SSH.KeyPath
 		p.Log.Debugf("sshKeyPath: %s", p.SSH.KeyPath)
 	}
-	p.Log.Tracef("ssh -i %s %s@%s:%s", p.SSH.KeyPath, p.SSH.User, p.SSH.Server, p.SSH.Port)
+	p.Log.Tracef("ssh -i %s %s@%s -p %s", p.SSH.KeyPath, p.SSH.User, p.SSH.Server, p.SSH.Port)
 }
 
 // sshExecute выполнить комманду на удаленном компьютере и вернуть результат как строка

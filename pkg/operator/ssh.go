@@ -47,11 +47,12 @@ func (r *SSHOperator) NewSSHOperator(bastion *k3sv1alpha1.BastionNode) {
 		// UseInsecureCipher: true,
 	}
 	r.Config.Server = bastion.Address
+	r.Config.KeyPath = util.ExpandPath("/home/jbo/.ssh/id_ed25519")
 	if len(bastion.SSHAuthorizedKey) > 0 {
 		r.Config.KeyPath = util.ExpandPath(bastion.SSHAuthorizedKey)
 		log.Debugf("sshKeyPath: %s", r.Config.KeyPath)
 	}
-	// log.Debugf("ssh -i %s %s@%s:%s", ssh.KeyPath, ssh.User, ssh.Server, ssh.Port)
+	log.Debugf("ssh -i %s %s@%s -p %s", r.Config.KeyPath, r.Config.User, r.Config.Server, r.Config.Port)
 }
 
 // Run command on remote machine
