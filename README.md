@@ -68,6 +68,22 @@ Example create cluster
 ./k3ctl node delete <node name> -c <cluster name> 
 ```
 
+### Gitlab Agent
+
+
+
+```bash
+helm repo add gitlab https://charts.gitlab.io
+helm repo update
+helm upgrade --install gitlab-agent gitlab/gitlab-agent \
+    --namespace gitlab-agent \
+    --create-namespace \
+    --set config.kasAddress=wss://gitlab.iwis.com.ua/-/kubernetes-agent/
+    # --set image.tag=v15.2.0 \
+    # --set config.token=<your_token> \
+    
+```
+
 
 ## проблемы
 

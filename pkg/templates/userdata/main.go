@@ -145,7 +145,7 @@ InstallPackageMinimal() {
   apt update
   apt upgrade -y
   # aptitude install -y open-vm-tools
-  apt install -y git sudo iftop curl bzip2 dnsutils keychain jq ntp mc vim socat libseccomp2 make
+  apt install -y git sudo iftop curl bzip2 dnsutils keychain ntp mc vim socat libseccomp2 make jq yq pwgen
   apt install -y util-linux wget ca-certificates iotop mtr ipvsadm lsof lvm2 net-tools
   
   if [ $OS == "debian" ]; then
@@ -159,9 +159,9 @@ InstallPackage() {
   echo "обновляем систему"
   apt update
   apt upgrade -y
-  apt install -y git sudo iftop curl bzip2 dnsutils hdparm keychain parted jq
+  apt install -y git sudo iftop curl bzip2 dnsutils hdparm keychain parted jq yq pwgen
   apt install -y build-essential libssl-dev libcap2-bin gcc g++ make
-  apt install -y ntp mc neovim vim neovim locales-all socat libseccomp2 jq tree htop tmux unzip tar apt-transport-https
+  apt install -y ntp mc neovim vim neovim locales-all socat libseccomp2 tree htop tmux unzip tar apt-transport-https
   apt install -y util-linux wget ca-certificates iotop mtr ipvsadm usbmount pmount lsof
 
   if [ $OS == "debian" ]; then
@@ -298,8 +298,9 @@ InstallGitlabRunner () {
 `
 
 // NewUserData - Prepare for UserData
-//   provider (aws, azure, hetzner, proxmox, vmware)
-//   mode (k3sMaster, k3sWorker, docker, podman)
+//
+//	provider (aws, azure, hetzner, proxmox, vmware)
+//	mode (k3sMaster, k3sWorker, docker, podman)
 func NewUserData(mode string, provider string) (result *UserData) {
 	result = &UserData{}
 
