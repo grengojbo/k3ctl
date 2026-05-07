@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1060,71 +1061,65 @@ func (p *ProviderBase) shutdown(node *k3sv1alpha1.Node) {
 	// p.Log.Debugf("[shutdown] stdOut: %v", stdOut)
 }
 
-// MakeInstallExec установка сервера
+// MakeInstallExec будує конфігурацію k3s-сервера.
+// Всі параметри записуються у /etc/rancher/k3s/config.yaml (ConfigYamlContent),
+// а не передаються через INSTALL_K3S_EXEC у k3s.service.
 func (p *ProviderBase) MakeInstallExec() (k3sIstallOptions k3sv1alpha1.K3sIstallOptions) {
-	extraArgs := []string{}
 	k3sIstallOptions = k3sv1alpha1.K3sIstallOptions{
 		K3sVersion: p.Cluster.Spec.KubernetesVersion,
 		K3sChannel: p.Cluster.Spec.K3sChannel,
 	}
 
+	var cfg strings.Builder
+
+	// datastore
 	if len(p.Cluster.Spec.Datastore.Provider) > 0 {
 		if p.Cluster.Spec.Datastore.Provider == k3sv1alpha1.DatastoreEtcd {
 			k3sIstallOptions.IsCluster = true
 		} else if datastore, err := p.Cluster.GetDatastore(p.ENV.DBPassword); err != nil {
 			p.Log.Fatalln(err.Error())
 		} else {
-			extraArgs = append(extraArgs, fmt.Sprintf("--datastore-endpoint %s", datastore))
-			// p.Log.Infof("datastore connection string: %s", datastore)
+			cfg.WriteString(fmt.Sprintf("datastore-endpoint: %q\n", datastore))
 		}
 	}
 
+	// disable list (servicelb always disabled when LB is external; traefik always disabled)
+	disableItems := []string{"traefik"}
 	if p.Cluster.Spec.Options.DisableLoadbalancer {
-		extraArgs = append(extraArgs, "--disable servicelb")
-	} else {
-		if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
-			// TODO: #3 добавить проверку на ip adress
-			p.Log.Infof("LoadBalancer MetalLB: %v", p.Cluster.Spec.LoadBalancer.MetalLb)
-			extraArgs = append(extraArgs, "--disable servicelb")
-			k3sIstallOptions.LoadBalancer = types.MetalLb
-		} else if len(p.Cluster.Spec.LoadBalancer.KubeVip) > 0 {
-			// TODO: добавить проверку на ip adress
-			p.Log.Infof("LoadBalancer kube-vip: %v", p.Cluster.Spec.LoadBalancer.KubeVip)
-			extraArgs = append(extraArgs, "--disable servicelb")
-			k3sIstallOptions.LoadBalancer = types.KubeVip
-		}
+		disableItems = append([]string{"servicelb"}, disableItems...)
+	} else if len(p.Cluster.Spec.LoadBalancer.MetalLb) > 0 {
+		p.Log.Infof("LoadBalancer MetalLB: %v", p.Cluster.Spec.LoadBalancer.MetalLb)
+		k3sIstallOptions.LoadBalancer = types.MetalLb
+		disableItems = append([]string{"servicelb"}, disableItems...)
+	} else if len(p.Cluster.Spec.LoadBalancer.KubeVip) > 0 {
+		p.Log.Infof("LoadBalancer kube-vip: %v", p.Cluster.Spec.LoadBalancer.KubeVip)
+		k3sIstallOptions.LoadBalancer = types.KubeVip
+		disableItems = append([]string{"servicelb"}, disableItems...)
+	}
+	cfg.WriteString("disable:\n")
+	for _, item := range disableItems {
+		cfg.WriteString(fmt.Sprintf("  - %s\n", item))
 	}
 
-	// if options.Options.DisableIngress || len(options.Ingress) > 0 {
-	// 	if ingress, isset := util.Find(types.IngressControllers, options.Ingress); isset {
-	// 		k3sIstallOptions.Ingress = ingress
-	// 		extraArgs = append(extraArgs, "--disable traefik")
-	// 	} else {
-	// 		p.Log.Fatalf("Ingress Controllers %s not support :(", options.Ingress)
-	// 	}
-	// }
-	extraArgs = append(extraArgs, "--disable traefik")
-
+	// networking
 	if len(p.Cluster.Spec.Networking.ServiceSubnet) > 0 {
 		p.Log.Debugln("ServiceSubnet: ", p.Cluster.Spec.Networking.ServiceSubnet)
-		extraArgs = append(extraArgs, fmt.Sprintf("--service-cidr %s", p.Cluster.Spec.Networking.ServiceSubnet))
+		cfg.WriteString(fmt.Sprintf("service-cidr: %q\n", p.Cluster.Spec.Networking.ServiceSubnet))
 	}
-
 	if len(p.Cluster.Spec.Networking.PodSubnet) > 0 {
 		p.Log.Debugln("PodSubnet: ", p.Cluster.Spec.Networking.PodSubnet)
-		extraArgs = append(extraArgs, fmt.Sprintf("--cluster-cidr %s", p.Cluster.Spec.Networking.PodSubnet))
+		cfg.WriteString(fmt.Sprintf("cluster-cidr: %q\n", p.Cluster.Spec.Networking.PodSubnet))
 	}
-
 	if len(p.Cluster.Spec.Networking.DNSDomain) > 0 {
 		p.Log.Debugln("DNSDomain: ", p.Cluster.Spec.Networking.DNSDomain)
-		extraArgs = append(extraArgs, fmt.Sprintf("--cluster-domain %s", p.Cluster.Spec.Networking.DNSDomain))
+		cfg.WriteString(fmt.Sprintf("cluster-domain: %q\n", p.Cluster.Spec.Networking.DNSDomain))
 	}
-
 	if len(p.Cluster.Spec.Networking.ClusterDns) > 0 {
 		p.Log.Debugln("ClusterDns: ", p.Cluster.Spec.Networking.ClusterDns)
-		extraArgs = append(extraArgs, fmt.Sprintf("--cluster-dns %s", p.Cluster.Spec.Networking.ClusterDns))
+		cfg.WriteString(fmt.Sprintf("cluster-dns: %q\n", p.Cluster.Spec.Networking.ClusterDns))
 	}
 
+	// CNI / flannel-backend
 	k3sIstallOptions.Backend = types.Vxlan
 	k3sIstallOptions.CNI = types.Flannel
 	if len(p.Cluster.Spec.Networking.CNI) > 0 {
@@ -1156,90 +1151,67 @@ func (p *ProviderBase) MakeInstallExec() (k3sIstallOptions k3sv1alpha1.K3sIstall
 		}
 	}
 	if k3sIstallOptions.CNI == types.Flannel {
-		extraArgs = append(extraArgs, fmt.Sprintf("--flannel-backend=%s", k3sIstallOptions.Backend))
+		cfg.WriteString(fmt.Sprintf("flannel-backend: %q\n", k3sIstallOptions.Backend))
 	} else {
-		extraArgs = append(extraArgs, "--flannel-backend=none")
+		cfg.WriteString("flannel-backend: \"none\"\n")
 	}
 
+	// options
 	if p.Cluster.Spec.Options.SecretsEncryption {
-		extraArgs = append(extraArgs, "--secrets-encryption")
+		cfg.WriteString("secrets-encryption: true\n")
 	}
-
 	if p.Cluster.Spec.Options.SELinux {
-		extraArgs = append(extraArgs, "--selinux")
+		cfg.WriteString("selinux: true\n")
 	}
-
 	if p.Cluster.Spec.Options.Rootless {
-		extraArgs = append(extraArgs, "--rootless")
+		cfg.WriteString("rootless: true\n")
 	}
 
-	extraArgsCmdline := ""
-	for _, a := range extraArgs {
-		extraArgsCmdline += a + " "
-	}
-
+	// ExtraServerArgs → YAML lines
 	for _, a := range p.Cluster.Spec.K3sOptions.ExtraServerArgs {
 		if a == "[]" {
 			continue
 		}
-		if hasSpaceInValue(a) {
-			k3sIstallOptions.ConfigFileArgs = append(k3sIstallOptions.ConfigFileArgs, a)
-		} else {
-			extraArgsCmdline += a + " "
-		}
-	}
-
-	installExec := ""
-
-	if trimmed := strings.TrimSpace(extraArgsCmdline); len(trimmed) > 0 {
-		installExec += fmt.Sprintf(" %s", trimmed)
+		cfg.WriteString(cliArgToYamlLine(a) + "\n")
 	}
 
 	if len(k3sIstallOptions.LoadBalancer) == 0 {
 		k3sIstallOptions.LoadBalancer = types.ServiceLb
 	}
 
-	k3sIstallOptions.ExecString = installExec
-
-	// --tls-san developer.cluster --node-taint CriticalAddonsOnly=true:NoExecute
+	k3sIstallOptions.ConfigYamlContent = cfg.String()
+	k3sIstallOptions.ExecString = "" // all args are in config.yaml
 	return k3sIstallOptions
 }
 
-// hasSpaceInValue returns true if the CLI arg has a '=value' part that contains spaces.
-// Such args cannot be passed via INSTALL_K3S_EXEC because the k3s install script
-// word-splits the value and writes each word as a separate argument in the service file,
-// breaking pflag parsing for all flags that follow.
-func hasSpaceInValue(arg string) bool {
+// cliArgToYamlLine converts a CLI flag string to a single YAML config.yaml line.
+// Examples:
+//
+//	"--disable-kube-proxy"           → "disable-kube-proxy: true"
+//	"--etcd-snapshot-retention=10"   → "etcd-snapshot-retention: 10"
+//	"--etcd-snapshot-schedule-cron=0 */6 * * *" → "etcd-snapshot-schedule-cron: \"0 */6 * * *\""
+func cliArgToYamlLine(arg string) string {
+	arg = strings.TrimPrefix(arg, "--")
 	if idx := strings.Index(arg, "="); idx >= 0 {
-		return strings.Contains(arg[idx+1:], " ")
+		key := arg[:idx]
+		value := arg[idx+1:]
+		if _, err := strconv.Atoi(value); err == nil {
+			return fmt.Sprintf("%s: %s", key, value)
+		}
+		return fmt.Sprintf("%s: %q", key, value)
 	}
-	return false
+	return fmt.Sprintf("%s: true", arg)
 }
 
-// buildK3sConfigCmd builds a shell command that creates /etc/rancher/k3s/config.yaml
-// from args that could not be passed via INSTALL_K3S_EXEC.
-// Input format: ["--etcd-snapshot-schedule-cron=0 */6 * * *", ...]
-// Output: "mkdir -p /etc/rancher/k3s && printf '...\n' > /etc/rancher/k3s/config.yaml"
-func buildK3sConfigCmd(args []string) string {
-	if len(args) == 0 {
+// buildK3sConfigFromContent builds the shell command that writes content to
+// /etc/rancher/k3s/config.yaml on the remote server.
+func buildK3sConfigFromContent(content string) string {
+	if len(strings.TrimSpace(content)) == 0 {
 		return ""
 	}
-	var yamlLines []string
-	for _, arg := range args {
-		a := strings.TrimPrefix(arg, "--")
-		idx := strings.Index(a, "=")
-		if idx < 0 {
-			continue
-		}
-		key := a[:idx]
-		value := a[idx+1:]
-		yamlLines = append(yamlLines, fmt.Sprintf(`%s: "%s"`, key, value))
-	}
-	if len(yamlLines) == 0 {
-		return ""
-	}
-	content := strings.Join(yamlLines, `\n`)
-	return fmt.Sprintf(`mkdir -p /etc/rancher/k3s && printf '%s\n' > /etc/rancher/k3s/config.yaml`, content)
+	lines := strings.Split(strings.TrimRight(content, "\n"), "\n")
+	escaped := strings.Join(lines, `\n`)
+	return fmt.Sprintf(`mkdir -p /etc/rancher/k3s && printf '%s\n' > /etc/rancher/k3s/config.yaml`, escaped)
 }
 
 // MakeAgentInstallExec compile agent install string
@@ -1253,37 +1225,38 @@ func (p *ProviderBase) MakeAgentInstallExec(opts *k3sv1alpha1.K3sWorkerOptions) 
 func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.Node, opts *k3sv1alpha1.K3sIstallOptions) {
 	// TODO: перевести на K3S_AGENT_TOKEN_FILE
 	extraArgs := fmt.Sprintf("K3S_AGENT_TOKEN='%s'", p.Cluster.Spec.AgentToken)
-	// extraArgs := ""
-	execArgs := " --disable-network-policy=true"
 
-	// TODO: перевести на переменнын окружения
-	// K3S_CLUSTER_INIT
-	// K3S_CLUSTER_RESET
+	// Build node-specific config.yaml entries
+	var nodeCfg strings.Builder
+	nodeCfg.WriteString("disable-network-policy: true\n")
+
+	// TODO: перевести на K3S_CLUSTER_INIT env var
 	if opts.IsCluster {
-		// extraArgs = fmt.Sprintf("%s K3S_CLUSTER_INIT=true", extraArgs)
-		execArgs += " --cluster-init"
+		nodeCfg.WriteString("cluster-init: true\n")
 	}
 
 	if len(tlsSAN) > 0 {
+		nodeCfg.WriteString("tls-san:\n")
 		for _, san := range tlsSAN {
-			execArgs += fmt.Sprintf(" --tls-san %s", san)
+			nodeCfg.WriteString(fmt.Sprintf("  - %q\n", san))
 		}
 	}
 
 	for _, ip := range node.Addresses {
 		if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.ExternalIP) {
-			execArgs = fmt.Sprintf(" %s --node-external-ip %s", execArgs, ip.Address)
+			nodeCfg.WriteString(fmt.Sprintf("node-external-ip: %q\n", ip.Address))
 		} else if ip.Type == v1alpha3.MachineAddressType(k3sv1alpha1.InternalIP) {
-			// TODO: [KCTL-14] проверить для dual stack advertise-address нужно для host-gw когда есть ExternalIP
-			execArgs = fmt.Sprintf(" %s --node-ip %s --advertise-address %s", execArgs, ip.Address, ip.Address)
+			// TODO: [KCTL-14] dual stack — advertise-address нужно для host-gw когда есть ExternalIP
+			nodeCfg.WriteString(fmt.Sprintf("node-ip: %q\n", ip.Address))
+			nodeCfg.WriteString(fmt.Sprintf("advertise-address: %q\n", ip.Address))
 		}
 	}
 
-	installCmd := fmt.Sprintf(types.InitMasterCommand, types.K3sGetScript, extraArgs, p.Cluster.Spec.ClusterToken, opts.ExecString, execArgs, util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
-	command := installCmd
-	if configCmd := buildK3sConfigCmd(opts.ConfigFileArgs); configCmd != "" {
-		command = configCmd + " && " + installCmd
-	}
+	// Merge common config + node-specific config, write to /etc/rancher/k3s/config.yaml
+	fullConfig := opts.ConfigYamlContent + nodeCfg.String()
+	configCmd := buildK3sConfigFromContent(fullConfig)
+	installCmd := fmt.Sprintf(types.InitMasterCommand, types.K3sGetScript, extraArgs, p.Cluster.Spec.ClusterToken, "", "", util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
+	command := configCmd + " && " + installCmd
 	p.Log.Debugf("[initAdditionalMaster] RUN %s", command)
 
 	err := retry.Do(
