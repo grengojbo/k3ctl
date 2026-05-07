@@ -723,15 +723,16 @@ type ClusterList struct {
 // }
 
 type K3sIstallOptions struct {
-	ExecString   string
-	LoadBalancer string
-	Ingress      string
-	CNI          string
-	Backend      string
-	K3sVersion   string
-	K3sChannel   string
-	IsCluster    bool
-	Node         *Node
+	ExecString     string
+	LoadBalancer   string
+	Ingress        string
+	CNI            string
+	Backend        string
+	K3sVersion     string
+	K3sChannel     string
+	IsCluster      bool
+	Node           *Node
+	ConfigFileArgs []string // args with spaces in value that must go to /etc/rancher/k3s/config.yaml
 }
 type K3sWorkerOptions struct {
 	JoinAgentCommand string `json:"joinAgentCommand,omitempty"`

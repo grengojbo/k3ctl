@@ -1179,7 +1179,12 @@ func (p *ProviderBase) MakeInstallExec() (k3sIstallOptions k3sv1alpha1.K3sIstall
 	}
 
 	for _, a := range p.Cluster.Spec.K3sOptions.ExtraServerArgs {
-		if a != "[]" {
+		if a == "[]" {
+			continue
+		}
+		if hasSpaceInValue(a) {
+			k3sIstallOptions.ConfigFileArgs = append(k3sIstallOptions.ConfigFileArgs, a)
+		} else {
 			extraArgsCmdline += a + " "
 		}
 	}
@@ -1198,6 +1203,43 @@ func (p *ProviderBase) MakeInstallExec() (k3sIstallOptions k3sv1alpha1.K3sIstall
 
 	// --tls-san developer.cluster --node-taint CriticalAddonsOnly=true:NoExecute
 	return k3sIstallOptions
+}
+
+// hasSpaceInValue returns true if the CLI arg has a '=value' part that contains spaces.
+// Such args cannot be passed via INSTALL_K3S_EXEC because the k3s install script
+// word-splits the value and writes each word as a separate argument in the service file,
+// breaking pflag parsing for all flags that follow.
+func hasSpaceInValue(arg string) bool {
+	if idx := strings.Index(arg, "="); idx >= 0 {
+		return strings.Contains(arg[idx+1:], " ")
+	}
+	return false
+}
+
+// buildK3sConfigCmd builds a shell command that creates /etc/rancher/k3s/config.yaml
+// from args that could not be passed via INSTALL_K3S_EXEC.
+// Input format: ["--etcd-snapshot-schedule-cron=0 */6 * * *", ...]
+// Output: "mkdir -p /etc/rancher/k3s && printf '...\n' > /etc/rancher/k3s/config.yaml"
+func buildK3sConfigCmd(args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+	var yamlLines []string
+	for _, arg := range args {
+		a := strings.TrimPrefix(arg, "--")
+		idx := strings.Index(a, "=")
+		if idx < 0 {
+			continue
+		}
+		key := a[:idx]
+		value := a[idx+1:]
+		yamlLines = append(yamlLines, fmt.Sprintf(`%s: "%s"`, key, value))
+	}
+	if len(yamlLines) == 0 {
+		return ""
+	}
+	content := strings.Join(yamlLines, `\n`)
+	return fmt.Sprintf(`mkdir -p /etc/rancher/k3s && printf '%s\n' > /etc/rancher/k3s/config.yaml`, content)
 }
 
 // MakeAgentInstallExec compile agent install string
@@ -1237,7 +1279,11 @@ func (p *ProviderBase) initAdditionalMaster(tlsSAN []string, node *k3sv1alpha1.N
 		}
 	}
 
-	command := fmt.Sprintf(types.InitMasterCommand, types.K3sGetScript, extraArgs, p.Cluster.Spec.ClusterToken, opts.ExecString, execArgs, util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
+	installCmd := fmt.Sprintf(types.InitMasterCommand, types.K3sGetScript, extraArgs, p.Cluster.Spec.ClusterToken, opts.ExecString, execArgs, util.CreateVersionStr(opts.K3sVersion, opts.K3sChannel))
+	command := installCmd
+	if configCmd := buildK3sConfigCmd(opts.ConfigFileArgs); configCmd != "" {
+		command = configCmd + " && " + installCmd
+	}
 	p.Log.Debugf("[initAdditionalMaster] RUN %s", command)
 
 	err := retry.Do(
@@ -1460,7 +1506,7 @@ func (p *ProviderBase) CreateK3sCluster() (err error) {
 	return nil
 }
 
-//  AddNodeToCluster add worker node to cluster.
+// AddNodeToCluster add worker node to cluster.
 func (p *ProviderBase) AddNodeToCluster(node *k3sv1alpha1.Node) (err error) {
 	// TODO: перенести добавление новых нод в отдельную функцию
 	// 	p.Log.Errorf("[InitK3sCluster] присоединение worker node (%s) к первому мастеру", node.Name)
@@ -1762,7 +1808,8 @@ func (p *ProviderBase) sshExecute(command string) (stdOut string, stdErr string,
 }
 
 // Run command on remote machine
-//   Example:
+//
+//	Example:
 func (p *ProviderBase) Run(command string) (done bool, err error) {
 	p.Log.Debugf("RUN command: %s", command)
 	stdOut, stdErr, done, err := p.SSH.Run(command, 60*time.Second)
@@ -1782,7 +1829,8 @@ func (p *ProviderBase) Run(command string) (done bool, err error) {
 // Stream returns one channel that combines the stdout and stderr of the command
 // as it is run on the remote machine, and another that sends true when the
 // command is done. The sessions and channels will then be closed.
-//  isPrint - выводить результат на экран или в лог
+//
+//	isPrint - выводить результат на экран или в лог
 func (p *ProviderBase) sshStream(command string, isPrint bool) {
 	if p.CmdFlags.DryRun {
 		p.Log.Warnf("Dry Stream: ssh %s@%s -p %s \"%s\"", p.SSH.User, p.SSH.Server, p.SSH.Port, command)
