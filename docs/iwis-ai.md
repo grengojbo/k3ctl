@@ -404,28 +404,83 @@ kubectl -n kube-system logs -l app.kubernetes.io/name=external-dns --tail=30
 
 Детальна документація: [`docs/addons/external-dns.md`](addons/external-dns.md)
 
-### 4.11. Cloudflare Tunnel (адмін-сервіси)
-```bash
-# 1) У Cloudflare Zero Trust створити tunnel iwis-ai-admin, отримати TOKEN
-kubectl create ns cloudflared
-kubectl -n cloudflared create secret generic cloudflared-token \
-  --from-literal=token=$CLOUDFLARE_TUNNEL_TOKEN
-kubectl apply -f ./variables/iwis-ai/cloudflared.yaml
-kubectl -n cloudflared get pods
+### 4.11. Cloudflare Tunnel
 
-# 2) У Cloudflare Zero Trust → Tunnels → iwis-ai-admin → Public Hostname:
-#   longhorn.admin.iwis.dev -> http://longhorn-frontend.longhorn-system.svc.cluster.local:80
-#   hubble.admin.iwis.dev   -> http://hubble-ui.kube-system.svc.cluster.local:80
+Єдиний тунель `iwis-ai` для всіх сервісів. Публічні ресурси доступні всім, приватні — захищені Cloudflare Access policy (team: `iwis-dev.cloudflareaccess.com`).
+
+| Hostname | Backend | Доступ |
+|---|---|---|
+| `hello.iwis.dev` | `whoami.default.svc:80` | публічний |
+| `longhorn.k3s.iwis.dev` | `longhorn-frontend.longhorn-system.svc:80` | Cloudflare Access |
+| `hubble.k3s.iwis.dev` | `hubble-ui.kube-system.svc:80` | Cloudflare Access |
+
+**1) Створити тунель у Cloudflare Zero Trust**
+
+```bash
+# Локально (одноразово)
+brew install cloudflared
+cloudflared tunnel login
+cloudflared tunnel create iwis-ai
+# Скопіювати TOKEN з Dashboard: Zero Trust → Networks → Tunnels → iwis-ai → Configure → token
 ```
 
-### 4.12. Smoke-test
+**2) Задеплоїти в кластер**
+
 ```bash
-kubectl run web --image=nginx --port=80
-kubectl expose pod web --port=80
-kubectl create ingress web --class=haproxy \
-  --rule="hello.iwis.dev/*=web:80,tls=hello-iwis-tls" \
-  --annotation cert-manager.io/cluster-issuer=letsencrypt-prod
-curl -kI https://hello.iwis.dev   # через DNAT 116.202.72.52
+export CLOUDFLARE_TUNNEL_TOKEN=<token з Dashboard>
+kubectl create ns cloudflared
+kubectl -n cloudflared create secret generic cloudflared-token --from-literal=token=$CLOUDFLARE_TUNNEL_TOKEN
+kubectl apply -f manifests/iwis-ai/cloudflared.yaml
+
+# Перевірка — 2 поди на lb-1 та lb-2
+kubectl -n cloudflared get pods -o wide
+```
+
+**3) Налаштувати Public Hostnames у Dashboard**
+
+Zero Trust → Networks → Tunnels → `iwis-ai` → Public Hostname → Add:
+- `hello.iwis.dev` → `http://whoami.default.svc.cluster.local:80`
+- `longhorn.k3s.iwis.dev` → `http://longhorn-frontend.longhorn-system.svc.cluster.local:80`
+- `hubble.k3s.iwis.dev` → `http://hubble-ui.kube-system.svc.cluster.local:80`
+
+**4) Cloudflare Access policy для приватних сервісів**
+
+Zero Trust → Access → Applications → Add:
+- Application: `longhorn.k3s.iwis.dev`, `hubble.k3s.iwis.dev`
+- Policy: Allow → Email ends in `@iwis.io` (або One-time PIN)
+
+### 4.12. Smoke-test
+
+Використовує `traefik/whoami` — показує request headers, real IP, TLS info.
+
+```bash
+kubectl apply -f manifests/iwis-ai/smoke-test.yaml
+
+# Дочекатись TLS-сертифікату (cert-manager)
+kubectl get certificate hello-iwis-tls
+
+# Перевірка — видно X-Forwarded-For, реальний IP клієнта
+curl https://hello.iwis.dev
+
+# Або детально з headers
+curl -v https://hello.iwis.dev
+```
+
+Очікуваний response:
+```
+Hostname: whoami-xxxx
+IP: 10.42.x.x
+RemoteAddr: 10.42.x.x:xxxxx
+GET / HTTP/1.1
+Host: hello.iwis.dev
+X-Forwarded-For: <твій реальний IP>
+X-Forwarded-Proto: https
+X-Real-Ip: <твій реальний IP>
+```
+
+Прибрати після тесту:
+```bash
+kubectl delete -f manifests/iwis-ai/smoke-test.yaml
 ```
 
 ---
