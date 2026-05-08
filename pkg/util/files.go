@@ -247,3 +247,34 @@ func LoadTemplate(url string) ([]byte, error) {
 // 	}
 // 	return buf.String(), nil
 // }
+
+// LoadDotEnv reads KEY=VALUE pairs from a .env file and sets them as environment
+// variables via os.Setenv. Existing env vars are NOT overwritten.
+// Lines starting with '#' and empty lines are ignored.
+// Returns nil if the file does not exist (silently skipped).
+func LoadDotEnv(envFile string) error {
+	data, err := os.ReadFile(envFile)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("LoadDotEnv: %w", err)
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if len(line) == 0 || strings.HasPrefix(line, "#") {
+			continue
+		}
+		idx := strings.IndexByte(line, '=')
+		if idx <= 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:idx])
+		val := strings.TrimSpace(line[idx+1:])
+		val = strings.Trim(val, `"'`)
+		if _, exists := os.LookupEnv(key); !exists {
+			_ = os.Setenv(key, val)
+		}
+	}
+	return nil
+}

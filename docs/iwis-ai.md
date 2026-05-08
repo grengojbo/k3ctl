@@ -48,6 +48,11 @@ HA-готовий k3s в Hetzner: embedded etcd, Cilium (kube-proxy replacement,
 Повна підготовка ноди винесена у [`scripts/prepare-node.sh`](../scripts/prepare-node.sh).
 Скрипт: встановлює пакети, завантажує модулі ядра (`br_netfilter`, `overlay`, `ip_vs`, `nf_conntrack`), налаштовує sysctl, вимикає swap. Для worker-нод (`NODE_ROLE=worker`) додатково вмикає `iscsid` (Longhorn).
 
+Додаткові скрипти:
+- [`scripts/prepare-longhorn-disk.sh`](../scripts/prepare-longhorn-disk.sh) — підготовка диска `/dev/sdb` для Longhorn
+- [`scripts/prepare-longhorn-workers.sh`](../scripts/prepare-longhorn-workers.sh) — автоматична підготовка всіх worker-нодів (диск + `iscsi_tcp` + вимкнення `multipathd`)
+- [`scripts/prepare-all-nodes.sh`](../scripts/prepare-all-nodes.sh) — підготовка всіх нод кластера (§3.1)
+
 ```bash
 # Передумова: користувач ubuntu з sudo NOPASSWD + ssh-ключ у ~/.ssh/authorized_keys
 # Hostname задати відповідно до таблиці §1
@@ -103,6 +108,44 @@ ping -M do -s 1372 -c 2 168.119.131.145    # перевірка MTU 1400
 - `TCP 443 116.202.72.52 -> 10.0.40.100:443`
 
 DNS у Cloudflare: `*.iwis.dev` A `116.202.72.52` (proxied=false на час видачі LE; потім за бажанням proxied=true).
+
+### 3.3. Підготовка дисків для Longhorn (тільки worker-1/2/3)
+
+На кожному worker-і є окремий диск `/dev/sdb` (120 GiB) під Longhorn. Скрипт [`scripts/prepare-longhorn-disk.sh`](../scripts/prepare-longhorn-disk.sh) створює GPT, розділ, ext4, монтує в `/var/lib/longhorn`.
+
+```bash
+# Автоматично на всіх worker-ах (диск + iscsi_tcp + вимкнення multipathd)
+bash scripts/prepare-longhorn-workers.sh
+
+# Або окремо на одному worker-і:
+scp scripts/prepare-longhorn-disk.sh ubuntu@10.0.40.101:~
+ssh ubuntu@10.0.40.101 'sudo bash prepare-longhorn-disk.sh'
+
+# Додатково на worker (якщо не через prepare-longhorn-workers.sh):
+# - iscsi_tcp модуль
+ssh ubuntu@10.0.40.101 '
+  echo iscsi_tcp | sudo tee /etc/modules-load.d/iscsi_tcp.conf
+  sudo modprobe iscsi_tcp
+'
+# - вимкнення multipathd (конфліктує з Longhorn)
+ssh ubuntu@10.0.40.101 '
+  sudo systemctl stop multipathd && sudo systemctl disable multipathd && sudo systemctl mask multipathd
+'
+```
+
+Перевірка середовища Longhorn:
+```bash
+# З робочої машини (де kubectl має доступ до кластера)
+curl -sSfL https://raw.githubusercontent.com/longhorn/longhorn/v1.7.2/scripts/environment_check.sh | bash
+```
+
+Очікуваний результат (worker-ноди — без помилок, master/lb — iscsid неактивний — це нормально):
+```
+[INFO]  Checking iscsid...
+[ERROR] Neither iscsid.service nor iscsid.socket is running on lb-1      # OK — не worker
+[ERROR] Neither iscsid.service nor iscsid.socket is running on master-1  # OK — не worker
+[INFO]  Checking multipathd...
+```
 
 ---
 
@@ -174,7 +217,19 @@ Node [master-1] is assuming leadership of the cluster
 Gratuitous Arp broadcast will repeat every 3 seconds for [10.0.40.20/eth0]
 ```
 
-Після підняття VIP — оновити Cilium на `k8sServiceHost: 10.0.40.20`:
+Після підняття VIP:
+
+**1. Перемкнути kubeconfig на VIP** (`~/.kube/config`):
+```bash
+kubectl config set-cluster iwis-ai --server=https://10.0.40.20:6443
+# або вручну:
+sed -i 's|server: https://10.0.40.10:6443|server: https://10.0.40.20:6443|g' ~/.kube/config
+
+# Перевірити:
+kubectl --context=iwis-ai get nodes
+```
+
+**2. Оновити Cilium** на `k8sServiceHost: 10.0.40.20`:
 ```bash
 helm upgrade cilium cilium/cilium -n kube-system -f ./variables/iwis-ai/cilium-values.yaml
 ```
@@ -190,10 +245,9 @@ helm upgrade cilium cilium/cilium -n kube-system -f ./variables/iwis-ai/cilium-v
 kubectl taint node lb-1 lb-2 dedicated=lb:NoSchedule --overwrite
 
 # Longhorn диски — тільки на worker-ах
-kubectl label node worker-1 worker-2 worker-3 \
-  node.longhorn.io/create-default-disk=true --overwrite
-kubectl label node lb-1 lb-2 master-1 \
-  node.longhorn.io/create-default-disk=false --overwrite
+kubectl label node worker-1 worker-2 worker-3 node.longhorn.io/create-default-disk=true --overwrite
+kubectl label node lb-1 lb-2 master-1 node.longhorn.io/create-default-disk=false --overwrite
+kubectl label node worker-1 worker-2 worker-3 storage=longhorn --overwrite
 ```
 
 ### 4.6. Kube-VIP Cloud Provider (service VIP `10.0.40.100`)
@@ -202,26 +256,55 @@ kubectl apply -f https://kube-vip.io/manifests/rbac.yaml
 kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/main/manifest/kube-vip-cloud-controller.yaml
 kubectl apply -f ./variables/iwis-ai/kube-vip-cloud.yaml
 
-# Kube-VIP DaemonSet на lb-нодах для анонсу LoadBalancer IP (svc_enable=true).
-# Скористатися генератором з kube-vip:
-docker run --rm ghcr.io/kube-vip/kube-vip:v0.8.0 manifest daemonset \
-  --interface eth0 --services --inCluster --arp --leaderElection \
-  | kubectl apply -f -
+# Kube-VIP DaemonSet на lb-нодах для анонсу LoadBalancer IP (svc_enable=true)
+kubectl apply -f manifests/iwis-ai/kube-vip-svc.yaml
 
-kubectl -n kube-system patch ds kube-vip-ds --type merge -p '{
-  "spec":{"template":{"spec":{
-    "nodeSelector":{"role":"lb"},
-    "tolerations":[{"key":"dedicated","operator":"Equal","value":"lb","effect":"NoSchedule"}]
-  }}}}'
+# Перевірити
+kubectl -n kube-system get pods -l app.kubernetes.io/name=kube-vip-svc -o wide
 ```
 
 ### 4.7. Longhorn
+
+> **Передумова**: виконати підготовку дисків на worker-нодах (§3.3) та перевірити `environment_check.sh` (не повинно бути ERROR на worker-ах).
+
+**Виправлення якщо підготовку пропущено** (або на нових worker-ах):
+```bash
+# iscsi_tcp на всіх worker-ах (якщо environment_check.sh скаржиться)
+for node in worker-1 worker-2 worker-3; do
+  ssh ubuntu@$node 'echo iscsi_tcp | sudo tee /etc/modules-load.d/iscsi_tcp.conf && sudo modprobe iscsi_tcp'
+done
+
+# вимкнення multipathd на всіх нодах (конфліктує з Longhorn)
+for node in worker-1 worker-2 worker-3 lb-1 lb-2 master-1; do
+  ssh ubuntu@$node 'sudo systemctl stop multipathd && sudo systemctl disable multipathd && sudo systemctl mask multipathd'
+done
+```
+
+**Перевірка середовища:**
+```bash
+curl -sSfL https://raw.githubusercontent.com/longhorn/longhorn/v1.7.2/scripts/environment_check.sh | bash
+```
+Очікувано: ERROR на iscsid для master/lb (не worker) — це нормально; на worker-ах не повинно бути ERROR.
+
+**Встановлення Longhorn:**
 ```bash
 helm repo add longhorn https://charts.longhorn.io && helm repo update
-kubectl create ns longhorn-system
+kubectl create ns longhorn-system 2>/dev/null || true
 helm upgrade --install longhorn longhorn/longhorn -n longhorn-system \
   -f ./variables/iwis-ai/longhorn-values.yaml
 kubectl -n longhorn-system get pods -w
+```
+
+**Перевірка:**
+```bash
+kubectl -n longhorn-system get pods -l app=longhorn-manager
+# Очікувано: 4 pods (по одному на кожну ноду) у статусі Running 2/2
+```
+
+**Доступ до UI (опційно):**
+```bash
+kubectl -n longhorn-system port-forward svc/longhorn-frontend 8080:80
+# Відкрити http://localhost:8080
 ```
 
 ### 4.8. Helm-addons через `k3ctl apply`
@@ -248,28 +331,23 @@ kubectl -n ingress-haproxy get svc     # EXTERNAL-IP має бути 10.0.40.100
 arping -c2 10.0.40.100                 # з будь-якої ноди в 10.0.40.0/24
 ```
 
-### 4.9. ClusterIssuer Let's Encrypt (вручну)
+### 4.9. ClusterIssuer Let's Encrypt (автоматично)
 
-`k3ctl apply ... cert-manager` ставить лише Helm chart. ClusterIssuer-и (ресурси cert-manager CRD) — вручну:
+`k3ctl apply -c iwis-ai cert-manager` встановлює Helm chart **і** автоматично застосовує маніфести з поля `certManager.manifests` у `variables/iwis-ai.yaml`. ClusterIssuer для Cloudflare DNS-01 вже описаний у [`manifests/iwis-ai/clusterissuer-cloudflare.yaml`](../manifests/iwis-ai/clusterissuer-cloudflare.yaml).
 
+> **Передумова**: `CF_API_TOKEN` (Cloudflare Zone:DNS:Edit) — `k3ctl` читає автоматично з `variables/iwis-ai/.env` (кластерний, пріоритет вищий) або `.env` (глобальний fallback). Секрет `cloudflare-api-token` створюється перед Helm install.
+>
+> ```bash
+> # variables/iwis-ai/.env  (вже у .gitignore)
+> CF_API_TOKEN=your-cloudflare-zone-dns-edit-token
+> ```
+
+Перевірка після `k3ctl apply -c iwis-ai cert-manager`:
 ```bash
-kubectl apply -f - <<'EOF'
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata: { name: letsencrypt-prod }
-spec:
-  acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    email: admin@iwis.dev
-    privateKeySecretRef: { name: letsencrypt-prod }
-    solvers:
-      - dns01:
-          cloudflare:
-            apiTokenSecretRef:
-              name: cloudflare-api-token
-              key: api-token
-EOF
+kubectl get clusterissuer letsencrypt-prod -o jsonpath='{.status.conditions[0].message}'
 ```
+
+Детальна документація: [`docs/addons/cert-manager.md`](addons/cert-manager.md)
 
 ### 4.10. (зарезервовано)
 Об’єднано з §4.8 — ExternalDNS розгортається через `k3ctl apply -c iwis-ai external-dns`.

@@ -106,6 +106,27 @@ func Helm3Upgrade(options *k3sv1alpha1.HelmOptions) (err error) {
 	return nil
 }
 
+// ApplyManifests runs `kubectl apply -f` for each manifest file in the list.
+// Skips empty entries. Logs errors but continues.
+func ApplyManifests(manifests []string, kubeConfigPath string, clusterName string, dryRun bool) {
+	for _, manifest := range manifests {
+		if len(manifest) == 0 {
+			continue
+		}
+		command := fmt.Sprintf(types.KubectlApplyCommand, manifest, kubeConfigPath, clusterName)
+		log.Infof("[ApplyManifests] kubectl apply -f %s", manifest)
+		stdOut, errOut, err := k3s.RunLocalCommand(command, false, dryRun)
+		if err != nil {
+			log.Errorf("[ApplyManifests] %v", err.Error())
+			if len(errOut) > 0 {
+				log.Errorf("errOut: %s", errOut)
+			}
+		} else {
+			log.Debugf("%s", stdOut)
+		}
+	}
+}
+
 // CreateSecret kubectl create secret
 func CreateSecret(secret k3sv1alpha1.K8sSecret, kubeConfigPath string, clusterName string, dryRun bool) error {
 
@@ -198,7 +219,7 @@ func AddHelmRepo(repos []k3sv1alpha1.HelmRepo, kubeconfigPath string, clusterNam
 	}
 }
 
-//  CreateNamespace - Create namespace is not exits
+// CreateNamespace - Create namespace is not exits
 func CreateNamespace(ns []string, kubeconfigPath string, clusterName string, dryRun bool) {
 	command := fmt.Sprintf(types.NamespaceGetCommand, kubeconfigPath, clusterName)
 	stdOut, _, err := k3s.RunLocalCommand(command, false, dryRun)
