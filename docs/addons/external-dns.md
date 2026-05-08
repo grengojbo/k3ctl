@@ -119,6 +119,9 @@ k3ctl apply -c <cluster> external-dns
 | `metrics.enabled` | `true` | якщо `monitoring.disabled=false` |
 | `aws.region` | з config | тільки для AWS |
 | `aws.zoneType` | `public` | тільки для AWS |
+| `image.registry` | `registry.bitnami.com` | Bitnami перемістив образи з docker.io (2024) |
+| `cloudflare.apiToken` | з `CF_API_TOKEN` | автоматично з `.env` |
+| `cloudflare.proxied` | `true`/`false` | з `externalDns.proxied` (default `false`) |
 
 ## Перевірка
 
@@ -137,4 +140,5 @@ kubectl -n kube-system logs -l app.kubernetes.io/name=external-dns --tail=50
 
 - `policy: sync` — ExternalDNS **видаляє** DNS-записи якщо відповідний `Ingress`/`Service` видалено. Для безпечнішого режиму: `policy: upsert-only` (не видаляє).
 - `txtOwnerId` встановлено в `<clusterName>` — дозволяє кількох ExternalDNS у різних кластерах керувати одним доменом без конфліктів.
+- WARN `IS NOT Set "spec.loadBalancer.externalIP"` — інформаційне попередження, не блокує встановлення. Якщо `externalIP` не вказано, ExternalDNS визначає IP з `Service` ресурсів кластера (рекомендовано при використанні kube-vip).
 - `cloudflare.proxied: false` рекомендується для `cert-manager` DNS-01 challenge — Cloudflare proxy може блокувати ACME validation.
