@@ -30,7 +30,7 @@ spec:
 ### Провайдери
 
 - `http` — HTTP-01 (не рекомендується для production)
-- `cloudflare` — DNS-01 через Cloudflare API Token (потребує `CF_API_TOKEN` у `.env`)
+- `cloudflare` — DNS-01 через Cloudflare API Token (потребує `CF_API_TOKEN` у `.env`; якщо не встановлено — ClusterIssuer **не** буде застосовано, виводиться ERROR)
 - `route53` — DNS-01 через AWS Route53 (потребує `AWS_REGION` та IAM прав)
 
 ## Потік виконання `k3ctl apply cert-manager`

@@ -174,6 +174,13 @@ func applyClusterIssuer(addons *k3sv1alpha1.CertManager, kubeConfigPath string, 
 		return
 	}
 
+	if addons.Provider == k3sv1alpha1.CertManagerProviderCloudflare {
+		if token := os.Getenv("CF_API_TOKEN"); len(token) == 0 {
+			log.Errorf("[%s] provider=cloudflare but CF_API_TOKEN is not set — ClusterIssuer will NOT be applied. Set it in variables/%s/.env or export CF_API_TOKEN=...", name, clusterName)
+			return
+		}
+	}
+
 	var yaml string
 	switch addons.Provider {
 	case k3sv1alpha1.CertManagerProviderCloudflare:
