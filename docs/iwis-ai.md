@@ -311,46 +311,83 @@ kubectl -n longhorn-system port-forward svc/longhorn-frontend 8080:80
 
 `k3ctl apply -c iwis-ai` бере секцію `spec.addons` з `variables/iwis-ai.yaml` і ставить HAProxy Ingress, cert-manager, ExternalDNS, monitoring. Підтримувані addon-и: `cert-manager`, `ingress`, `monitoring`, `external-dns` (`pkg/types/module.go`).
 
-```bash
-# Передумова: секрети для Cloudflare API у потрібних namespace.
-export CF_API_TOKEN=...     # Cloudflare API Token (Zone:DNS:Edit для iwis.dev)
-kubectl create ns cert-manager 2>/dev/null || true
-kubectl -n cert-manager create secret generic cloudflare-api-token \
-  --from-literal=api-token=$CF_API_TOKEN --dry-run=client -o yaml | kubectl apply -f -
-
-# 1) Усі addons разом:
-k3ctl apply -c iwis-ai
-
-# Або окремо:
-k3ctl apply -c iwis-ai cert-manager
-k3ctl apply -c iwis-ai ingress         # → HAProxy з ingress-haproxy-values.yaml
-k3ctl apply -c iwis-ai external-dns
-k3ctl apply -c iwis-ai monitoring
-
-kubectl -n ingress-haproxy get svc     # EXTERNAL-IP має бути 10.0.40.100
-arping -c2 10.0.40.100                 # з будь-якої ноди в 10.0.40.0/24
-```
-
-### 4.9. ClusterIssuer Let's Encrypt (автоматично)
-
-`k3ctl apply -c iwis-ai cert-manager` встановлює Helm chart **і** автоматично застосовує маніфести з поля `certManager.manifests` у `variables/iwis-ai.yaml`. ClusterIssuer для Cloudflare DNS-01 вже описаний у [`manifests/iwis-ai/clusterissuer-cloudflare.yaml`](../manifests/iwis-ai/clusterissuer-cloudflare.yaml).
-
-> **Передумова**: `CF_API_TOKEN` (Cloudflare Zone:DNS:Edit) — `k3ctl` читає автоматично з `variables/iwis-ai/.env` (кластерний, пріоритет вищий) або `.env` (глобальний fallback). Секрет `cloudflare-api-token` створюється перед Helm install.
->
+> **Передумова**: `CF_API_TOKEN` у `variables/iwis-ai/.env` — `k3ctl` читає автоматично і створює секрет `cloudflare-api-token` перед встановленням cert-manager.
 > ```bash
-> # variables/iwis-ai/.env  (вже у .gitignore)
+> # variables/iwis-ai/.env  (у .gitignore)
 > CF_API_TOKEN=your-cloudflare-zone-dns-edit-token
 > ```
 
-Перевірка після `k3ctl apply -c iwis-ai cert-manager`:
 ```bash
+# Встановити окремо (рекомендований порядок):
+k3ctl apply -c iwis-ai cert-manager    # Helm chart + secret + ClusterIssuer letsencrypt-prod
+k3ctl apply -c iwis-ai ingress         # HAProxy DaemonSet на lb-нодах (Cilium + kube-vip)
+k3ctl apply -c iwis-ai external-dns
+k3ctl apply -c iwis-ai monitoring
+
+# Або всі addons разом:
+k3ctl apply -c iwis-ai
+
+# Перевірка ingress
+kubectl -n haproxy-controller get svc  # EXTERNAL-IP має бути 10.0.40.100
+kubectl -n haproxy-controller get pods -o wide  # поди на lb-1, lb-2
+arping -c2 10.0.40.100                 # з будь-якої ноди в 10.0.40.0/24
+```
+Статистика HAProxy: http://10.0.40.100:1024/
+
+Детальна документація: [`docs/addons/ingress.md`](addons/ingress.md)
+
+### 4.9. ClusterIssuer Let's Encrypt (автоматично)
+
+`k3ctl apply -c iwis-ai cert-manager` виконує повний цикл:
+1. Читає `CF_API_TOKEN` з `variables/iwis-ai/.env`
+2. Створює namespace `cert-manager` і секрет `cloudflare-api-token`
+3. Встановлює Helm chart cert-manager (`installCRDs=true`)
+4. Генерує і застосовує `ClusterIssuer letsencrypt-prod` (DNS-01 / Cloudflare) — налаштовано через `provider: cloudflare` у `variables/iwis-ai.yaml`
+
+Конфігурація в `variables/iwis-ai.yaml`:
+```yaml
+addons:
+  certManager:
+    provider: cloudflare   # автогенерація ClusterIssuer
+    email: iwisdev@iwis.io
+```
+
+Перевірка:
+```bash
+kubectl -n cert-manager get pods
+kubectl get clusterissuer letsencrypt-prod
 kubectl get clusterissuer letsencrypt-prod -o jsonpath='{.status.conditions[0].message}'
+# Очікувано: "The ACME account was registered with the ACME server"
 ```
 
 Детальна документація: [`docs/addons/cert-manager.md`](addons/cert-manager.md)
 
-### 4.10. (зарезервовано)
-Об’єднано з §4.8 — ExternalDNS розгортається через `k3ctl apply -c iwis-ai external-dns`.
+### 4.10. ExternalDNS (Cloudflare)
+
+`k3ctl apply -c iwis-ai external-dns` встановлює ExternalDNS і автоматично синхронізує DNS-записи в Cloudflare для всіх `Ingress` та `LoadBalancer Service` у домені `iwis.dev`.
+
+Конфігурація в `variables/iwis-ai.yaml`:
+```yaml
+loadBalancer:
+  domain: iwis.dev
+
+addons:
+  externalDns:
+    provider: cloudflare
+    values:
+      logLevel: info
+```
+
+`CF_API_TOKEN` читається автоматично з `variables/iwis-ai/.env` (той самий файл що і для cert-manager).
+
+```bash
+k3ctl apply -c iwis-ai external-dns
+
+# Перевірка
+kubectl -n kube-system logs -l app.kubernetes.io/name=external-dns --tail=30
+```
+
+Детальна документація: [`docs/addons/external-dns.md`](addons/external-dns.md)
 
 ### 4.11. Cloudflare Tunnel (адмін-сервіси)
 ```bash

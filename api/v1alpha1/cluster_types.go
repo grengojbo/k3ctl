@@ -226,6 +226,7 @@ type ExternalDns struct {
 	Name          string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
 	Provider      string   `mapstructure:"provider" yaml:"provider" json:"provider"`
 	Region        string   `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Proxied       bool     `mapstructure:"proxied" yaml:"proxied" json:"proxied,omitempty"`
 	Domains       []string `mapstructure:"domains" yaml:"domains" json:"domains"`
 	HostedZoneIds []string `mapstructure:"HostedZoneIds" yaml:"HostedZoneIds" json:"HostedZoneIds,omitempty"`
 	// HostedZoneIdentifier string            `mapstructure:"hostedZoneIdentifier" yaml:"hostedZoneIdentifier" json:"hostedZoneIdentifier,omitempty"`

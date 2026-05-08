@@ -105,10 +105,9 @@ kubectl -n kube-system delete secrets <agent-node-name>.node-password.k3s
 
 TODO:
 - [ ] добавить поддержку gitlab agent
-- [ ] добавить поддержку cert-manager
+- [x] добавить поддержку cert-manager
 - [ ] добавить поддержку external-dns
-- [ ] добавить поддержку ingress-nginx
-- [ ] добавить поддержку ingress-haproxy
+- [ ] добавить документацію по ingress
 - [ ] добавить поддержку monitoring
 - [ ] добавить поддержку logging
 - [ ] добавить поддержку backup
@@ -126,5 +125,3 @@ TODO:
 - [ ] добавить поддержку storage
 - [ ] добавить поддержку dns
 - [ ] добавить поддержку loadbalancer
-
-Поддержка cert-manager
