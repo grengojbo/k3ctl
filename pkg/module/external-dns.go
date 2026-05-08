@@ -191,15 +191,26 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 
 	if addons.Provider == types.ProviderCloudflare {
 		if token := os.Getenv("CF_API_TOKEN"); len(token) > 0 {
-			overrides["cloudflare.apiToken"] = token
 			log.Infof("[%s] using CF_API_TOKEN from environment for Cloudflare provider", name)
+			cfSecret := k3sv1alpha1.K8sSecret{
+				Name:      "cloudflare-api-token",
+				Type:      "generic",
+				Namespace: release.Namespace,
+				SecretsData: []k3sv1alpha1.SecretsData{
+					{Key: "CF_API_TOKEN", Value: token, Type: types.StringLiteralSecret},
+				},
+			}
+			if err := CreateSecret(cfSecret, kubeConfigPath, args.ClusterName, dryRun); err != nil {
+				log.Errorf("[%s] failed to create cloudflare-api-token secret: %v", name, err)
+			}
+			overrides["env[0].name"] = "CF_API_TOKEN"
+			overrides["env[0].valueFrom.secretKeyRef.name"] = "cloudflare-api-token"
+			overrides["env[0].valueFrom.secretKeyRef.key"] = "CF_API_TOKEN"
 		} else {
 			log.Warnf("[%s] provider=cloudflare but CF_API_TOKEN is not set — set it in variables/%s/.env or export CF_API_TOKEN=...", name, args.ClusterName)
 		}
 		if addons.Proxied {
-			overrides["cloudflare.proxied"] = "true"
-		} else {
-			overrides["cloudflare.proxied"] = "false"
+			overrides["extraArgs[0]"] = "--cloudflare-proxied"
 		}
 	}
 
