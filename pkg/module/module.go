@@ -261,9 +261,6 @@ func flattenSecretData(data []k3sv1alpha1.SecretsData) ([]string, error) {
 	for _, value := range data {
 		switch value.Type {
 		case types.StringLiteralSecret:
-			if err := util.CheckExitFile(value.Value); err != nil {
-				return nil, fmt.Errorf("IS NOT file: %s", value.Value)
-			}
 			output = append(output, fmt.Sprintf("--from-literal=%s=%s", value.Key, value.Value))
 
 		case types.FromFileSecret:
