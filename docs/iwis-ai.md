@@ -366,16 +366,28 @@ kubectl get clusterissuer letsencrypt-prod -o jsonpath='{.status.conditions[0].m
 
 `k3ctl apply -c iwis-ai external-dns` встановлює ExternalDNS і автоматично синхронізує DNS-записи в Cloudflare для всіх `Ingress` та `LoadBalancer Service` у домені `iwis.dev`.
 
+**Схема DNS → трафік:**
+```
+hello.iwis.dev → 116.202.72.52 (Hetzner public IP)
+                      ↓ DNAT на шлюзі
+                 10.0.40.100 (kube-vip VIP)
+                      ↓
+            HAProxy ingress → pod
+```
+
+ExternalDNS читає `spec.loadBalancer.externalIP` і пише саме цей IP в DNS Cloudflare (а не приватний `10.0.40.100` з Service).
+
 Конфігурація в `variables/iwis-ai.yaml`:
 ```yaml
 loadBalancer:
   domain: iwis.dev
+  externalIP: 116.202.72.52   # публічний IP — пишеться в DNS Cloudflare
+  kubeVip: 10.0.40.100        # приватний VIP — тільки всередині кластера
 
 addons:
   externalDns:
     provider: cloudflare
     proxied: false          # false = DNS-only (обов'язково для cert-manager DNS-01)
-    valuesFile: ./variables/iwis-ai/external-dns-values.yaml
     values:
       logLevel: info
 ```
@@ -388,7 +400,6 @@ k3ctl apply -c iwis-ai external-dns
 # Перевірка
 kubectl -n kube-system get pods -l app.kubernetes.io/name=external-dns
 kubectl -n kube-system logs -l app.kubernetes.io/name=external-dns --tail=30
-# WARN "IS NOT Set spec.loadBalancer.externalIP" — нормально при kube-vip (IP береться з Service)
 ```
 
 Детальна документація: [`docs/addons/external-dns.md`](addons/external-dns.md)

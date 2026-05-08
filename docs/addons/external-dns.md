@@ -141,5 +141,5 @@ kubectl -n kube-system logs -l app.kubernetes.io/name=external-dns --tail=50
 
 - `policy: sync` — ExternalDNS **видаляє** DNS-записи якщо відповідний `Ingress`/`Service` видалено. Для безпечнішого режиму: `policy: upsert-only` (не видаляє).
 - `txtOwnerId` встановлено в `<clusterName>` — дозволяє кількох ExternalDNS у різних кластерах керувати одним доменом без конфліктів.
-- WARN `IS NOT Set "spec.loadBalancer.externalIP"` — інформаційне попередження, не блокує встановлення. Якщо `externalIP` не вказано, ExternalDNS визначає IP з `Service` ресурсів кластера (рекомендовано при використанні kube-vip).
+- `spec.loadBalancer.externalIP` — **публічний IP** який ExternalDNS пише в DNS (наприклад `116.202.72.52` при DNAT-схемі). Якщо не вказано — ExternalDNS бере IP з `LoadBalancer Service` (приватний VIP `10.0.40.x`), що не доступний ззовні.
 - `cloudflare.proxied: false` рекомендується для `cert-manager` DNS-01 challenge — Cloudflare proxy може блокувати ACME validation.

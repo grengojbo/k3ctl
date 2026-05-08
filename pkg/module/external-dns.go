@@ -189,6 +189,12 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 
 	overrides["provider"] = addons.Provider
 
+	extraArgIdx := 0
+	if len(spec.LoadBalancer.ExternalIP) > 0 {
+		overrides[fmt.Sprintf("extraArgs[%d]", extraArgIdx)] = fmt.Sprintf("--default-targets=%s", spec.LoadBalancer.ExternalIP)
+		extraArgIdx++
+	}
+
 	if addons.Provider == types.ProviderCloudflare {
 		if token := os.Getenv("CF_API_TOKEN"); len(token) > 0 {
 			log.Infof("[%s] using CF_API_TOKEN from environment for Cloudflare provider", name)
@@ -210,7 +216,8 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 			log.Warnf("[%s] provider=cloudflare but CF_API_TOKEN is not set — set it in variables/%s/.env or export CF_API_TOKEN=...", name, args.ClusterName)
 		}
 		if addons.Proxied {
-			overrides["extraArgs[0]"] = "--cloudflare-proxied"
+			overrides[fmt.Sprintf("extraArgs[%d]", extraArgIdx)] = "--cloudflare-proxied"
+			extraArgIdx++
 		}
 	}
 
@@ -230,9 +237,6 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 	for i, v := range addons.HostedZoneIds {
 		k := fmt.Sprintf("zoneIdFilters[%d]", i)
 		overrides[k] = v
-		// if i == 0 {
-		// 	overrides["txtOwnerId"] = v
-		// }
 	}
 
 	addons.Domains = append(addons.Domains, spec.LoadBalancer.Domain)
