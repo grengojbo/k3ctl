@@ -85,9 +85,9 @@ const GrafanaAgentCloudHelmURL = "https://grengojbo.github.io/charts/"
 const GrafanaAgentCloudDefaultNamespace = "monitoring"
 const GrafanaAgentCloudDefaultName = "grafana-agent"
 
-const ExternalDnsHelmRepoName = "bitnami"
-const ExternalDnsHelmRepo = "bitnami/external-dns"
-const ExternalDnsHelmURL = "https://charts.bitnami.com/bitnami"
+const ExternalDnsHelmRepoName = "external-dns"
+const ExternalDnsHelmRepo = "external-dns/external-dns"
+const ExternalDnsHelmURL = "https://kubernetes-sigs.github.io/external-dns/"
 const ExternalDnsDefaultNamespace = "kube-system"
 const ExternalDnsDefaultName = "external-dns"
 

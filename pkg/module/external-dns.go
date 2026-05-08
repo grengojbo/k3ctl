@@ -187,8 +187,6 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 		overrides["metrics.serviceMonitor.enabled"] = "true"
 	}
 
-	overrides["image.registry"] = "registry.bitnami.com"
-	overrides["global.security.allowInsecureImages"] = "true"
 	overrides["provider"] = addons.Provider
 
 	if addons.Provider == types.ProviderCloudflare {
