@@ -120,6 +120,7 @@ k3ctl apply -c <cluster> external-dns
 | `aws.region` | з config | тільки для AWS |
 | `aws.zoneType` | `public` | тільки для AWS |
 | `image.registry` | `registry.bitnami.com` | Bitnami перемістив образи з docker.io (2024) |
+| `global.security.allowInsecureImages` | `true` | обходить перевірку підпису образу в Bitnami chart 9.x |
 | `cloudflare.apiToken` | з `CF_API_TOKEN` | автоматично з `.env` |
 | `cloudflare.proxied` | `true`/`false` | з `externalDns.proxied` (default `false`) |
 
