@@ -226,6 +226,7 @@ type ExternalDns struct {
 	Name          string   `mapstructure:"name" yaml:"name" json:"name,omitempty"`
 	Provider      string   `mapstructure:"provider" yaml:"provider" json:"provider"`
 	Region        string   `mapstructure:"region" yaml:"region" json:"region,omitempty"`
+	Proxied       bool     `mapstructure:"proxied" yaml:"proxied" json:"proxied,omitempty"`
 	Domains       []string `mapstructure:"domains" yaml:"domains" json:"domains"`
 	HostedZoneIds []string `mapstructure:"HostedZoneIds" yaml:"HostedZoneIds" json:"HostedZoneIds,omitempty"`
 	// HostedZoneIdentifier string            `mapstructure:"hostedZoneIdentifier" yaml:"hostedZoneIdentifier" json:"hostedZoneIdentifier,omitempty"`
@@ -251,16 +252,28 @@ type MetalLB struct {
 	Manifests  []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
+// CertManagerProvider defines the DNS/HTTP challenge provider for ClusterIssuer.
+// Supported: "http" (default), "cloudflare", "route53".
+type CertManagerProvider string
+
+const (
+	CertManagerProviderHTTP       CertManagerProvider = "http"
+	CertManagerProviderCloudflare CertManagerProvider = "cloudflare"
+	CertManagerProviderRoute53    CertManagerProvider = "route53"
+)
+
 type CertManager struct {
-	Name       string            `mapstructure:"name" yaml:"name" json:"name,omitempty"`
-	Namespace  string            `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
-	Disabled   bool              `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
-	Version    string            `mapstructure:"version" yaml:"version" json:"version,omitempty"`
-	URL        string            `mapstructure:"url" yaml:"url" json:"url,omitempty"`
-	Values     map[string]string `mapstructure:"values" yaml:"values" json:"values,omitempty"`
-	ValuesFile string            `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
-	Repo       HelmRepo          `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
-	Manifests  []string          `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
+	Name       string              `mapstructure:"name" yaml:"name" json:"name,omitempty"`
+	Namespace  string              `mapstructure:"namespace" yaml:"namespace" json:"namespace,omitempty"`
+	Disabled   bool                `mapstructure:"disabled" yaml:"disabled" json:"disabled,omitempty"`
+	Version    string              `mapstructure:"version" yaml:"version" json:"version,omitempty"`
+	URL        string              `mapstructure:"url" yaml:"url" json:"url,omitempty"`
+	Provider   CertManagerProvider `mapstructure:"provider" yaml:"provider" json:"provider,omitempty"`
+	Email      string              `mapstructure:"email" yaml:"email" json:"email,omitempty"`
+	Values     map[string]string   `mapstructure:"values" yaml:"values" json:"values,omitempty"`
+	ValuesFile string              `mapstructure:"valuesFile" yaml:"valuesFile" json:"valuesFile,omitempty"`
+	Repo       HelmRepo            `mapstructure:"repo" yaml:"repo" json:"repo,omitempty"`
+	Manifests  []string            `mapstructure:"manifests" yaml:"manifests" json:"manifests"`
 }
 
 // observer
@@ -723,15 +736,17 @@ type ClusterList struct {
 // }
 
 type K3sIstallOptions struct {
-	ExecString   string
-	LoadBalancer string
-	Ingress      string
-	CNI          string
-	Backend      string
-	K3sVersion   string
-	K3sChannel   string
-	IsCluster    bool
-	Node         *Node
+	ExecString        string
+	LoadBalancer      string
+	Ingress           string
+	CNI               string
+	Backend           string
+	K3sVersion        string
+	K3sChannel        string
+	IsCluster         bool
+	Node              *Node
+	ConfigFileArgs    []string // kept for backward compat; use ConfigYamlContent instead
+	ConfigYamlContent string   // complete YAML content for /etc/rancher/k3s/config.yaml
 }
 type K3sWorkerOptions struct {
 	JoinAgentCommand string `json:"joinAgentCommand,omitempty"`

@@ -8,6 +8,7 @@
 bin
 k3ctl
 ./k3ctl-*
+/tmp
 
 # Test binary, build with `go test -c`
 *.test

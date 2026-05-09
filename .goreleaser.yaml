@@ -10,7 +10,7 @@ before:
     # - get -v -d ./...
 builds:
   - env:
-    - CGO_ENABLED=0
+      - CGO_ENABLED=0
     binary: k3ctl
     # GOARCH to build for.
     # For more info refer to: https://golang.org/doc/install/source#environment

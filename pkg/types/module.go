@@ -19,6 +19,7 @@ const HelmDeleteCommand = "helm delete %s -n %s --kubeconfig %s --kube-context %
 const SecretCreateCommand = "kubectl create secret %s %s %s --kubeconfig %s --context %s"
 const SecretDeleteCommand = "kubectl delete secret %s -n %s --kubeconfig %s --context %s"
 const SecretListCommand = "kubectl get secret -n %s --kubeconfig %s --context %s -o json | jq -r '.items[].metadata.name'"
+const KubectlApplyCommand = "kubectl apply -f %s --kubeconfig %s --context %s"
 
 const NamespaceGetCommand = "kubectl get ns -o=custom-columns='NAME:.metadata.name' --no-headers --kubeconfig %s --context %s"
 const NamespaceCreateCommand = "kubectl create namespace %s --kubeconfig %s --context %s"
@@ -84,9 +85,9 @@ const GrafanaAgentCloudHelmURL = "https://grengojbo.github.io/charts/"
 const GrafanaAgentCloudDefaultNamespace = "monitoring"
 const GrafanaAgentCloudDefaultName = "grafana-agent"
 
-const ExternalDnsHelmRepoName = "bitnami"
-const ExternalDnsHelmRepo = "bitnami/external-dns"
-const ExternalDnsHelmURL = "https://charts.bitnami.com/bitnami"
+const ExternalDnsHelmRepoName = "external-dns"
+const ExternalDnsHelmRepo = "external-dns/external-dns"
+const ExternalDnsHelmURL = "https://kubernetes-sigs.github.io/external-dns/"
 const ExternalDnsDefaultNamespace = "kube-system"
 const ExternalDnsDefaultName = "external-dns"
 

@@ -4,6 +4,7 @@ import (
 	// "github.com/alexellis/arkade/pkg/apps"
 	// "github.com/alexellis/arkade/pkg/types"
 	"fmt"
+	"os"
 
 	k3sv1alpha1 "github.com/grengojbo/k3ctl/api/v1alpha1"
 	"github.com/grengojbo/k3ctl/pkg/types"
@@ -97,6 +98,15 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 
 	// log.Debugf("[%s] name: %s disabled: %v status: %v (cluster: %s)", name, addons.Name, addons.Disabled, release.Status, args.ClusterName)
 
+	// Load .env: cluster-level first, then global fallback
+	clusterEnvFile := fmt.Sprintf("variables/%s/.env", args.ClusterName)
+	if err := util.LoadDotEnv(clusterEnvFile); err != nil {
+		log.Warnf("[%s] LoadDotEnv(%s): %v", name, clusterEnvFile, err)
+	}
+	if err := util.LoadDotEnv(".env"); err != nil {
+		log.Warnf("[%s] LoadDotEnv(.env): %v", name, err)
+	}
+
 	if len(spec.LoadBalancer.Domain) == 0 {
 		log.Warnf("IS NOT Set \"spec.loadBalancer.domain\" %s disabled...", description)
 		return nil
@@ -179,6 +189,38 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 
 	overrides["provider"] = addons.Provider
 
+	extraArgIdx := 0
+	if len(spec.LoadBalancer.ExternalIP) > 0 {
+		overrides[fmt.Sprintf("extraArgs[%d]", extraArgIdx)] = fmt.Sprintf("--default-targets=%s", spec.LoadBalancer.ExternalIP)
+		extraArgIdx++
+	}
+
+	if addons.Provider == types.ProviderCloudflare {
+		if token := os.Getenv("CF_API_TOKEN"); len(token) > 0 {
+			log.Infof("[%s] using CF_API_TOKEN from environment for Cloudflare provider", name)
+			cfSecret := k3sv1alpha1.K8sSecret{
+				Name:      "cloudflare-api-token",
+				Type:      "generic",
+				Namespace: release.Namespace,
+				SecretsData: []k3sv1alpha1.SecretsData{
+					{Key: "CF_API_TOKEN", Value: token, Type: types.StringLiteralSecret},
+				},
+			}
+			if err := CreateSecret(cfSecret, kubeConfigPath, args.ClusterName, dryRun); err != nil {
+				log.Errorf("[%s] failed to create cloudflare-api-token secret: %v", name, err)
+			}
+			overrides["env[0].name"] = "CF_API_TOKEN"
+			overrides["env[0].valueFrom.secretKeyRef.name"] = "cloudflare-api-token"
+			overrides["env[0].valueFrom.secretKeyRef.key"] = "CF_API_TOKEN"
+		} else {
+			log.Warnf("[%s] provider=cloudflare but CF_API_TOKEN is not set — set it in variables/%s/.env or export CF_API_TOKEN=...", name, args.ClusterName)
+		}
+		if addons.Proxied {
+			overrides[fmt.Sprintf("extraArgs[%d]", extraArgIdx)] = "--cloudflare-proxied"
+			extraArgIdx++
+		}
+	}
+
 	if addons.Provider == types.ProviderAws {
 		// When using the AWS provider, AWS_DEFAULT_REGION to set in the environment (optional)
 		overrides["aws.region"] = addons.Region
@@ -195,9 +237,6 @@ func MakeInstallExternalDns(spec *k3sv1alpha1.ClusterSpec, args *k3sv1alpha1.Hel
 	for i, v := range addons.HostedZoneIds {
 		k := fmt.Sprintf("zoneIdFilters[%d]", i)
 		overrides[k] = v
-		// if i == 0 {
-		// 	overrides["txtOwnerId"] = v
-		// }
 	}
 
 	addons.Domains = append(addons.Domains, spec.LoadBalancer.Domain)
