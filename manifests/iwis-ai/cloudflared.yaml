@@ -1,10 +1,6 @@
 # Cloudflare Tunnel — єдиний тунель для всіх сервісів iwis-ai.
 # Routing визначається у Cloudflare Zero Trust Dashboard → Tunnels → Public Hostname:
 #
-#  hello.iwis.dev           → http://whoami.default.svc.cluster.local:80          (публічний)
-#  longhorn.k3s.iwis.dev    → http://longhorn-frontend.longhorn-system.svc.cluster.local:80  (Access policy)
-#  hubble.k3s.iwis.dev      → http://hubble-ui.kube-system.svc.cluster.local:80   (Access policy)
-#
 # Підготовка:
 #   kubectl create ns cloudflared
 #   kubectl -n cloudflared create secret generic cloudflared-token --from-literal=token=$CLOUDFLARE_TUNNEL_TOKEN

@@ -4,7 +4,7 @@ metadata: { name: letsencrypt-prod }
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: iwisdev@iwis.io
+    email: example@example.com
     privateKeySecretRef: { name: letsencrypt-prod }
     solvers:
       - dns01:
