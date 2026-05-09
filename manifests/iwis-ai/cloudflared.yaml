@@ -37,17 +37,22 @@ spec:
                 topologyKey: kubernetes.io/hostname
                 labelSelector:
                   matchLabels: { app: cloudflared }
+      securityContext:
+        sysctls:
+          - name: net.ipv4.ping_group_range
+            value: "65532 65532"
       containers:
         - name: cloudflared
           image: cloudflare/cloudflared:latest
-          args:
+          command:
+            - cloudflared
             - tunnel
             - --no-autoupdate
+            - --loglevel
+            - info
             - --metrics
             - 0.0.0.0:2000
             - run
-            - --token
-            - $(TUNNEL_TOKEN)
           env:
             - name: TUNNEL_TOKEN
               valueFrom:
@@ -55,7 +60,10 @@ spec:
                   name: cloudflared-token
                   key: token
           livenessProbe:
-            httpGet: { path: /ready, port: 2000 }
+            httpGet:
+              path: /ready
+              port: 2000
+            failureThreshold: 1
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:

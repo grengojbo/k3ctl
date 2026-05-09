@@ -440,7 +440,7 @@ kubectl -n cloudflared get pods -o wide
 
 Zero Trust → Networks → Tunnels → `iwis-ai` → Public Hostname → Add:
 - `hello.iwis.dev` → `http://whoami.default.svc.cluster.local:80`
-- `longhorn.k3s.iwis.dev` → `http://longhorn-frontend.longhorn-system.svc.cluster.local:80`
+- `longhorn.iwis.dev` → `http://longhorn-frontend.longhorn-system.svc.cluster.local:80`
 - `hubble.k3s.iwis.dev` → `http://hubble-ui.kube-system.svc.cluster.local:80`
 
 **4) Cloudflare Access policy для приватних сервісів**
